@@ -42,8 +42,11 @@ jobs:
           spack load mfem-mgis
           cmake --build ${{github.workspace}}/release --config Release
       - name: Run examples
+        working-directory: ${{github.workspace}}/release
         shell: spack-sh {0}
         run: |
+          spack load tfel
+          spack load mfem        
           spack load mfem-mgis
           make -j
           ctest
