@@ -40,7 +40,36 @@ make -j 4
 ```
 
 
-## Test Case : 1 
+## Bubble Case 
+
+### Short Description
+
+TODO : The default example is the rupture of a stressed bubble.
+
+### Parameters
+
+```
+Usage: ./test-bubble [options] ...
+Options:
+   -h, --help
+	Print this help message and exit.
+   -m <string>, --mesh <string>, current value: mesh/mesh_sphere.msh
+	Mesh file to use.
+   -l <string>, --library <string>, current value: src/libBehaviour.so
+	Material library.
+   -f <string>, --bubble-file <string>, current value: src/libBehaviour.so
+	File containing the bubbles.
+   -o <int>, --order <int>, current value: 1
+	Finite element order (polynomial degree).
+   -r <int>, --refinement <int>, current value: 0
+	refinement level of the mesh, default = 0
+   -p <int>, --post-processing <int>, current value: 1
+	run post processing step
+   -v <int>, --verbosity-level <int>, current value: 0
+	choose the verbosity level
+```
 
 
-TODO
+### Output With On Bubble
+
+![Bubble Case](/img/bubble.png)
