@@ -12,6 +12,8 @@
 #include "MFEMMGIS/UniformImposedPressureBoundaryCondition.hxx"
 #include "OperaHPC/BubbleDescription.hxx"
 #include "OperaHPC/Utilities.hxx"
+#include "Common/Print.hxx"
+#include "Common/Memory.hxx"
 
 namespace opera_hpc {
 
@@ -36,20 +38,68 @@ void post_process(Problem& p, double start, double end) {
   p.executePostProcessings(start, end);
 }
 
+struct TestParameters {
+  const char* mesh_file = "mesh/mesh_sphere.msh";
+  const char* behaviour = "Elasticity";
+  const char* library = "src/libBehaviour.so";
+  const char* bubble_file = "bubbles.txt";
+  int order = 1;
+  int refinement = 0;
+  int post_processing = 1; // default value : activated
+  int verbosity_level = 0; // default value : lower level
+};
+
+
+void fill_parameters(mfem::OptionsParser& args, TestParameters& p)
+{
+  args.AddOption(&p.mesh_file, "-m", "--mesh", "Mesh file to use.");
+  args.AddOption(&p.library, "-l", "--library", "Material library.");
+  args.AddOption(&p.library, "-f", "--bubble-file", "File containing the bubbles.");
+  args.AddOption(&p.order, "-o", "--order", "Finite element order (polynomial degree).");
+  args.AddOption(&p.refinement, "-r", "--refinement", "refinement level of the mesh, default = 0");
+  args.AddOption(&p.post_processing, "-p", "--post-processing", "run post processing step");
+  args.AddOption(&p.verbosity_level, "-v", "--verbosity-level", "choose the verbosity level");
+
+  args.Parse();
+
+  if (!args.Good()) {
+    if (mfem_mgis::getMPIrank() == 0)
+      args.PrintUsage(std::cout);
+    mfem_mgis::finalize();
+    exit(0);
+  }
+  if (p.mesh_file == nullptr) { 
+    if (mfem_mgis::getMPIrank() == 0)
+      std::cout << "ERROR: Mesh file missing" << std::endl;
+    args.PrintUsage(std::cout);
+    mfem_mgis::abort(EXIT_FAILURE);
+  }
+  if (mfem_mgis::getMPIrank() == 0)
+    args.PrintOptions(std::cout);
+}
+
+
+
 int main(int argc, char** argv) {
   using namespace mfem_mgis::Profiler::Utils; // Use Message
   // options treatment
   mfem_mgis::initialize(argc, argv);
   mfem_mgis::Profiler::timers::init_timers();
+
+  // get parameters
+  TestParameters p;
+  mfem::OptionsParser args(argc, argv);
+  fill_parameters(args, p);
+
   // reference pressure
   constexpr auto pref = mfem_mgis::real{1e6};
   constexpr auto maximumNumberSteps = mfem_mgis::size_type{100};
   // distance pour déterminer si une bulle casse
   constexpr auto dmin = mfem_mgis::real{1};
   //
-  auto bubbles = [] {
+  auto bubbles = [p] {
     auto r = std::vector<opera_hpc::Bubble>{};
-    for (const auto& d : opera_hpc::BubbleDescription::read("bubbles.txt")) {
+    for (const auto& d : opera_hpc::BubbleDescription::read(p.bubble_file)) {
       auto b = opera_hpc::Bubble{};
       static_cast<opera_hpc::BubbleDescription&>(b) = d;
       r.push_back(b);
@@ -59,16 +109,21 @@ int main(int argc, char** argv) {
   // finite element space
   auto fed = std::make_shared<mfem_mgis::FiniteElementDiscretization>(
       mfem_mgis::Parameters{
-          {"MeshFileName", "mesh/mesh_sphere.msh"},
+          {"MeshFileName", p.mesh_file},
           {"FiniteElementFamily", "H1"},
-          {"FiniteElementOrder", 1},
+          {"FiniteElementOrder", p.order},
           {"UnknownsSize", 3},
-          {"NumberOfUniformRefinements", 0}, // faster for testing
+          {"NumberOfUniformRefinements", p.refinement}, // faster for testing
           //{"NumberOfUniformRefinements", parameters.parallel ? 1 : 0},
           //          {"Hypothesis", "Tridimensional"},
           {"Parallel", true}});
   // definition of the nonlinear problem
   auto problem = mfem_mgis::PeriodicNonLinearEvolutionProblem{fed};
+
+  // get problem information
+  print_mesh_information(problem.getImplementation<true>());
+  print_memory_footprint("[Building problem]");
+
   // macroscopic strain
   std::vector<mfem_mgis::real> e(6, mfem_mgis::real{0});
   problem.setMacroscopicGradientsEvolution(
@@ -86,8 +141,8 @@ int main(int argc, char** argv) {
             }));
     }
     // choix du solver linéaire +
-    const int verbosity = 0;
-    const int post_processing = 0;
+    int verbosity = p.verbosity_level;
+    int post_processing = p.post_processing;
     auto solverParameters = mfem_mgis::Parameters{};
     solverParameters.insert(
         mfem_mgis::Parameters{{"VerbosityLevel", verbosity}});
@@ -103,8 +158,8 @@ int main(int argc, char** argv) {
         mfem_mgis::Parameters{{"Preconditioner", preconditionner}});
     problem.setLinearSolver("HyprePCG", solverParameters);
     // matrice élastique
-    problem.addBehaviourIntegrator("Mechanics", 1, "src/libBehaviour.so",
-                                   "Elasticity");
+    problem.addBehaviourIntegrator("Mechanics", 1, p.library,
+                                   p.behaviour);
     auto &m = problem.getMaterial(1);
     for (auto &s : {&m.s0, &m.s1}) {
       mgis::behaviour::setMaterialProperty(*s, "YoungModulus", 150e9);
@@ -150,6 +205,7 @@ int main(int argc, char** argv) {
       
       ++nstep;
     }
+    print_memory_footprint("[End]");
     mfem_mgis::Profiler::timers::print_and_write_timers();
     return EXIT_SUCCESS;
 }
