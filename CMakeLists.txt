@@ -24,4 +24,7 @@ find_package(MFEMMGIS REQUIRED)
 #find_package(TFELMath REQUIRED)
 #include_directories(/home/rp269144/spack/opt/spack/linux-ubuntu22.04-skylake/gcc-11.4.0/tfel-master-u6q5krrbckkhn3ahzrwjils5oijqvfzv/include/)
 
+enable_testing()
+
 add_subdirectory(bubble)
+

@@ -40,4 +40,6 @@ target_link_directories(test-bubble
 
 file(COPY Elasticity.mfront bubbles.txt mesh DESTINATION ${PROJECT_BINARY_DIR})
 
+add_test(NAME BubbleTest COMMAND test-bubble)
+
 install(TARGETS test-bubble DESTINATION bin)
