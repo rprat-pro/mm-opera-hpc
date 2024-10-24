@@ -24,7 +24,7 @@ jobs:
           path: spack       # Where to clone Spack
           path: spack       # Where to clone Spack
       - name: Install MFEM MGIS
-            run: |
+        run: |
           git clone https://github.com/rprat-pro/spack-repo-mfem-mgis.git
           spack repo add spack-repo-mfem-mgis
           spack install mfem-mgis
