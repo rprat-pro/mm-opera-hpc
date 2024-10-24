@@ -57,7 +57,7 @@ Options:
 	Mesh file to use.
    -l <string>, --library <string>, current value: src/libBehaviour.so
 	Material library.
-   -f <string>, --bubble-file <string>, current value: src/libBehaviour.so
+   -f <string>, --bubble-file <string>, current value: bubbles.txt
 	File containing the bubbles.
    -o <int>, --order <int>, current value: 1
 	Finite element order (polynomial degree).
