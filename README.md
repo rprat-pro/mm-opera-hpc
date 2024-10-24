@@ -33,7 +33,8 @@ export MFEMMGIS_DIR=`spack location -i mfem-mgis`/share/mfem-mgis/cmake/
 Finally, build your examples:
 
 ```
-cd mfem-mgis-examples
+git clone https://github.com/rprat-pro/mm-opera-hpc.git
+cd mm-opera-hpc/
 mkdir build && cd build
 cmake ..
 make -j 4
