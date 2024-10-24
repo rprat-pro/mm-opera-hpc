@@ -39,7 +39,7 @@ void post_process(Problem& p, double start, double end) {
 }
 
 struct TestParameters {
-  const char* mesh_file = "mesh/mesh_sphere.msh";
+  const char* mesh_file = "mesh/single_sphere.msh";
   const char* behaviour = "Elasticity";
   const char* library = "src/libBehaviour.so";
   const char* bubble_file = "bubbles.txt";
@@ -94,8 +94,8 @@ int main(int argc, char** argv) {
   // reference pressure
   constexpr auto pref = mfem_mgis::real{1e6};
   constexpr auto maximumNumberSteps = mfem_mgis::size_type{100};
-  // distance pour déterminer si une bulle casse
-  constexpr auto dmin = mfem_mgis::real{1};
+  // distance to determine if a bubble breaks
+  constexpr auto dmin = mfem_mgis::real{650e-9};
   //
   auto bubbles = [p] {
     auto r = std::vector<opera_hpc::Bubble>{};
@@ -157,7 +157,7 @@ int main(int argc, char** argv) {
     solverParameters.insert(
         mfem_mgis::Parameters{{"Preconditioner", preconditionner}});
     problem.setLinearSolver("HyprePCG", solverParameters);
-    // matrice élastique
+    // matrix is considered elastic
     problem.addBehaviourIntegrator("Mechanics", 1, p.library,
                                    p.behaviour);
     auto &m = problem.getMaterial(1);
@@ -167,9 +167,11 @@ int main(int argc, char** argv) {
       mgis::behaviour::setExternalStateVariable(*s, "Temperature", 293.15);
       mgis::behaviour::setExternalStateVariable(*s, "Temperature", 293.15);
     }
-    if (post_processing){
-    problem.addPostProcessing("ParaviewExportResults",
-                              {{"OutputFileName", "TestCaseOneBubble"}});
+    if (post_processing) {
+      auto results = std::vector<mfem_mgis::Parameter>{"Stress"};
+      problem.addPostProcessing(
+          "ParaviewExportIntegrationPointResultsAtNodes",
+          {{"OutputFileName", "TestCaseOneBubble"}, {"Results", results}});
     }
     //
     auto nstep = mfem_mgis::size_type{};
