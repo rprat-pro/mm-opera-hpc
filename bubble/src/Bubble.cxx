@@ -30,6 +30,7 @@ namespace opera_hpc {
 }  // end of namespace opera_hpc
 
 int main(int argc, char** argv) {
+  using namespace mfem_mgis::Profiler::Utils; // Use Message
   // options treatment
   mfem_mgis::initialize(argc, argv);
   mfem_mgis::Profiler::timers::init_timers();
@@ -126,14 +127,14 @@ int main(int argc, char** argv) {
         std::cout << "no bubble broke at step " << nstep << "\n";
         break;
       }
-      std::cout << "step: " << nstep << "\n"
-                << "- " << nbroken << " bubbles broke at this step.\n"
-                << "- " << all_broken_bubbles_identifiers.size()
-                << " bubbles are broken\n"
-                << "- value of the first principal stress: " << r.value
-                << " at coordinate (" << r.location[0] << "," << r.location[1]
-                << ", " << r.location[2] << ")\n\n";
+
+
+      Message("step:",nstep);
+      Message("-", nbroken, "bubbles broke at this step.");
+      Message("-", all_broken_bubbles_identifiers.size(), "bubbles are broken");
+      Message("- value of the first principal stress:", r.value, "at coordinate (", r.location[0], ",", r.location[1], "," , r.location[2], ")");
       ++nstep;
     }
+    mfem_mgis::Profiler::timers::print_and_write_timers();
     return EXIT_SUCCESS;
 }
