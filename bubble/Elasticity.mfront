@@ -1,0 +1,32 @@
+@Behaviour Elasticity;
+
+@UseQt true;
+@ProvidesSymmetricTangentOperator;
+
+// Material properties
+@MaterialProperty stress young;
+young.setGlossaryName("YoungModulus");
+@MaterialProperty real nu;
+nu.setGlossaryName("PoissonRatio");
+
+// Lame Coefficients
+@LocalVariable stress lambda, mu;
+
+@InitLocalVariables {
+  lambda = computeLambda(young, nu);
+  mu = computeMu(young, nu);
+}
+
+@PredictionOperator {
+  static_cast<void>(smt); // remove unused variable warning
+  computeAlteredElasticStiffness<hypothesis, real>::exe(Dt, lambda, mu);
+}
+
+@Integrator {
+  constexpr auto id = Stensor::Id();
+  sig = lambda * trace(eto + deto) * id + 2 * mu * (eto + deto);
+  if (computeTangentOperator_) {
+    static_cast<void>(smt); // remove unused variable warning
+    Dt = lambda * Stensor4::IxI() + 2 * mu * Stensor4::Id();
+  }
+}
