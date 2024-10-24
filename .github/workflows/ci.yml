@@ -22,7 +22,6 @@ jobs:
           buildcache: true  # Configure oci://ghcr.io/spack/github-actions-buildcache
           color: true       # Force color output (SPACK_COLOR=always)
           path: spack       # Where to clone Spack
-          path: spack       # Where to clone Spack
       - name: Install MFEM MGIS
         run: |
           git clone https://github.com/rprat-pro/spack-repo-mfem-mgis.git
