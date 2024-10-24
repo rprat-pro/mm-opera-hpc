@@ -29,6 +29,13 @@ namespace opera_hpc {
   }
 }  // end of namespace opera_hpc
 
+// add postprocessing
+template <typename Problem>
+void post_process(Problem& p, double start, double end) {
+  CatchTimeSection("common::post_processing_step");
+  p.executePostProcessings(start, end);
+}
+
 int main(int argc, char** argv) {
   using namespace mfem_mgis::Profiler::Utils; // Use Message
   // options treatment
@@ -80,6 +87,7 @@ int main(int argc, char** argv) {
     }
     // choix du solver linéaire +
     const int verbosity = 0;
+    const int post_processing = 0;
     auto solverParameters = mfem_mgis::Parameters{};
     solverParameters.insert(
         mfem_mgis::Parameters{{"VerbosityLevel", verbosity}});
@@ -104,6 +112,10 @@ int main(int argc, char** argv) {
       mgis::behaviour::setExternalStateVariable(*s, "Temperature", 293.15);
       mgis::behaviour::setExternalStateVariable(*s, "Temperature", 293.15);
     }
+    if (post_processing){
+    problem.addPostProcessing("ParaviewExportResults",
+                              {{"OutputFileName", "TestCaseOneBubble"}});
+    }
     //
     auto nstep = mfem_mgis::size_type{};
     while ((nstep != maximumNumberSteps) &&
@@ -124,7 +136,7 @@ int main(int argc, char** argv) {
         }
       }
       if (nbroken == 0) {
-        std::cout << "no bubble broke at step " << nstep << "\n";
+        Message("no bubble broke at step ", nstep,"\n");
         break;
       }
 
@@ -133,6 +145,9 @@ int main(int argc, char** argv) {
       Message("-", nbroken, "bubbles broke at this step.");
       Message("-", all_broken_bubbles_identifiers.size(), "bubbles are broken");
       Message("- value of the first principal stress:", r.value, "at coordinate (", r.location[0], ",", r.location[1], "," , r.location[2], ")");
+      if (post_processing)
+        post_process(problem, 0+double(nstep), 1+double(nstep));
+      
       ++nstep;
     }
     mfem_mgis::Profiler::timers::print_and_write_timers();
