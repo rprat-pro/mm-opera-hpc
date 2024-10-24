@@ -35,7 +35,12 @@ jobs:
           export MFEMMGIS_DIR=`spack location -i mfem-mgis`/share/mfem-mgis/cmake/
           cmake -B ${{github.workspace}}/release 
       - name: Build OperaHpc Test Cases
-        run:  cmake --build ${{github.workspace}}/release --config Release
+        shell: spack-sh {0}
+        run: |
+          spack load tfel
+          spack load mfem
+          spack load mfem-mgis
+          cmake --build ${{github.workspace}}/release --config Release
       - name: Run examples
         shell: spack-sh {0}
         run: |
