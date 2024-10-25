@@ -42,7 +42,7 @@ struct TestParameters {
   const char* mesh_file = "mesh/single_sphere.msh";
   const char* behaviour = "Elasticity";
   const char* library = "src/libBehaviour.so";
-  const char* bubble_file = "bubbles.txt";
+  const char* bubble_file = "mesh/single_bubble.txt";
   int order = 1;
   int refinement = 0;
   int post_processing = 1; // default value : activated
@@ -54,7 +54,7 @@ void fill_parameters(mfem::OptionsParser& args, TestParameters& p)
 {
   args.AddOption(&p.mesh_file, "-m", "--mesh", "Mesh file to use.");
   args.AddOption(&p.library, "-l", "--library", "Material library.");
-  args.AddOption(&p.library, "-f", "--bubble-file", "File containing the bubbles.");
+  args.AddOption(&p.bubble_file, "-f", "--bubble-file", "File containing the bubbles.");
   args.AddOption(&p.order, "-o", "--order", "Finite element order (polynomial degree).");
   args.AddOption(&p.refinement, "-r", "--refinement", "refinement level of the mesh, default = 0");
   args.AddOption(&p.post_processing, "-p", "--post-processing", "run post processing step");
