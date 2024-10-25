@@ -45,7 +45,9 @@ make -j 4
 
 ### Short Description
 
-TODO : The default example is the rupture of a stressed bubble.
+TODO : The default example is the rupture of a spherical, pressurized inclusion (e.g., a gas bubble) in an elastic infinite medium.
+
+The criterium to determine the rupture or not is based on a simple geometrical assumption, i.e., if a certain distance $d_min$ is found between the position of the center of the sphere and the location of the maximum principal stress caused by the pressure exerted by the bubble on the surrounding matrix.
 
 ### Parameters
 
@@ -54,11 +56,11 @@ Usage: ./test-bubble [options] ...
 Options:
    -h, --help
 	Print this help message and exit.
-   -m <string>, --mesh <string>, current value: mesh/mesh_sphere.msh
+   -m <string>, --mesh <string>, current value: mesh/single_sphere.msh
 	Mesh file to use.
    -l <string>, --library <string>, current value: src/libBehaviour.so
 	Material library.
-   -f <string>, --bubble-file <string>, current value: bubbles.txt
+   -f <string>, --bubble-file <string>, current value: mesh/single_bubble.txt
 	File containing the bubbles.
    -o <int>, --order <int>, current value: 1
 	Finite element order (polynomial degree).
@@ -70,7 +72,20 @@ Options:
 	choose the verbosity level
 ```
 
+### Verification against an analytical solution
 
-### Output With On Bubble
+The problem of a pressurized spherical inclusion in an infinite, elastic medium has a closed solution for the expressions of the stresses as a function of the distance from the sphere center. 
+
+$$
+\sigma_{\theta\theta}(r) = \dfrac{p_{in}*R_b^3}{2r^3}
+$$
+
+where $p_{in}$ is the internal pressure, $R_b$ the bubble radius, and reminding that the expression is holding for $r>R_b$.
+
+The comparison obtained running the test-case considering the FE mesh available `bubble/mesh/single_sphere.msh` and the analytical solution is showed below, and can be generated thanks to the script available in the `verification` folder.
+
+![Bubble Case](/img/comparison_analytical_mmm.png)
+
+### Output With One Bubble
 
 ![Bubble Case](/img/bubble.png)
