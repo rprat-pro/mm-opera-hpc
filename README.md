@@ -89,3 +89,16 @@ The comparison obtained running the test-case considering the FE mesh available 
 ### Output With One Bubble
 
 ![Bubble Case](/img/bubble/bubble.png)
+
+## Polycrystal Case
+
+### Short Description
+
+This example is under construction
+
+
+### Parameters
+
+### Output Example
+
+![Bubble Case](/img/polycrystal/polycrystal.png)
