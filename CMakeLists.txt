@@ -27,4 +27,5 @@ find_package(MFEMMGIS REQUIRED)
 enable_testing()
 
 add_subdirectory(bubble)
+add_subdirectory(polycrystal)
 

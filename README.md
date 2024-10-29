@@ -89,3 +89,37 @@ The comparison obtained running the test-case considering the FE mesh available 
 ### Output With One Bubble
 
 ![Bubble Case](/img/bubble/bubble.png)
+
+## Polycrystal Case
+
+### Short Description
+
+This example is under construction
+
+
+### Parameters
+
+```
+Usage: ./uniaxial-polycristal [options] ...
+Options:
+   -h, --help
+	Print this help message and exit.
+   -m <string>, --mesh <string>, current value: periodic-cube.msh
+	Mesh file to use.
+   -f <string>, --vect <string>, current value: periodic-cube-vecteurs.txt
+	Vector file to use.
+   -l <string>, --library <string>, current value: src/libBehaviour.so
+	Material library.
+   -o <int>, --order <int>, current value: 2
+	Finite element order (polynomial degree).
+   -r <int>, --refinement <int>, current value: 0
+	refinement level of the mesh, default = 0
+   -p <int>, --post-processing <int>, current value: 1
+	run post processing step
+   -v <int>, --verbosity-level <int>, current value: 0
+	choose the verbosity level
+```
+
+### Output Example
+
+![Bubble Case](/img/polycrystal/polycrystal.png)
