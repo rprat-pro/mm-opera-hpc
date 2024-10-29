@@ -45,7 +45,7 @@ make -j 4
 
 ### Short Description
 
-TODO : The default example is the rupture of a spherical, pressurized inclusion (e.g., a gas bubble) in an elastic infinite medium.
+The default example is the rupture of a spherical, pressurized inclusion (e.g., a gas bubble) in an elastic infinite medium.
 
 The criterium to determine the rupture or not is based on a simple geometrical assumption, i.e., if a certain distance $d_min$ is found between the position of the center of the sphere and the location of the maximum principal stress caused by the pressure exerted by the bubble on the surrounding matrix.
 
@@ -72,7 +72,7 @@ Options:
 	choose the verbosity level
 ```
 
-### Verification against an analytical solution
+### Verification against the analytical solution
 
 The problem of a pressurized spherical inclusion in an infinite, elastic medium has a closed solution for the expressions of the stresses as a function of the distance from the sphere center. 
 
@@ -82,10 +82,10 @@ $$
 
 where $p_{in}$ is the internal pressure, $R_b$ the bubble radius, and reminding that the expression is holding for $r>R_b$.
 
-The comparison obtained running the test-case considering the FE mesh available `bubble/mesh/single_sphere.msh` and the analytical solution is showed below, and can be generated thanks to the script available in the `verification` folder.
+The comparison obtained running the test-case considering the FE mesh available `bubble/mesh/single_sphere.msh` and the analytical solution is showed below, and can be generated thanks to the script available in the `verification/bubble` folder.
 
-![Bubble Case](/img/comparison_analytical_mmm.png)
+![Bubble Case](/img/bubble/comparison_analytical_mmm.png)
 
 ### Output With One Bubble
 
-![Bubble Case](/img/bubble.png)
+![Bubble Case](/img/bubble/bubble.png)
