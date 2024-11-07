@@ -20,7 +20,7 @@ spack repo add $PWD/spack-repo-mfem-mgis
 Secondly, install mfem-mgis
 
 ```
-spack install mfem-mgis
+spack install mfem-mgis@v1.0.1
 ```
 
 Thirdly, load mfem-mgis
