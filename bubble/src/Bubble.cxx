@@ -43,6 +43,7 @@ struct TestParameters {
   const char* behaviour = "Elasticity";
   const char* library = "src/libBehaviour.so";
   const char* bubble_file = "mesh/single_bubble.txt";
+  int parallel_mesh = 0;
   int order = 1;
   int refinement = 0;
   int post_processing = 1; // default value : activated
@@ -53,6 +54,7 @@ struct TestParameters {
 void fill_parameters(mfem::OptionsParser& args, TestParameters& p)
 {
   args.AddOption(&p.mesh_file, "-m", "--mesh", "Mesh file to use.");
+  args.AddOption(&p.parallel_mesh, "-pm", "--parallel-mesh", "Parallel mesh format or not");
   args.AddOption(&p.library, "-l", "--library", "Material library.");
   args.AddOption(&p.bubble_file, "-f", "--bubble-file", "File containing the bubbles.");
   args.AddOption(&p.order, "-o", "--order", "Finite element order (polynomial degree).");
@@ -78,7 +80,9 @@ void fill_parameters(mfem::OptionsParser& args, TestParameters& p)
     args.PrintOptions(std::cout);
 }
 
-
+void write_message(std::ofstream& file_to_write, const auto&... args){
+  ((file_to_write << args << " "), ...) << std::endl;
+}
 
 int main(int argc, char** argv) {
   using namespace mfem_mgis::Profiler::Utils; // Use Message
@@ -86,16 +90,24 @@ int main(int argc, char** argv) {
   mfem_mgis::initialize(argc, argv);
   mfem_mgis::Profiler::timers::init_timers();
 
+  // file collecting the output
+  std::string file_name="bubbles_and_stresses.txt";
+  std::ofstream output_file(file_name);
+  if (!output_file.is_open()) {
+    std::cerr << "Failed to open the file: " << file_name << std::endl;
+    return EXIT_FAILURE; // Exit the program with an error code
+}
+
   // get parameters
   TestParameters p;
   mfem::OptionsParser args(argc, argv);
   fill_parameters(args, p);
 
   // reference pressure
-  constexpr auto pref = mfem_mgis::real{1e6};
-  constexpr auto maximumNumberSteps = mfem_mgis::size_type{100};
+  constexpr auto pref = mfem_mgis::real{1.0};
+  constexpr auto maximumNumberSteps = mfem_mgis::size_type{1000};
   // distance to determine if a bubble breaks
-  constexpr auto dmin = mfem_mgis::real{650e-9};
+  constexpr auto dmin = mfem_mgis::real{0.8};
   //
   auto bubbles = [p] {
     auto r = std::vector<opera_hpc::Bubble>{};
@@ -110,12 +122,12 @@ int main(int argc, char** argv) {
   auto fed = std::make_shared<mfem_mgis::FiniteElementDiscretization>(
       mfem_mgis::Parameters{
           {"MeshFileName", p.mesh_file},
+          {"MeshReadMode", p.parallel_mesh ? "Restart" : "FromScratch"},
           {"FiniteElementFamily", "H1"},
           {"FiniteElementOrder", p.order},
           {"UnknownsSize", 3},
           {"NumberOfUniformRefinements", p.refinement}, // faster for testing
           //{"NumberOfUniformRefinements", parameters.parallel ? 1 : 0},
-          //          {"Hypothesis", "Tridimensional"},
           {"Parallel", true}});
   // definition of the nonlinear problem
   auto problem = mfem_mgis::PeriodicNonLinearEvolutionProblem{fed};
@@ -155,8 +167,12 @@ int main(int argc, char** argv) {
     auto preconditionner =
         mfem_mgis::Parameters{{"Name", "HypreBoomerAMG"}, {"Options", options}};
     solverParameters.insert(
-        mfem_mgis::Parameters{{"Preconditioner", preconditionner}});
+        mfem_mgis::Parameters{{"Preconditioner", preconditionner},{"Tolerance", 1e-8}});
     problem.setLinearSolver("HyprePCG", solverParameters);
+     problem.setSolverParameters({{"VerbosityLevel", 1},
+       {"RelativeTolerance", 1e-6},
+       {"AbsoluteTolerance", 0.},
+       {"MaximumNumberOfIterations", 1}});
     // matrix is considered elastic
     problem.addBehaviourIntegrator("Mechanics", 1, p.library,
                                    p.behaviour);
@@ -192,6 +208,7 @@ int main(int argc, char** argv) {
           all_broken_bubbles_identifiers.push_back(b.boundary_identifier);
         }
       }
+      problem.update();
       if (nbroken == 0) {
         Message("no bubble broke at step ", nstep,"\n");
         break;
@@ -202,11 +219,18 @@ int main(int argc, char** argv) {
       Message("-", nbroken, "bubbles broke at this step.");
       Message("-", all_broken_bubbles_identifiers.size(), "bubbles are broken");
       Message("- value of the first principal stress:", r.value, "at coordinate (", r.location[0], ",", r.location[1], "," , r.location[2], ")");
+      if (mfem_mgis::getMPIrank()==0){
+        write_message(output_file, nbroken, "bubbles broke at this step.");
+        write_message(output_file, all_broken_bubbles_identifiers.size(), "bubbles are broken");
+        write_message(output_file, "Value of the first principal stress:", r.value, "at coordinate (", r.location[0], ",", r.location[1], "," , r.location[2], ")");
+      }
+      
       if (post_processing)
         post_process(problem, 0+double(nstep), 1+double(nstep));
       
       ++nstep;
     }
+    output_file.close();
     print_memory_footprint("[End]");
     mfem_mgis::Profiler::timers::print_and_write_timers();
     return EXIT_SUCCESS;
