@@ -167,7 +167,7 @@ int main(int argc, char** argv) {
     auto preconditionner =
         mfem_mgis::Parameters{{"Name", "HypreBoomerAMG"}, {"Options", options}};
     solverParameters.insert(
-        mfem_mgis::Parameters{{"Preconditioner", preconditionner},{"Tolerance", 1e-8}});
+        mfem_mgis::Parameters{{"Preconditioner", preconditionner},{"Tolerance", 1e-6}});
     problem.setLinearSolver("HyprePCG", solverParameters);
      problem.setSolverParameters({{"VerbosityLevel", 1},
        {"RelativeTolerance", 1e-6},
@@ -208,7 +208,7 @@ int main(int argc, char** argv) {
           all_broken_bubbles_identifiers.push_back(b.boundary_identifier);
         }
       }
-      problem.update();
+
       if (nbroken == 0) {
         Message("no bubble broke at step ", nstep,"\n");
         break;

@@ -4,9 +4,9 @@ import merope
 dimensions_side = 10  # µm
 L = [dimensions_side, dimensions_side, dimensions_side]
 
-radius = 0.5  # µm
-pore_fraction = 0.10  # /
-distMin = radius*1.2
+radius = 0.4  # µm
+pore_fraction = 0.15  # /
+distMin = radius*1.3
 randomSeed = 0
 
 
@@ -38,7 +38,7 @@ mi.setMatrixPhase(1)
 
 meshGenerator = merope.mesh.MeshGenerator()
 meshGenerator.setMeshOrder(2)
-meshGenerator.setMeshSize(dimensions_side*1e-2)
+meshGenerator.setMeshSize(dimensions_side*2e-2)
 meshGenerator.setMultiInclusions(mi)
 meshGenerator.do_not_mesh(tab_phase_not_to_mesh)
 meshGenerator.set_nameOutput(["spheres.vtk"])
