@@ -9,7 +9,7 @@
 #include <vector>
 #include <limits>
 #include <algorithm>
-#include <TFEL/Math/stensor.hxx>
+#include "TFEL/Math/stensor.hxx"
 #include "mfem/linalg/densemat.hpp"
 #include "mfem/fem/fespace.hpp"
 #ifdef MFEM_USE_MPI
@@ -23,7 +23,7 @@
 namespace opera_hpc {
 
   template <bool parallel>
-  FirstPrincipalStressValueAndLocation
+  static FirstPrincipalStressValueAndLocation
   findFirstPrincipalStressValueAndLocationImplementation(
       const mfem_mgis::Material &m) {
     constexpr auto stress_size = mfem_mgis::size_type{6};
@@ -85,18 +85,107 @@ namespace opera_hpc {
     return {.value = max_stress, .location = max_stress_location};
   }  // end of findFirstPrincipalStressValueAndLocationImplementation
 
-  FirstPrincipalStressValueAndLocation findFirstPrincipalStressValueAndLocation(
-      const mfem_mgis::Material &m) {
+  template <bool parallel>
+  static std::vector<std::array<mfem_mgis::real, 3u>>
+  getIntegrationPointLocationsWithFirstPrincipalStressGreaterThanThresoldImplementation(
+      const mfem_mgis::Material &m, const mfem_mgis::real threshold) {
+    constexpr auto stress_size = mfem_mgis::size_type{6};
+    const auto &s = m.getPartialQuadratureSpace();
+    const auto &fed = s.getFiniteElementDiscretization();
+    const auto &fespace = fed.getFiniteElementSpace<parallel>();
+    // material identifier
+    const auto mid = s.getId();
+    // values of the stress at the end of the time step
+    const auto *stress_values = m.s1.thermodynamic_forces.data();
+    auto local_locations = std::vector<std::array<mfem_mgis::real, 3u>>{};
+    // loop over the elements
+    auto tmp = mfem::Vector{};
+    for (mfem_mgis::size_type i = 0; i != fespace.GetNE(); ++i) {
+      if (fespace.GetAttribute(i) != mid) {
+        // the element is not associated with the considered material
+        continue;
+      }
+      const auto &fe = *(fespace.GetFE(i));
+      auto &tr = *(fespace.GetElementTransformation(i));
+      const auto &ir = s.getIntegrationRule(fe, tr);
+      // offset of the element
+      const auto eo = s.getOffset(i);
+      // loop over the integration points
+      for (mfem_mgis::size_type g = 0; g != ir.GetNPoints(); ++g) {
+        const auto *const stress = stress_values + (eo + g) * stress_size;
+        auto sig = tfel::math::stensor<3u, mfem_mgis::real>{stress};
+        const auto sig_vp = sig.computeEigenValues<
+            tfel::math::stensor_common::FSESJACOBIEIGENSOLVER>();
+        const auto mvp = *(tfel::fsalgo::max_element<3>::exe(sig_vp.begin()));
+        if (mvp > threshold) {
+          const auto &ip = ir.IntPoint(g);
+          tr.SetIntPoint(&ip);
+          tr.Transform(tr.GetIntPoint(), tmp);
+          local_locations.push_back({tmp[0], tmp[1], tmp[2]});
+        }
+      }
+    }
+    if constexpr (parallel) {
+      int nprocs;
+      MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+      const auto lsize = static_cast<int>(local_locations.size());
+      auto local_locations_tmp = std::vector<double>{};
+      local_locations_tmp.resize(3 * lsize);
+      for (int idx = 0; idx != lsize; ++idx) {
+        local_locations_tmp[3 * idx] = local_locations[idx][0];
+        local_locations_tmp[3 * idx + 1] = local_locations[idx][1];
+        local_locations_tmp[3 * idx + 2] = local_locations[idx][2];
+      }
+      auto gsize = int{};
+      MPI_Allreduce(&lsize, &gsize, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+      auto all_locations_tmp = std::vector<double>(3 * gsize);
+      auto counts_recv = std::vector<int>(nprocs);
+      auto displacements = std::vector<int>(nprocs);
+      MPI_Allgatherv(local_locations_tmp.data(), 3 * lsize, MPI_DOUBLE,
+                     all_locations_tmp.data(), counts_recv.data(),
+                     displacements.data(), MPI_DOUBLE, MPI_COMM_WORLD);
+      auto all_locations = std::vector<std::array<mfem_mgis::real, 3u>>{};
+      all_locations.resize(gsize);
+      for (int idx = 0; idx != gsize; ++idx) {
+        all_locations[idx][0] = all_locations_tmp[3 * idx];
+        all_locations[idx][1] = all_locations_tmp[3 * idx + 1];
+        all_locations[idx][2] = all_locations_tmp[3 * idx + 2];
+      }
+      return all_locations;
+    } else {
+      return local_locations;
+    }
+  }  // end of findFirstPrincipalStressValueAndLocationImplementation
+
+  FirstPrincipalStressValueAndLocation
+  findFirstPrincipalStressValueAndLocation(const mfem_mgis::Material &m) {
     const auto &s = m.getPartialQuadratureSpace();
     const auto &fed = s.getFiniteElementDiscretization();
     if (fed.describesAParallelComputation()) {
 #ifdef MFEM_USE_MPI
       return findFirstPrincipalStressValueAndLocationImplementation<true>(m);
 #else  /* MFEM_USE_MPI */
-      mfem_mgsi::reportUnsupportedParallelComputations();
+      mfem_mgis::reportUnsupportedParallelComputations();
 #endif /* MFEM_USE_MPI */
     }
     return findFirstPrincipalStressValueAndLocationImplementation<false>(m);
-  }  // end of findFirstPrincipalStressValueAndLocation
+  } // end of findFirstPrincipalStressValueAndLocation
 
-}  // end of namespace opera_hpc
+  std::vector<std::array<mfem_mgis::real, 3u>>
+  getIntegrationPointLocationsWithFirstPrincipalStressGreaterThanThresold(
+      mfem_mgis::Material &m, const mfem_mgis::real v) {
+    const auto &s = m.getPartialQuadratureSpace();
+    const auto &fed = s.getFiniteElementDiscretization();
+    if (fed.describesAParallelComputation()) {
+#ifdef MFEM_USE_MPI
+      return getIntegrationPointLocationsWithFirstPrincipalStressGreaterThanThresoldImplementation<
+          true>(m, v);
+#else  /* MFEM_USE_MPI */
+      mfem_mgis::reportUnsupportedParallelComputations();
+#endif /* MFEM_USE_MPI */
+    }
+    return getIntegrationPointLocationsWithFirstPrincipalStressGreaterThanThresoldImplementation<
+        false>(m, v);
+  }
+
+  } // end of namespace opera_hpc
