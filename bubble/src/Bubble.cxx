@@ -43,6 +43,7 @@ struct TestParameters {
   const char* behaviour = "Elasticity";
   const char* library = "src/libBehaviour.so";
   const char* bubble_file = "mesh/single_bubble.txt";
+  const char* testcase_name = "TestCaseBubble";
   int parallel_mesh = 0;
   int order = 1;
   int refinement = 0;
@@ -68,6 +69,7 @@ void fill_parameters(mfem::OptionsParser& args, TestParameters& p) {
                  "choose the verbosity level");
   args.AddOption(&p.scale_factor_vp, "-sf", "--scale-factor-vp",
                  "Scaling factor for the principal stress");
+  args.AddOption(&p.testcase_name, "-n", "--name-case", "Name of the testcase.");
 
   args.Parse();
 
@@ -112,7 +114,7 @@ int main(int argc, char** argv) {
   constexpr auto pref = mfem_mgis::real{1.0};
   constexpr auto maximumNumberSteps = mfem_mgis::size_type{1000};
   // distance to determine if a bubble breaks
-  constexpr auto dmin = mfem_mgis::real{500e-9};
+  constexpr auto dmin = mfem_mgis::real{0.600};
   //
   auto bubbles = [p] {
     auto r = std::vector<opera_hpc::Bubble>{};
@@ -168,10 +170,10 @@ int main(int argc, char** argv) {
   //
   auto options = mfem_mgis::Parameters{{"VerbosityLevel", verbosity},
                                        {"Strategy", "Elasticity"}};
-  auto preconditionner =
+  auto preconditioner =
       mfem_mgis::Parameters{{"Name", "HypreBoomerAMG"}, {"Options", options}};
   solverParameters.insert(mfem_mgis::Parameters{
-      {"Preconditioner", preconditionner}, {"Tolerance", 1e-8}});
+      {"Preconditioner", preconditioner}, {"Tolerance", 1e-9}});
   problem.setLinearSolver("HyprePCG", solverParameters);
   problem.setSolverParameters({{"VerbosityLevel", 1},
                                {"RelativeTolerance", 1e-10},
@@ -190,7 +192,7 @@ int main(int argc, char** argv) {
     auto results = std::vector<mfem_mgis::Parameter>{"Stress"};
     problem.addPostProcessing(
         "ParaviewExportIntegrationPointResultsAtNodes",
-        {{"OutputFileName", "TestCaseOneBubble"}, {"Results", results}});
+        {{"OutputFileName", p.testcase_name}, {"Results", results}});
   }
   //
   auto nstep = mfem_mgis::size_type{};
@@ -202,10 +204,14 @@ int main(int argc, char** argv) {
     const auto all_locations_above_threshold = opera_hpc::
         getIntegrationPointLocationsWithFirstPrincipalStressGreaterThanThresold(
             problem.getMaterial(1), max_vp_scaled);
+    // for (auto &location : all_locations_above_threshold){
+    //   Message("Here we are");
+    //   Message(location[0], "\t",location[1], "\t",location[2], "\t");
+    // }
     auto nbroken = mfem_mgis::size_type{};
     auto all_broken_bubbles_identifiers = std::vector<mfem_mgis::size_type>{};
-    for (auto& b : bubbles) {
-      for (auto& location : all_locations_above_threshold) {
+    for (auto &b : bubbles) {
+      for (auto &location : all_locations_above_threshold) {
         const auto d = opera_hpc::distance(b, location);
         if (d < dmin) {
           if (!b.broken) {

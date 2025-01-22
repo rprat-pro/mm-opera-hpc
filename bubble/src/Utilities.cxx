@@ -135,12 +135,27 @@ namespace opera_hpc {
         local_locations_tmp[3 * idx] = local_locations[idx][0];
         local_locations_tmp[3 * idx + 1] = local_locations[idx][1];
         local_locations_tmp[3 * idx + 2] = local_locations[idx][2];
+        //std::cout << local_locations[idx][0] << "\t" << local_locations[idx][1] << "\t" << local_locations[idx][2] << std::endl;
       }
       auto gsize = int{};
       MPI_Allreduce(&lsize, &gsize, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
       auto all_locations_tmp = std::vector<double>(3 * gsize);
       auto counts_recv = std::vector<int>(nprocs);
       auto displacements = std::vector<int>(nprocs);
+
+      MPI_Allgather(&lsize, 1, MPI_INT, counts_recv.data(), 1, MPI_INT,
+                    MPI_COMM_WORLD);
+
+      displacements[0] = 0;
+      for (int i = 1; i < nprocs; ++i) {
+        displacements[i] =
+            displacements[i-1] + counts_recv[i-1] * 3;
+      }
+
+      for (int i = 0; i < nprocs; ++i) {
+        counts_recv[i] *= 3;
+      }
+      
       MPI_Allgatherv(local_locations_tmp.data(), 3 * lsize, MPI_DOUBLE,
                      all_locations_tmp.data(), counts_recv.data(),
                      displacements.data(), MPI_DOUBLE, MPI_COMM_WORLD);
