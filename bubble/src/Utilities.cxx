@@ -161,11 +161,29 @@ namespace opera_hpc {
                      displacements.data(), MPI_DOUBLE, MPI_COMM_WORLD);
       auto all_locations = std::vector<std::array<mfem_mgis::real, 3u>>{};
       all_locations.resize(gsize);
+
+      for (auto& locs : all_locations){
+        std::fill(locs.begin(), locs.end(), -1e6);
+      }
+
       for (int idx = 0; idx != gsize; ++idx) {
         all_locations[idx][0] = all_locations_tmp[3 * idx];
         all_locations[idx][1] = all_locations_tmp[3 * idx + 1];
         all_locations[idx][2] = all_locations_tmp[3 * idx + 2];
       }
+
+      auto out = std::all_of(all_locations.begin(), all_locations.end(), 
+        [&](const auto& el) {
+          for (size_t i=0; i<3; ++i){
+            if (el[i]<=-1e6)
+              return false;
+          }
+          return true;
+        });
+
+      if (!out)
+        mgis::raise("Error in fetching the positions from the distributed processes.");
+
       return all_locations;
     } else {
       return local_locations;
