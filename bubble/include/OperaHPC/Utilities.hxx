@@ -28,7 +28,7 @@ namespace opera_hpc {
       const mfem_mgis::Material &);
 
   std::vector<std::array<mfem_mgis::real, 3u>>
-  getIntegrationPointLocationsWithFirstPrincipalStressGreaterThanThresold(
+  getPointsAboveStressThreshold(
       mfem_mgis::Material &, const mfem_mgis::real);
 
 }  // end of namespace opera_hpc

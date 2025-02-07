@@ -202,7 +202,7 @@ int main(int argc, char** argv) {
         problem.getMaterial(1));
     const auto max_vp_scaled = p.scale_factor_vp * r.value;
     const auto all_locations_above_threshold = opera_hpc::
-        getIntegrationPointLocationsWithFirstPrincipalStressGreaterThanThresold(
+    getPointsAboveStressThreshold(
             problem.getMaterial(1), max_vp_scaled);
     // for (auto &location : all_locations_above_threshold){
     //   Message("Here we are");

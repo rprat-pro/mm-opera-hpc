@@ -9,7 +9,7 @@
 #include <vector>
 #include <limits>
 #include <algorithm>
-#include "TFEL/Math/stensor.hxx"
+#include <TFEL/Math/stensor.hxx>
 #include "mfem/linalg/densemat.hpp"
 #include "mfem/fem/fespace.hpp"
 #ifdef MFEM_USE_MPI
@@ -87,7 +87,7 @@ namespace opera_hpc {
 
   template <bool parallel>
   static std::vector<std::array<mfem_mgis::real, 3u>>
-  getIntegrationPointLocationsWithFirstPrincipalStressGreaterThanThresoldImplementation(
+  getPointsAboveStressThresholdImplementation(
       const mfem_mgis::Material &m, const mfem_mgis::real threshold) {
     constexpr auto stress_size = mfem_mgis::size_type{6};
     const auto &s = m.getPartialQuadratureSpace();
@@ -188,7 +188,7 @@ namespace opera_hpc {
     } else {
       return local_locations;
     }
-  }  // end of findFirstPrincipalStressValueAndLocationImplementation
+  }  // end of getPointsAboveStressThresholdImplementation
 
   FirstPrincipalStressValueAndLocation
   findFirstPrincipalStressValueAndLocation(const mfem_mgis::Material &m) {
@@ -205,19 +205,19 @@ namespace opera_hpc {
   } // end of findFirstPrincipalStressValueAndLocation
 
   std::vector<std::array<mfem_mgis::real, 3u>>
-  getIntegrationPointLocationsWithFirstPrincipalStressGreaterThanThresold(
+  getPointsAboveStressThreshold(
       mfem_mgis::Material &m, const mfem_mgis::real v) {
     const auto &s = m.getPartialQuadratureSpace();
     const auto &fed = s.getFiniteElementDiscretization();
     if (fed.describesAParallelComputation()) {
 #ifdef MFEM_USE_MPI
-      return getIntegrationPointLocationsWithFirstPrincipalStressGreaterThanThresoldImplementation<
+      return getPointsAboveStressThresholdImplementation<
           true>(m, v);
 #else  /* MFEM_USE_MPI */
       mfem_mgis::reportUnsupportedParallelComputations();
 #endif /* MFEM_USE_MPI */
     }
-    return getIntegrationPointLocationsWithFirstPrincipalStressGreaterThanThresoldImplementation<
+    return getPointsAboveStressThresholdImplementation<
         false>(m, v);
   }
 
