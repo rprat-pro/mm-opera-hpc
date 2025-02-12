@@ -26,7 +26,7 @@ namespace opera_hpc {
   static FirstPrincipalStressValueAndLocation
   findFirstPrincipalStressValueAndLocationImplementation(
       const mfem_mgis::Material &m) {
-    constexpr auto stress_size = mfem_mgis::size_type{6};
+    constexpr mfem_mgis::size_type stress_size = 6;
     const auto &s = m.getPartialQuadratureSpace();
     const auto &fed = s.getFiniteElementDiscretization();
     const auto &fespace = fed.getFiniteElementSpace<parallel>();
@@ -34,9 +34,9 @@ namespace opera_hpc {
     const auto mid = s.getId();
     // values of the stress at the end of the time step
     const auto *stress_values = m.s1.thermodynamic_forces.data();
-    auto max_stress = -std::numeric_limits<mfem_mgis::real>::max();
-    auto max_stress_location = std::array<mfem_mgis::real, 3u>{};
-    auto tmp = mfem::Vector{};
+    auto  max_stress = -std::numeric_limits<mfem_mgis::real>::max();
+    std::array<mfem_mgis::real, 3u> max_stress_location;
+    mfem::Vector tmp;
     // loop over the elements
     for (mfem_mgis::size_type i = 0; i != fespace.GetNE(); ++i) {
       if (fespace.GetAttribute(i) != mid) {
@@ -89,7 +89,7 @@ namespace opera_hpc {
   static std::vector<std::array<mfem_mgis::real, 3u>>
   getPointsAboveStressThresholdImplementation(
       const mfem_mgis::Material &m, const mfem_mgis::real threshold) {
-    constexpr auto stress_size = mfem_mgis::size_type{6};
+    constexpr mfem_mgis::size_type stress_size = 6;
     const auto &s = m.getPartialQuadratureSpace();
     const auto &fed = s.getFiniteElementDiscretization();
     const auto &fespace = fed.getFiniteElementSpace<parallel>();
@@ -97,9 +97,9 @@ namespace opera_hpc {
     const auto mid = s.getId();
     // values of the stress at the end of the time step
     const auto *stress_values = m.s1.thermodynamic_forces.data();
-    auto local_locations = std::vector<std::array<mfem_mgis::real, 3u>>{};
+    std::vector<std::array<mfem_mgis::real, 3u>> local_locations;
     // loop over the elements
-    auto tmp = mfem::Vector{};
+    mfem::Vector tmp;
     for (mfem_mgis::size_type i = 0; i != fespace.GetNE(); ++i) {
       if (fespace.GetAttribute(i) != mid) {
         // the element is not associated with the considered material
@@ -129,7 +129,7 @@ namespace opera_hpc {
       int nprocs;
       MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
       const auto lsize = static_cast<int>(local_locations.size());
-      auto local_locations_tmp = std::vector<double>{};
+      std::vector<double> local_locations_tmp;
       local_locations_tmp.resize(3 * lsize);
       for (int idx = 0; idx != lsize; ++idx) {
         local_locations_tmp[3 * idx] = local_locations[idx][0];
@@ -137,11 +137,11 @@ namespace opera_hpc {
         local_locations_tmp[3 * idx + 2] = local_locations[idx][2];
         //std::cout << local_locations[idx][0] << "\t" << local_locations[idx][1] << "\t" << local_locations[idx][2] << std::endl;
       }
-      auto gsize = int{};
+      int gsize;
       MPI_Allreduce(&lsize, &gsize, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-      auto all_locations_tmp = std::vector<double>(3 * gsize);
-      auto counts_recv = std::vector<int>(nprocs);
-      auto displacements = std::vector<int>(nprocs);
+      std::vector<double> all_locations_tmp(3 * gsize);
+      std::vector<int> counts_recv(nprocs);
+      std::vector<int> displacements(nprocs);
 
       MPI_Allgather(&lsize, 1, MPI_INT, counts_recv.data(), 1, MPI_INT,
                     MPI_COMM_WORLD);
@@ -159,7 +159,7 @@ namespace opera_hpc {
       MPI_Allgatherv(local_locations_tmp.data(), 3 * lsize, MPI_DOUBLE,
                      all_locations_tmp.data(), counts_recv.data(),
                      displacements.data(), MPI_DOUBLE, MPI_COMM_WORLD);
-      auto all_locations = std::vector<std::array<mfem_mgis::real, 3u>>{};
+      std::vector<std::array<mfem_mgis::real, 3u>> all_locations;
       all_locations.resize(gsize);
 
       for (auto& locs : all_locations){
@@ -174,7 +174,7 @@ namespace opera_hpc {
 
       auto out = std::all_of(all_locations.begin(), all_locations.end(), 
         [&](const auto& el) {
-          for (size_t i=0; i<3; ++i){
+          for (int i=0; i<3; ++i){
             if (el[i]<=-1e6)
               return false;
           }

@@ -111,10 +111,10 @@ int main(int argc, char** argv) {
   fill_parameters(args, p);
 
   // reference pressure
-  constexpr auto pref = mfem_mgis::real{1.0};
-  constexpr auto maximumNumberSteps = mfem_mgis::size_type{1000};
+  constexpr mfem_mgis::real pref = 1.0;
+  constexpr mfem_mgis::size_type maximumNumberSteps =1000;
   // distance to determine if a bubble breaks
-  constexpr auto dmin = mfem_mgis::real{0.600};
+  constexpr mfem_mgis::real dmin = 0.600;
   //
   auto bubbles = [p] {
     auto r = std::vector<opera_hpc::Bubble>{};
@@ -162,7 +162,7 @@ int main(int argc, char** argv) {
   // choix du solver linéaire +
   int verbosity = p.verbosity_level;
   int post_processing = p.post_processing;
-  auto solverParameters = mfem_mgis::Parameters{};
+  mfem_mgis::Parameters solverParameters;
   solverParameters.insert(mfem_mgis::Parameters{{"VerbosityLevel", verbosity}});
   //  solverParameters.insert(mfem_mgis::Parameters{{"MaximumNumberOfIterations",
   //  defaultMaxNumOfIt}});
@@ -195,7 +195,7 @@ int main(int argc, char** argv) {
         {{"OutputFileName", p.testcase_name}, {"Results", results}});
   }
   //
-  auto nstep = mfem_mgis::size_type{};
+  mfem_mgis::size_type nstep;
   while ((nstep != maximumNumberSteps) && (!opera_hpc::areAllBroken(bubbles))) {
     problem.solve(0, 1);
     const auto r = opera_hpc::findFirstPrincipalStressValueAndLocation(
@@ -208,8 +208,8 @@ int main(int argc, char** argv) {
     //   Message("Here we are");
     //   Message(location[0], "\t",location[1], "\t",location[2], "\t");
     // }
-    auto nbroken = mfem_mgis::size_type{};
-    auto all_broken_bubbles_identifiers = std::vector<mfem_mgis::size_type>{};
+    mfem_mgis::size_type nbroken;
+    std::vector<mfem_mgis::size_type> all_broken_bubbles_identifiers;
     for (auto &b : bubbles) {
       for (auto &location : all_locations_above_threshold) {
         const auto d = opera_hpc::distance(b, location);
@@ -236,6 +236,7 @@ int main(int argc, char** argv) {
     Message("- value of the first principal stress:", r.value,
             "at coordinate (", r.location[0], ",", r.location[1], ",",
             r.location[2], ")");
+    
     if (mfem_mgis::getMPIrank() == 0) {
       write_message(output_file, nbroken, "bubbles broke at this step.");
       write_message(output_file, all_broken_bubbles_identifiers.size(),
