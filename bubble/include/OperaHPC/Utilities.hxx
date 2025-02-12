@@ -27,6 +27,10 @@ namespace opera_hpc {
   FirstPrincipalStressValueAndLocation findFirstPrincipalStressValueAndLocation(
       const mfem_mgis::Material &);
 
+  std::vector<std::array<mfem_mgis::real, 3u>>
+  getPointsAboveStressThreshold(
+      mfem_mgis::Material &, const mfem_mgis::real);
+
 }  // end of namespace opera_hpc
 
 #endif /* LIB_OPERA_HPC_UTILITIES_HXX */
