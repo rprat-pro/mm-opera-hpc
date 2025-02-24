@@ -195,7 +195,7 @@ int main(int argc, char** argv) {
         {{"OutputFileName", p.testcase_name}, {"Results", results}});
   }
   //
-  mfem_mgis::size_type nstep;
+  mfem_mgis::size_type nstep{0};
   while ((nstep != maximumNumberSteps) && (!opera_hpc::areAllBroken(bubbles))) {
     problem.solve(0, 1);
     const auto r = opera_hpc::findFirstPrincipalStressValueAndLocation(
@@ -208,7 +208,7 @@ int main(int argc, char** argv) {
     //   Message("Here we are");
     //   Message(location[0], "\t",location[1], "\t",location[2], "\t");
     // }
-    mfem_mgis::size_type nbroken;
+    mfem_mgis::size_type nbroken{0};
     std::vector<mfem_mgis::size_type> all_broken_bubbles_identifiers;
     for (auto &b : bubbles) {
       for (auto &location : all_locations_above_threshold) {
