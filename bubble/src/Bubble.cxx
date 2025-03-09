@@ -1,19 +1,23 @@
 /*!
- * \file   main.cxx
- * \brief    
- * \author Thomas Helfer
- * \date   29/09/2024
+ * \file   Bubble.cxx
+ * \brief
+ * \author T. Helfer, T. Barani, R. Prat
  */
 
-#include <cstdlib>
-#include "MFEMMGIS/Material.hxx"
-#include "MFEMMGIS/Profiler.hxx"
-#include "MFEMMGIS/PeriodicNonLinearEvolutionProblem.hxx"
-#include "MFEMMGIS/UniformImposedPressureBoundaryCondition.hxx"
-#include "OperaHPC/BubbleDescription.hxx"
-#include "OperaHPC/Utilities.hxx"
-#include "Common/Print.hxx"
-#include "Common/Memory.hxx"
+ #include <cstdlib>
+ #include <random>
+ #include <cmath>
+ #include <iostream>
+ #include <memory> 
+ 
+ #include "MFEMMGIS/Material.hxx"
+ #include "MFEMMGIS/Profiler.hxx"
+ #include "MFEMMGIS/PeriodicNonLinearEvolutionProblem.hxx"
+ #include "MFEMMGIS/UniformImposedPressureBoundaryCondition.hxx"
+ #include "OperaHPC/BubbleDescription.hxx"
+ #include "OperaHPC/Utilities.hxx"
+ #include "Common/Print.hxx"
+ #include "Common/Memory.hxx"
 
 namespace opera_hpc {
 
@@ -29,6 +33,44 @@ bool areAllBroken(const std::vector<Bubble>& bubbles) {
   }
   return true;
 }
+
+std::array<mfem_mgis::real, 3u> generate_random_vector() {
+  std::random_device rand_dummy;
+  std::mt19937 gen(rand_dummy());
+  std::uniform_real_distribution<> distribution(-1.0, 1.0);
+  return {distribution(gen), distribution(gen), distribution(gen)};
+}
+
+std::array<mfem_mgis::real, 3u> generate_plane_by_random_normal() {
+  auto v = opera_hpc::generate_random_vector();
+  auto square = [](const mfem_mgis::real x) { return x * x; };
+  mfem_mgis::real norm = std::sqrt(square(v[0]) + square(v[1]) + square(v[2]));
+  if (norm < std::numeric_limits<mfem_mgis::real>::epsilon())
+    return {1.0, 0.0, 0.0};
+  return {v[0] / norm, v[1] / norm, v[2] / norm};
+}
+
+// Function to calculate the distance from a point to a plane defined by a point
+// and normal
+mfem_mgis::real distance_point_to_plane(
+    const std::array<mfem_mgis::real, 3u>& point,
+    const std::array<mfem_mgis::real, 3u>& plane_normal,
+    const std::array<mfem_mgis::real, 3u>& plane_point) {
+  mfem_mgis::real dist =
+      std::abs(plane_normal[0] * (point[0] - plane_point[0]) +
+               plane_normal[1] * (point[1] - plane_point[1]) +
+               plane_normal[2] * (point[2] - plane_point[2]));
+  return dist;
+}
+
+// Function to check if a bubble (sphere) intersects a plane
+bool is_plane_intersecting_bubble(const Bubble& bubble, 
+                                  const std::array<mfem_mgis::real, 3u>& plane_normal,
+                                  const std::array<mfem_mgis::real, 3u>& plane_point) {
+  mfem_mgis::real dist = distance_point_to_plane(bubble.center, plane_normal, plane_point);
+  return dist <= bubble.radius;
+}
+
 }  // end of namespace opera_hpc
 
 // add postprocessing
@@ -47,9 +89,10 @@ struct TestParameters {
   int parallel_mesh = 0;
   int order = 1;
   int refinement = 0;
-  int post_processing = 1;  // default value : activated
-  int verbosity_level = 0;  // default value : lower level
+  int post_processing = 1;
+  int verbosity_level = 0;  
   mfem_mgis::real scale_factor_vp = 0.9;
+  const char* breaking_criterion = "distance"; 
 };
 
 void fill_parameters(mfem::OptionsParser& args, TestParameters& p) {
@@ -69,7 +112,10 @@ void fill_parameters(mfem::OptionsParser& args, TestParameters& p) {
                  "choose the verbosity level");
   args.AddOption(&p.scale_factor_vp, "-sf", "--scale-factor-vp",
                  "Scaling factor for the principal stress");
-  args.AddOption(&p.testcase_name, "-n", "--name-case", "Name of the testcase.");
+  args.AddOption(&p.testcase_name, "-n", "--name-case",
+                 "Name of the testcase.");
+  args.AddOption(&p.breaking_criterion, "-bc", "--breaking-criterion",
+                 "Bubble breaking criterion ('distance' or 'plane').");
 
   args.Parse();
 
@@ -91,6 +137,13 @@ void write_message(std::ofstream& file_to_write, const auto&... args) {
   ((file_to_write << args << " "), ...) << std::endl;
 }
 
+void write_bubble_positions(
+    std::ofstream& file_to_write,
+    const std::array<mfem_mgis::real, 3u> bubble_positions) {
+  for (auto& el : bubble_positions) file_to_write << el << "\t";
+  file_to_write << std::endl;
+}
+
 int main(int argc, char** argv) {
   using namespace mfem_mgis::Profiler::Utils;  // Use Message
   // options treatment
@@ -99,9 +152,17 @@ int main(int argc, char** argv) {
 
   // file collecting the output
   std::string file_name = "bubbles_and_stresses.txt";
+  std::string bubbles_locations_file = "bubbles_positions.txt";
   std::ofstream output_file(file_name);
+  std::ofstream output_file_bubbles(bubbles_locations_file);
   if (!output_file.is_open()) {
     std::cerr << "Failed to open the file: " << file_name << std::endl;
+    return EXIT_FAILURE;  // Exit the program with an error code
+  }
+
+  if (!output_file_bubbles.is_open()) {
+    std::cerr << "Failed to open the file: " << bubbles_locations_file
+              << std::endl;
     return EXIT_FAILURE;  // Exit the program with an error code
   }
 
@@ -112,7 +173,7 @@ int main(int argc, char** argv) {
 
   // reference pressure
   constexpr mfem_mgis::real pref = 1.0;
-  constexpr mfem_mgis::size_type maximumNumberSteps =1000;
+  constexpr mfem_mgis::size_type maximumNumberSteps = 1000;
   // distance to determine if a bubble breaks
   constexpr mfem_mgis::real dmin = 0.600;
   //
@@ -125,7 +186,7 @@ int main(int argc, char** argv) {
     }
     return r;
   }();
-  // finite element space
+  
   auto fed = std::make_shared<mfem_mgis::FiniteElementDiscretization>(
       mfem_mgis::Parameters{
           {"MeshFileName", p.mesh_file},
@@ -173,10 +234,10 @@ int main(int argc, char** argv) {
   auto preconditioner =
       mfem_mgis::Parameters{{"Name", "HypreBoomerAMG"}, {"Options", options}};
   solverParameters.insert(mfem_mgis::Parameters{
-      {"Preconditioner", preconditioner}, {"Tolerance", 1e-9}});
+      {"Preconditioner", preconditioner}, {"Tolerance", 1e-8}});
   problem.setLinearSolver("HyprePCG", solverParameters);
   problem.setSolverParameters({{"VerbosityLevel", 1},
-                               {"RelativeTolerance", 1e-10},
+                               {"RelativeTolerance", 1e-6},
                                {"AbsoluteTolerance", 0.},
                                {"MaximumNumberOfIterations", 1}});
   // matrix is considered elastic
@@ -195,56 +256,124 @@ int main(int argc, char** argv) {
         {{"OutputFileName", p.testcase_name}, {"Results", results}});
   }
   //
-  mfem_mgis::size_type nstep{0};
+  mfem_mgis::size_type nstep{1};
   while ((nstep != maximumNumberSteps) && (!opera_hpc::areAllBroken(bubbles))) {
     problem.solve(0, 1);
     const auto r = opera_hpc::findFirstPrincipalStressValueAndLocation(
         problem.getMaterial(1));
     const auto max_vp_scaled = p.scale_factor_vp * r.value;
-    const auto all_locations_above_threshold = opera_hpc::
-    getPointsAboveStressThreshold(
-            problem.getMaterial(1), max_vp_scaled);
-    // for (auto &location : all_locations_above_threshold){
-    //   Message("Here we are");
-    //   Message(location[0], "\t",location[1], "\t",location[2], "\t");
-    // }
-    mfem_mgis::size_type nbroken{0};
-    std::vector<mfem_mgis::size_type> all_broken_bubbles_identifiers;
-    for (auto &b : bubbles) {
-      for (auto &location : all_locations_above_threshold) {
-        const auto d = opera_hpc::distance(b, location);
-        if (d < dmin) {
-          if (!b.broken) {
-            ++nbroken;
-          }
+    const auto all_locations_above_threshold =
+        opera_hpc::getPointsAboveStressThreshold(problem.getMaterial(1),
+                                                 max_vp_scaled);
+    
+    if (p.breaking_criterion == "plane" &&
+        !all_locations_above_threshold.empty()) {
+      CatchTimeSection("common::plane_creation_and_bubble_ids_step");
+      std::vector<opera_hpc::Bubble*> intersected_bubbles;
+      mfem_mgis::size_type nbroken_plane{0};
+      std::vector<mfem_mgis::size_type> all_broken_bubbles_identifiers_plane;
+      std::vector<std::array<mfem_mgis::real, 3u>> all_broken_bubbles_locations_plane;
+
+      //std::array<mfem_mgis::real, 3u> plane_point = all_locations_above_threshold[0]; // we suppose it's the first one but it can change
+      std::array<mfem_mgis::real, 3u> plane_point = {r.location[0], r.location[1], r.location[2]}; // we suppose it's the first one but it can change
+      std::array<mfem_mgis::real, 3u> plane_normal = opera_hpc::generate_plane_by_random_normal();
+      
+      //
+      Message("Generated random plane at step ", nstep, 
+              " at point (", plane_point[0], ",", plane_point[1], ",", plane_point[2],
+              ") with normal (", plane_normal[0], ",", plane_normal[1], ",", plane_normal[2], ")");
+      //
+
+      for (auto& b : bubbles) {
+        if (opera_hpc::is_plane_intersecting_bubble(b, plane_normal, plane_point)) {
+          Message("Bubble", b.boundary_identifier, "intersects the plane.");
+          intersected_bubbles.push_back(&b);
+        }
+      }
+
+      for (auto* b_ptr : intersected_bubbles) {
+        auto& b = *b_ptr;
+        if (!b.broken) {
+          ++nbroken_plane;
+          all_broken_bubbles_identifiers_plane.push_back(b.boundary_identifier);
+          all_broken_bubbles_locations_plane.push_back(b.center);
           b.broken = true;
         }
       }
-      if (b.broken) {
-        all_broken_bubbles_identifiers.push_back(b.boundary_identifier);
+
+      if (nbroken_plane > 0) {
+        Message("step:", nstep);
+        Message("-", nbroken_plane,
+                "bubbles broke (plane criterion) at this step.");
+        Message("-", all_broken_bubbles_identifiers_plane.size(),
+                " bubbles are broken in total.");
+        Message("- value of the first principal stress:", r.value,
+                "at coordinate (", r.location[0], ",", r.location[1], ",",
+                r.location[2], ")");
+
+        if (mfem_mgis::getMPIrank() == 0) {
+          write_message(output_file, nbroken_plane,
+                        "bubbles broke (plane criterion) at this step.");
+          write_message(
+              output_file, all_broken_bubbles_identifiers_plane.size(),
+              "bubbles are broken in total");
+          write_message(output_file,
+                        "Value of the first principal stress:", r.value,
+                        "at coordinate (", r.location[0], ",", r.location[1],
+                        ",", r.location[2], ")");
+          for (auto& el : all_broken_bubbles_locations_plane)
+            write_bubble_positions(output_file_bubbles, el);
+        }
       }
-    }
 
-    if (nbroken == 0) {
-      Message("no bubble broke at step ", nstep, "\n");
-      break;
-    }
+    } else {  // Distance (old) criterion
+      mfem_mgis::size_type nbroken_distance{0};
+      std::vector<mfem_mgis::size_type> all_broken_bubbles_identifiers_distance;
+      std::vector<std::array<mfem_mgis::real, 3u>> all_broken_bubbles_locations_distance;
 
-    Message("step:", nstep);
-    Message("-", nbroken, "bubbles broke at this step.");
-    Message("-", all_broken_bubbles_identifiers.size(), "bubbles are broken");
-    Message("- value of the first principal stress:", r.value,
-            "at coordinate (", r.location[0], ",", r.location[1], ",",
-            r.location[2], ")");
-    
-    if (mfem_mgis::getMPIrank() == 0) {
-      write_message(output_file, nbroken, "bubbles broke at this step.");
-      write_message(output_file, all_broken_bubbles_identifiers.size(),
-                    "bubbles are broken");
-      write_message(output_file,
-                    "Value of the first principal stress:", r.value,
-                    "at coordinate (", r.location[0], ",", r.location[1], ",",
-                    r.location[2], ")");
+      for (auto& b : bubbles) {
+        for (auto& location : all_locations_above_threshold) {
+          const auto d = opera_hpc::distance(b, location);
+          if (d < dmin) {
+            if (!b.broken) {
+              ++nbroken_distance;
+              all_broken_bubbles_locations_distance.push_back(location);
+            }
+            b.broken = true;
+          }
+        }
+        if (b.broken) {
+          all_broken_bubbles_identifiers_distance.push_back(
+              b.boundary_identifier);
+        }
+      }
+
+      if (nbroken_distance > 0) {
+        Message("step:", nstep);
+        Message("-", nbroken_distance,
+                "bubbles broke (distance criterion) at this step.");
+        Message("-", all_broken_bubbles_identifiers_distance.size(),
+                "bubbles are broken");
+        Message("- value of the first principal stress:", r.value,
+                "at coordinate (", r.location[0], ",", r.location[1], ",",
+                r.location[2], ")");
+
+        if (mfem_mgis::getMPIrank() == 0) {
+          write_message(output_file, nbroken_distance,
+                        "bubbles broke (distance criterion) at this step.");
+          write_message(output_file,
+                        all_broken_bubbles_identifiers_distance.size(),
+                        "bubbles are broken");
+          write_message(output_file,
+                        "Value of the first principal stress:", r.value,
+                        "at coordinate (", r.location[0], ",", r.location[1],
+                        ",", r.location[2], ")");
+          for (auto& el : all_broken_bubbles_locations_distance)
+            write_bubble_positions(output_file_bubbles, el);
+        }
+      } else if (p.breaking_criterion != "plane") {
+        Message("no bubble broke at step ", nstep, " (distance criterion)\n");
+      }
     }
 
     if (post_processing)
