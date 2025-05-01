@@ -15,6 +15,7 @@
 #ifdef MFEM_USE_MPI
 #include "mfem/fem/pfespace.hpp"
 #endif /* MFEM_USE_MPI */
+#include "MFEMMGIS/Profiler.hxx"
 #include "MFEMMGIS/FiniteElementDiscretization.hxx"
 #include "MFEMMGIS/PartialQuadratureSpace.hxx"
 #include "MFEMMGIS/Material.hxx"
@@ -26,6 +27,7 @@ namespace opera_hpc {
   static FirstPrincipalStressValueAndLocation
   findFirstPrincipalStressValueAndLocationImplementation(
       const mfem_mgis::Material &m) {
+    CatchTimeSection("OperaHPC::FindFirstPrincipal");
     constexpr mfem_mgis::size_type stress_size = 6;
     const auto &s = m.getPartialQuadratureSpace();
     const auto &fed = s.getFiniteElementDiscretization();
@@ -38,34 +40,38 @@ namespace opera_hpc {
     std::array<mfem_mgis::real, 3u> max_stress_location;
     mfem::Vector tmp;
     // loop over the elements
-    for (mfem_mgis::size_type i = 0; i != fespace.GetNE(); ++i) {
-      if (fespace.GetAttribute(i) != mid) {
-        // the element is not associated with the considered material
-        continue;
-      }
-      const auto &fe = *(fespace.GetFE(i));
-      auto &tr = *(fespace.GetElementTransformation(i));
-      const auto &ir = s.getIntegrationRule(fe, tr);
-      // offset of the element
-      const auto eo = s.getOffset(i);
-      // loop over the integration points
-      for (mfem_mgis::size_type g = 0; g != ir.GetNPoints(); ++g) {
-        const auto *const stress = stress_values + (eo + g) * stress_size;
-        auto sig = tfel::math::stensor<3u, mfem_mgis::real>{stress};
-        const auto sig_vp = sig.computeEigenValues<
-            tfel::math::stensor_common::FSESJACOBIEIGENSOLVER>();
-        const auto mvp = *(tfel::fsalgo::max_element<3>::exe(sig_vp.begin()));
-        if (mvp > max_stress) {
-          max_stress = mvp;
-          // update the location
-          const auto &ip = ir.IntPoint(g);
-          tr.SetIntPoint(&ip);
-          tr.Transform(tr.GetIntPoint(), tmp);
-          max_stress_location = {tmp[0], tmp[1], tmp[2]};
+    {
+      CatchTimeSection("FindFirstPrincipal::LoopOverElem");
+      for (mfem_mgis::size_type i = 0; i != fespace.GetNE(); ++i) {
+        if (fespace.GetAttribute(i) != mid) {
+          // the element is not associated with the considered material
+          continue;
+        }
+        const auto &fe = *(fespace.GetFE(i));
+        auto &tr = *(fespace.GetElementTransformation(i));
+        const auto &ir = s.getIntegrationRule(fe, tr);
+        // offset of the element
+        const auto eo = s.getOffset(i);
+        // loop over the integration points
+        for (mfem_mgis::size_type g = 0; g != ir.GetNPoints(); ++g) {
+          const auto *const stress = stress_values + (eo + g) * stress_size;
+          auto sig = tfel::math::stensor<3u, mfem_mgis::real>{stress};
+          const auto sig_vp = sig.computeEigenValues<
+              tfel::math::stensor_common::FSESJACOBIEIGENSOLVER>();
+          const auto mvp = *(tfel::fsalgo::max_element<3>::exe(sig_vp.begin()));
+          if (mvp > max_stress) {
+            max_stress = mvp;
+            // update the location
+            const auto &ip = ir.IntPoint(g);
+            tr.SetIntPoint(&ip);
+            tr.Transform(tr.GetIntPoint(), tmp);
+            max_stress_location = {tmp[0], tmp[1], tmp[2]};
+          }
         }
       }
     }
     if constexpr (parallel) {
+      CatchTimeSection("FindFirstPrincipal::GatherResults");
       int nprocs;
       MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
       auto all_max_stresses = std::vector<double>(nprocs);
@@ -89,6 +95,7 @@ namespace opera_hpc {
   static std::vector<std::array<mfem_mgis::real, 3u>>
   getPointsAboveStressThresholdImplementation(
       const mfem_mgis::Material &m, const mfem_mgis::real threshold) {
+    CatchTimeSection("OperaHPC::GetPointsAbove");
     constexpr mfem_mgis::size_type stress_size = 6;
     const auto &s = m.getPartialQuadratureSpace();
     const auto &fed = s.getFiniteElementDiscretization();
@@ -100,32 +107,36 @@ namespace opera_hpc {
     std::vector<std::array<mfem_mgis::real, 3u>> local_locations;
     // loop over the elements
     mfem::Vector tmp;
-    for (mfem_mgis::size_type i = 0; i != fespace.GetNE(); ++i) {
-      if (fespace.GetAttribute(i) != mid) {
-        // the element is not associated with the considered material
-        continue;
-      }
-      const auto &fe = *(fespace.GetFE(i));
-      auto &tr = *(fespace.GetElementTransformation(i));
-      const auto &ir = s.getIntegrationRule(fe, tr);
-      // offset of the element
-      const auto eo = s.getOffset(i);
-      // loop over the integration points
-      for (mfem_mgis::size_type g = 0; g != ir.GetNPoints(); ++g) {
-        const auto *const stress = stress_values + (eo + g) * stress_size;
-        auto sig = tfel::math::stensor<3u, mfem_mgis::real>{stress};
-        const auto sig_vp = sig.computeEigenValues<
-            tfel::math::stensor_common::FSESJACOBIEIGENSOLVER>();
-        const auto mvp = *(tfel::fsalgo::max_element<3>::exe(sig_vp.begin()));
-        if (mvp > threshold) {
-          const auto &ip = ir.IntPoint(g);
-          tr.SetIntPoint(&ip);
-          tr.Transform(tr.GetIntPoint(), tmp);
-          local_locations.push_back({tmp[0], tmp[1], tmp[2]});
+    {
+      CatchTimeSection("GetPointsAbove::LoopOverElem");
+      for (mfem_mgis::size_type i = 0; i != fespace.GetNE(); ++i) {
+        if (fespace.GetAttribute(i) != mid) {
+          // the element is not associated with the considered material
+          continue;
+        }
+        const auto &fe = *(fespace.GetFE(i));
+        auto &tr = *(fespace.GetElementTransformation(i));
+        const auto &ir = s.getIntegrationRule(fe, tr);
+        // offset of the element
+        const auto eo = s.getOffset(i);
+        // loop over the integration points
+        for (mfem_mgis::size_type g = 0; g != ir.GetNPoints(); ++g) {
+          const auto *const stress = stress_values + (eo + g) * stress_size;
+          auto sig = tfel::math::stensor<3u, mfem_mgis::real>{stress};
+          const auto sig_vp = sig.computeEigenValues<
+              tfel::math::stensor_common::FSESJACOBIEIGENSOLVER>();
+          const auto mvp = *(tfel::fsalgo::max_element<3>::exe(sig_vp.begin()));
+          if (mvp > threshold) {
+            const auto &ip = ir.IntPoint(g);
+            tr.SetIntPoint(&ip);
+            tr.Transform(tr.GetIntPoint(), tmp);
+            local_locations.push_back({tmp[0], tmp[1], tmp[2]});
+          }
         }
       }
     }
     if constexpr (parallel) {
+      CatchTimeSection("GetPointsAbove::GatherResults");
       int nprocs;
       MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
       const auto lsize = static_cast<int>(local_locations.size());

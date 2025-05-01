@@ -110,6 +110,9 @@ int main(int argc, char** argv) {
   mfem::OptionsParser args(argc, argv);
   fill_parameters(args, p);
 
+
+  print_memory_footprint("[Start]");
+
   // reference pressure
   constexpr mfem_mgis::real pref = 1.0;
   constexpr mfem_mgis::size_type maximumNumberSteps =1000;
@@ -126,6 +129,7 @@ int main(int argc, char** argv) {
     return r;
   }();
   // finite element space
+  print_memory_footprint("[Building problem ...]");
   auto fed = std::make_shared<mfem_mgis::FiniteElementDiscretization>(
       mfem_mgis::Parameters{
           {"MeshFileName", p.mesh_file},
@@ -138,10 +142,10 @@ int main(int argc, char** argv) {
           {"Parallel", true}});
   // definition of the nonlinear problem
   auto problem = mfem_mgis::PeriodicNonLinearEvolutionProblem{fed};
+  print_memory_footprint("[Building problem done]");
 
   // get problem information
   print_mesh_information(problem.getImplementation<true>());
-  print_memory_footprint("[Building problem]");
 
   // macroscopic strain
   std::vector<mfem_mgis::real> e(6, mfem_mgis::real{0});
@@ -168,10 +172,15 @@ int main(int argc, char** argv) {
   //  defaultMaxNumOfIt}});
   //  solverParameters.insert(mfem_mgis::Parameters{{"Tolerance", Tol}});
   //
+/*
   auto options = mfem_mgis::Parameters{{"VerbosityLevel", verbosity},
                                        {"Strategy", "Elasticity"}};
   auto preconditioner =
       mfem_mgis::Parameters{{"Name", "HypreBoomerAMG"}, {"Options", options}};
+*/
+  auto preconditioner =
+      mfem_mgis::Parameters{{"Name", "HypreDiagScale"}};
+
   solverParameters.insert(mfem_mgis::Parameters{
       {"Preconditioner", preconditioner}, {"Tolerance", 1e-9}});
   problem.setLinearSolver("HyprePCG", solverParameters);
@@ -198,6 +207,7 @@ int main(int argc, char** argv) {
   mfem_mgis::size_type nstep{0};
   while ((nstep != maximumNumberSteps) && (!opera_hpc::areAllBroken(bubbles))) {
     CatchTimeSection("BubbleWhileLoop");
+    print_memory_footprint("[Step " + std::to_string(nstep) + "]");
     problem.solve(0, 1);
     const auto r = opera_hpc::findFirstPrincipalStressValueAndLocation(
         problem.getMaterial(1));
