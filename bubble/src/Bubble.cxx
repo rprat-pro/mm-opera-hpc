@@ -197,6 +197,7 @@ int main(int argc, char** argv) {
   //
   mfem_mgis::size_type nstep{0};
   while ((nstep != maximumNumberSteps) && (!opera_hpc::areAllBroken(bubbles))) {
+    CatchTimeSection("BubbleWhileLoop");
     problem.solve(0, 1);
     const auto r = opera_hpc::findFirstPrincipalStressValueAndLocation(
         problem.getMaterial(1));
