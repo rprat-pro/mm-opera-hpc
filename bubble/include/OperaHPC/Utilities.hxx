@@ -31,6 +31,12 @@ namespace opera_hpc {
   getPointsAboveStressThreshold(
       mfem_mgis::Material &, const mfem_mgis::real);
 
+      
+  std::vector<std::pair<mfem_mgis::real, std::array<mfem_mgis::real, 3u>>>
+  getPointsandStressAboveStressThreshold(mfem_mgis::Material &m,
+                                         const mfem_mgis::real v);
+
+
 }  // end of namespace opera_hpc
 
 #endif /* LIB_OPERA_HPC_UTILITIES_HXX */

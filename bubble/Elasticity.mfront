@@ -1,6 +1,6 @@
 @Behaviour Elasticity;
 
-@UseQt true;
+@UseQt false;
 @ProvidesSymmetricTangentOperator;
 
 // Material properties
@@ -11,10 +11,15 @@ nu.setGlossaryName("PoissonRatio");
 
 // Lame Coefficients
 @LocalVariable stress lambda, mu;
+@AuxiliaryStateVariable real sigma_vp_1; 
 
 @InitLocalVariables {
   lambda = computeLambda(young, nu);
   mu = computeMu(young, nu);
+}
+
+@Includes{
+ #include "TFEL/Math/stensor.hxx"
 }
 
 @PredictionOperator {
@@ -29,4 +34,10 @@ nu.setGlossaryName("PoissonRatio");
     static_cast<void>(smt); // remove unused variable warning
     Dt = lambda * Stensor4::IxI() + 2 * mu * Stensor4::Id();
   }
+}
+
+
+@UpdateAuxiliaryStateVars{
+  const auto sig_1 = sig.computeEigenValues();
+  sigma_vp_1 = *(max_element(sig_1.begin(), sig_1.end()));
 }
