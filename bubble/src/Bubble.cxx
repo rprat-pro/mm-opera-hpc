@@ -12,7 +12,7 @@
  #include <memory> 
 #include <tuple>
  
-#include "MFEMMGIS/Config.hxx"
+ #include "MFEMMGIS/Config.hxx"
  #include "MFEMMGIS/Material.hxx"
  #include "MFEMMGIS/Profiler.hxx"
  #include "MFEMMGIS/PeriodicNonLinearEvolutionProblem.hxx"
@@ -21,6 +21,7 @@
  #include "OperaHPC/Utilities.hxx"
  #include "Common/Print.hxx"
  #include "Common/Memory.hxx"
+ #include <H5Cpp.h>
 
 namespace opera_hpc {
 
@@ -76,12 +77,63 @@ bool is_plane_intersecting_bubble(const Bubble& bubble,
 
 }  // end of namespace opera_hpc
 
+struct BubbleInfoRecord {
+    mfem_mgis::size_type boundary_id;
+    mfem_mgis::real location[3];
+    mfem_mgis::real stress_value; 
+
+    BubbleInfoRecord(mfem_mgis::size_type bid, mfem_mgis::real s_val, const std::array<mfem_mgis::real, 3u>& loc)
+        : boundary_id(bid), stress_value(s_val) {
+        location[0] = loc[0];
+        location[1] = loc[1];
+        location[2] = loc[2];
+    }
+};
+
+void write_hdf5(const std::vector<BubbleInfoRecord>& data_to_write,
+                                   const std::string& filename,
+                                   const std::string& dataset_name) {
+    if (data_to_write.empty()) {
+        std::cout << "No data to write to HDF5." << std::endl;
+        return;
+    }
+
+    try {
+        H5::Exception::dontPrint();
+        H5::H5File file(filename, H5F_ACC_TRUNC);
+        H5::CompType memtype(sizeof(BubbleInfoRecord));
+        memtype.insertMember("bubble_id", HOFFSET(BubbleInfoRecord, boundary_id), H5::PredType::NATIVE_INT);
+
+        // location
+        hsize_t array_dims[1] = {3};
+        H5::ArrayType array_datatype(H5::PredType::NATIVE_DOUBLE, 1, array_dims);
+        memtype.insertMember("location", HOFFSET(BubbleInfoRecord, location), array_datatype);
+
+        memtype.insertMember("stress_value", HOFFSET(BubbleInfoRecord, stress_value), H5::PredType::NATIVE_DOUBLE);
+
+        hsize_t num_records = data_to_write.size();
+        H5::DataSpace dataspace(1, &num_records);
+        H5::DataSet dataset = file.createDataSet(dataset_name, memtype, dataspace);
+        dataset.write(data_to_write.data(), memtype);
+
+        std::cout << "Successfully wrote " << num_records << " records to "
+                  << filename << " dataset " << dataset_name << "\n";
+
+    } catch (const H5::Exception& error) {
+        error.printErrorStack(); 
+        throw std::runtime_error("HDF5 Error: " + error.getDetailMsg());
+    } catch (const std::exception& e) {
+        throw std::runtime_error("Standard Exception: " + std::string(e.what()));
+    }
+}
+
 // add postprocessing
 template <typename Problem>
 void post_process(Problem& p, double start, double end) {
   CatchTimeSection("common::post_processing_step");
   p.executePostProcessings(start, end);
 }
+
 
 struct TestParameters {
   const char* mesh_file = "mesh/single_sphere.msh";
@@ -288,6 +340,7 @@ int main(int argc, char** argv) {
 
   //std::vector<std::pair<mfem_mgis::size_type, std::array<mfem_mgis::real, 3u>>> bubbles_information;
   std::vector<std::tuple<mfem_mgis::size_type, mfem_mgis::real, std::array<mfem_mgis::real, 3u>>> bubbles_information;
+  std::vector<BubbleInfoRecord> storing_info_bubbles;
 
   for (auto &b : bubbles) {
     const auto max_vp_scaled = p.scale_factor_vp * r.value;
@@ -297,6 +350,7 @@ int main(int argc, char** argv) {
       const auto d = opera_hpc::distance(b, location_and_stress.second);
       if (d < dmin){
         bubbles_information.emplace_back(b.boundary_identifier, location_and_stress.first, location_and_stress.second);
+        storing_info_bubbles.emplace_back(b.boundary_identifier, location_and_stress.first, location_and_stress.second);
       }
     }
   }
@@ -307,6 +361,12 @@ int main(int argc, char** argv) {
       Message("Stress = ", std::get<1>(el));
       for (auto& el1 : std::get<2>(el))
         Message("Location=", el1);
+    }
+    try {
+        write_hdf5(storing_info_bubbles, "bubble_data.h5", "bubble_info_table");
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        return EXIT_FAILURE;
     }
   }
 

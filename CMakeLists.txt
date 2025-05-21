@@ -10,7 +10,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS True)
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules)
 
 include(cmake/modules/tfel.cmake)
-
+find_package(HDF5 REQUIRED COMPONENTS C CXX)
 find_package(MFEM REQUIRED)
 find_package(MFrontGenericInterface REQUIRED)
 find_package(MFEMMGIS REQUIRED)
