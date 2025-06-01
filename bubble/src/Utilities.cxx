@@ -36,7 +36,7 @@ namespace opera_hpc {
     const auto mid = s.getId();
     // values of the stress at the end of the time step
     const auto *stress_values = m.s1.thermodynamic_forces.data();
-    auto  max_stress = -std::numeric_limits<mfem_mgis::real>::max();
+    auto max_stress = -std::numeric_limits<mfem_mgis::real>::max();
     std::array<mfem_mgis::real, 3u> max_stress_location;
     mfem::Vector tmp;
     // loop over the elements
@@ -93,8 +93,8 @@ namespace opera_hpc {
 
   template <bool parallel>
   static std::vector<std::array<mfem_mgis::real, 3u>>
-  getPointsAboveStressThresholdImplementation(
-      const mfem_mgis::Material &m, const mfem_mgis::real threshold) {
+  getPointsAboveStressThresholdImplementation(const mfem_mgis::Material &m,
+                                              const mfem_mgis::real threshold) {
     CatchTimeSection("OperaHPC::GetPointsAbove");
     constexpr mfem_mgis::size_type stress_size = 6;
     const auto &s = m.getPartialQuadratureSpace();
@@ -146,7 +146,9 @@ namespace opera_hpc {
         local_locations_tmp[3 * idx] = local_locations[idx][0];
         local_locations_tmp[3 * idx + 1] = local_locations[idx][1];
         local_locations_tmp[3 * idx + 2] = local_locations[idx][2];
-        //std::cout << local_locations[idx][0] << "\t" << local_locations[idx][1] << "\t" << local_locations[idx][2] << std::endl;
+        // std::cout << local_locations[idx][0] << "\t" <<
+        // local_locations[idx][1] << "\t" << local_locations[idx][2] <<
+        // std::endl;
       }
       int gsize;
       MPI_Allreduce(&lsize, &gsize, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
@@ -159,21 +161,20 @@ namespace opera_hpc {
 
       displacements[0] = 0;
       for (int i = 1; i < nprocs; ++i) {
-        displacements[i] =
-            displacements[i-1] + counts_recv[i-1] * 3;
+        displacements[i] = displacements[i - 1] + counts_recv[i - 1] * 3;
       }
 
       for (int i = 0; i < nprocs; ++i) {
         counts_recv[i] *= 3;
       }
-      
+
       MPI_Allgatherv(local_locations_tmp.data(), 3 * lsize, MPI_DOUBLE,
                      all_locations_tmp.data(), counts_recv.data(),
                      displacements.data(), MPI_DOUBLE, MPI_COMM_WORLD);
       std::vector<std::array<mfem_mgis::real, 3u>> all_locations;
       all_locations.resize(gsize);
 
-      for (auto& locs : all_locations){
+      for (auto &locs : all_locations) {
         std::fill(locs.begin(), locs.end(), -1e6);
       }
 
@@ -183,17 +184,17 @@ namespace opera_hpc {
         all_locations[idx][2] = all_locations_tmp[3 * idx + 2];
       }
 
-      auto out = std::all_of(all_locations.begin(), all_locations.end(), 
-        [&](const auto& el) {
-          for (int i=0; i<3; ++i){
-            if (el[i]<=-1e6)
-              return false;
-          }
-          return true;
-        });
+      auto out = std::all_of(all_locations.begin(), all_locations.end(),
+                             [&](const auto &el) {
+                               for (int i = 0; i < 3; ++i) {
+                                 if (el[i] <= -1e6) return false;
+                               }
+                               return true;
+                             });
 
       if (!out)
-        mgis::raise("Error in fetching the positions from the distributed processes.");
+        mgis::raise(
+            "Error in fetching the positions from the distributed processes.");
 
       return all_locations;
     } else {
@@ -201,8 +202,8 @@ namespace opera_hpc {
     }
   }  // end of getPointsAboveStressThresholdImplementation
 
-  FirstPrincipalStressValueAndLocation
-  findFirstPrincipalStressValueAndLocation(const mfem_mgis::Material &m) {
+  FirstPrincipalStressValueAndLocation findFirstPrincipalStressValueAndLocation(
+      const mfem_mgis::Material &m) {
     const auto &s = m.getPartialQuadratureSpace();
     const auto &fed = s.getFiniteElementDiscretization();
     if (fed.describesAParallelComputation()) {
@@ -213,23 +214,20 @@ namespace opera_hpc {
 #endif /* MFEM_USE_MPI */
     }
     return findFirstPrincipalStressValueAndLocationImplementation<false>(m);
-  } // end of findFirstPrincipalStressValueAndLocation
+  }  // end of findFirstPrincipalStressValueAndLocation
 
-  std::vector<std::array<mfem_mgis::real, 3u>>
-  getPointsAboveStressThreshold(
+  std::vector<std::array<mfem_mgis::real, 3u>> getPointsAboveStressThreshold(
       mfem_mgis::Material &m, const mfem_mgis::real v) {
     const auto &s = m.getPartialQuadratureSpace();
     const auto &fed = s.getFiniteElementDiscretization();
     if (fed.describesAParallelComputation()) {
 #ifdef MFEM_USE_MPI
-      return getPointsAboveStressThresholdImplementation<
-          true>(m, v);
+      return getPointsAboveStressThresholdImplementation<true>(m, v);
 #else  /* MFEM_USE_MPI */
       mfem_mgis::reportUnsupportedParallelComputations();
 #endif /* MFEM_USE_MPI */
     }
-    return getPointsAboveStressThresholdImplementation<
-        false>(m, v);
+    return getPointsAboveStressThresholdImplementation<false>(m, v);
   }
 
-  } // end of namespace opera_hpc
+}  // end of namespace opera_hpc

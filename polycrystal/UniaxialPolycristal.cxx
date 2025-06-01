@@ -51,8 +51,8 @@ struct TestParameters {
   int order = 2;
   bool parallel = true;
   int refinement = 0;
-  int post_processing = 1; // default value : disabled
-  int verbosity_level = 0; // default value : lower level
+  int post_processing = 1;  // default value : disabled
+  int verbosity_level = 0;  // default value : lower level
 };
 
 void common_parameters(mfem::OptionsParser &args, TestParameters &p) {
@@ -71,8 +71,7 @@ void common_parameters(mfem::OptionsParser &args, TestParameters &p) {
   args.Parse();
 
   if (!args.Good()) {
-    if (mfem_mgis::getMPIrank() == 0)
-      args.PrintUsage(std::cout);
+    if (mfem_mgis::getMPIrank() == 0) args.PrintUsage(std::cout);
     mfem_mgis::finalize();
     exit(0);
   }
@@ -82,8 +81,7 @@ void common_parameters(mfem::OptionsParser &args, TestParameters &p) {
     args.PrintUsage(std::cout);
     mfem_mgis::abort(EXIT_FAILURE);
   }
-  if (mfem_mgis::getMPIrank() == 0)
-    args.PrintOptions(std::cout);
+  if (mfem_mgis::getMPIrank() == 0) args.PrintOptions(std::cout);
 }
 
 auto norm(std::array<mfem_mgis::real, 3u> &u) {
@@ -94,8 +92,8 @@ auto norm(std::array<mfem_mgis::real, 3u> &u) {
   return (std::sqrt(ret));
 }
 
-std::vector<std::array<mfem_mgis::real, 3u>>
-readVectorsFromFile(const std::string &filename) {
+std::vector<std::array<mfem_mgis::real, 3u>> readVectorsFromFile(
+    const std::string &filename) {
   // TODO: check if vectors size is equal to nMat
   std::vector<std::array<mfem_mgis::real, 3u>> vectors;
   std::ifstream inputFile(filename);
@@ -163,8 +161,8 @@ void print_mesh_information(Implementation &impl) {
 
   Message("Info problem: number of vertices -> ", numbers_of_vertices);
   Message("Info problem: number of elements -> ", numbers_of_elements);
-  Message("Info prolbem: element size -> ", h);
-  Message("Info porblem: Number of finite element unknowns: ", unknowns);
+  Message("Info problem: element size -> ", h);
+  Message("Info problem: Number of finite element unknowns: ", unknowns);
 }
 
 template <typename Problem>
@@ -180,7 +178,7 @@ void add_post_processings(Problem &p, std::string msg) {
   // 		"ParaviewExportIntegrationPointResultsAtNodes",
   // 		{{"OutputFileName", msg + "IntegrationPointOutputDG"},
   // 		 {"Results", {"DeformationGradient"}}});
-} // end timer add_postprocessing_and_outputs
+}  // end timer add_postprocessing_and_outputs
 
 template <typename Problem>
 void execute_post_processings(Problem &p, double start, double end) {
@@ -224,11 +222,12 @@ void setup_properties(const TestParameters &p,
 }
 
 template <typename Problem>
-static void setLinearSolver(Problem &p, const int verbosity = 0,
+static void setLinearSolver(Problem &p,
+                            const int verbosity = 0,
                             const mfem_mgis::real Tol = 1e-12) {
   CatchTimeSection("set_linear_solver");
   // pilote
-  constexpr int defaultMaxNumOfIt = 5000; // MaximumNumberOfIterations
+  constexpr int defaultMaxNumOfIt = 5000;  // MaximumNumberOfIterations
   auto solverParameters = mfem_mgis::Parameters{};
   solverParameters.insert(mfem_mgis::Parameters{{"VerbosityLevel", verbosity}});
   solverParameters.insert(
@@ -264,8 +263,8 @@ void run_solve(Problem &p, double start, double dt) {
 }
 
 template <typename Problem>
-void simulation(Problem &problem, double start, double end, double dt,
-                bool pp) {
+void simulation(
+    Problem &problem, double start, double end, double dt, bool pp) {
   CatchTimeSection("simulation");
 
   const int nMat =
@@ -323,7 +322,7 @@ void simulation(Problem &problem, double start, double end, double dt,
   mfem_mgis::Profiler::Utils::Message("GHSu =", GHSu);
   mfem_mgis::Profiler::Utils::Message("GK =", GK);
 
-  const double Geff = GK; // GHSu
+  const double Geff = GK;  // GHSu
   // Young and Poisson effective moduli
   const double nueff = (3 * Keff - 2 * Geff) / (2 * (3 * Keff + Geff));
   const double Eeff = 9 * Keff * Geff / (3 * Keff + Geff);
@@ -362,9 +361,9 @@ void simulation(Problem &problem, double start, double end, double dt,
 
   for (int i = 0; i < nMat; i++) {
     auto &mat = problem.getMaterial(i + 1);
-    set_properties(mat, young1, young2, young3,     // young modulus
-                   poisson12, poisson23, poisson13, // poisson ration
-                   shear12, shear23, shear13        // shear modulus
+    set_properties(mat, young1, young2, young3,      // young modulus
+                   poisson12, poisson23, poisson13,  // poisson ration
+                   shear12, shear23, shear13         // shear modulus
     );
     set_temperature(mat);
   }
@@ -474,8 +473,7 @@ void simulation(Problem &problem, double start, double end, double dt,
           "warning: maximum number of iterations for the fixed-point algorithm "
           "attained, before the requested tolerance is reached");
 
-    if (pp)
-      execute_post_processings(problem, i * dt, dt);
+    if (pp) execute_post_processings(problem, i * dt, dt);
 
     if (mfem_mgis::getMPIrank() == 0) {
       std::ofstream fichier("OutputFile-Uniaxial-polycristal-GradTrans.txt",
