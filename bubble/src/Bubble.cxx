@@ -1,6 +1,6 @@
 /*!
  * \file   main.cxx
- * \brief    
+ * \brief
  * \author Thomas Helfer
  * \date   29/09/2024
  */
@@ -17,18 +17,18 @@
 
 namespace opera_hpc {
 
-struct Bubble : BubbleDescription {
-  bool broken = false;
-};
+  struct Bubble : BubbleDescription {
+    bool broken = false;
+  };
 
-bool areAllBroken(const std::vector<Bubble>& bubbles) {
-  for (const auto& b : bubbles) {
-    if (!b.broken) {
-      return false;
+  bool areAllBroken(const std::vector<Bubble>& bubbles) {
+    for (const auto& b : bubbles) {
+      if (!b.broken) {
+        return false;
+      }
     }
+    return true;
   }
-  return true;
-}
 }  // end of namespace opera_hpc
 
 // add postprocessing
@@ -69,7 +69,8 @@ void fill_parameters(mfem::OptionsParser& args, TestParameters& p) {
                  "choose the verbosity level");
   args.AddOption(&p.scale_factor_vp, "-sf", "--scale-factor-vp",
                  "Scaling factor for the principal stress");
-  args.AddOption(&p.testcase_name, "-n", "--name-case", "Name of the testcase.");
+  args.AddOption(&p.testcase_name, "-n", "--name-case",
+                 "Name of the testcase.");
 
   args.Parse();
 
@@ -110,12 +111,11 @@ int main(int argc, char** argv) {
   mfem::OptionsParser args(argc, argv);
   fill_parameters(args, p);
 
-
   print_memory_footprint("[Start]");
 
   // reference pressure
   constexpr mfem_mgis::real pref = 1.0;
-  constexpr mfem_mgis::size_type maximumNumberSteps =1000;
+  constexpr mfem_mgis::size_type maximumNumberSteps = 1000;
   // distance to determine if a bubble breaks
   constexpr mfem_mgis::real dmin = 0.600;
   //
@@ -172,14 +172,13 @@ int main(int argc, char** argv) {
   //  defaultMaxNumOfIt}});
   //  solverParameters.insert(mfem_mgis::Parameters{{"Tolerance", Tol}});
   //
-/*
-  auto options = mfem_mgis::Parameters{{"VerbosityLevel", verbosity},
-                                       {"Strategy", "Elasticity"}};
-  auto preconditioner =
-      mfem_mgis::Parameters{{"Name", "HypreBoomerAMG"}, {"Options", options}};
-*/
-  auto preconditioner =
-      mfem_mgis::Parameters{{"Name", "HypreDiagScale"}};
+  /*
+    auto options = mfem_mgis::Parameters{{"VerbosityLevel", verbosity},
+                                         {"Strategy", "Elasticity"}};
+    auto preconditioner =
+        mfem_mgis::Parameters{{"Name", "HypreBoomerAMG"}, {"Options", options}};
+  */
+  auto preconditioner = mfem_mgis::Parameters{{"Name", "HypreDiagScale"}};
 
   solverParameters.insert(mfem_mgis::Parameters{
       {"Preconditioner", preconditioner}, {"Tolerance", 1e-9}});
@@ -212,17 +211,17 @@ int main(int argc, char** argv) {
     const auto r = opera_hpc::findFirstPrincipalStressValueAndLocation(
         problem.getMaterial(1));
     const auto max_vp_scaled = p.scale_factor_vp * r.value;
-    const auto all_locations_above_threshold = opera_hpc::
-    getPointsAboveStressThreshold(
-            problem.getMaterial(1), max_vp_scaled);
+    const auto all_locations_above_threshold =
+        opera_hpc::getPointsAboveStressThreshold(problem.getMaterial(1),
+                                                 max_vp_scaled);
     // for (auto &location : all_locations_above_threshold){
     //   Message("Here we are");
     //   Message(location[0], "\t",location[1], "\t",location[2], "\t");
     // }
     mfem_mgis::size_type nbroken{0};
     std::vector<mfem_mgis::size_type> all_broken_bubbles_identifiers;
-    for (auto &b : bubbles) {
-      for (auto &location : all_locations_above_threshold) {
+    for (auto& b : bubbles) {
+      for (auto& location : all_locations_above_threshold) {
         const auto d = opera_hpc::distance(b, location);
         if (d < dmin) {
           if (!b.broken) {
@@ -247,7 +246,7 @@ int main(int argc, char** argv) {
     Message("- value of the first principal stress:", r.value,
             "at coordinate (", r.location[0], ",", r.location[1], ",",
             r.location[2], ")");
-    
+
     if (mfem_mgis::getMPIrank() == 0) {
       write_message(output_file, nbroken, "bubbles broke at this step.");
       write_message(output_file, all_broken_bubbles_identifiers.size(),
