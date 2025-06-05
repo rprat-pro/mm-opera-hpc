@@ -1,6 +1,6 @@
 /*!
  * \file   main.cxx
- * \brief    
+ * \brief
  * \author Thomas Helfer
  * \date   29/09/2024
  */
@@ -21,18 +21,18 @@
 
 namespace opera_hpc {
 
-struct Bubble : BubbleDescription {
-  bool broken = false;
-};
+  struct Bubble : BubbleDescription {
+    bool broken = false;
+  };
 
-bool areAllBroken(const std::vector<Bubble>& bubbles) {
-  for (const auto& b : bubbles) {
-    if (!b.broken) {
-      return false;
+  bool areAllBroken(const std::vector<Bubble>& bubbles) {
+    for (const auto& b : bubbles) {
+      if (!b.broken) {
+        return false;
+      }
     }
+    return true;
   }
-  return true;
-}
 }  // end of namespace opera_hpc
 
 // add postprocessing
@@ -73,7 +73,8 @@ void fill_parameters(mfem::OptionsParser& args, TestParameters& p) {
                  "choose the verbosity level");
   args.AddOption(&p.scale_factor_vp, "-sf", "--scale-factor-vp",
                  "Scaling factor for the principal stress");
-  args.AddOption(&p.testcase_name, "-n", "--name-case", "Name of the testcase.");
+  args.AddOption(&p.testcase_name, "-n", "--name-case",
+                 "Name of the testcase.");
 
   args.Parse();
 
@@ -113,7 +114,6 @@ int main(int argc, char** argv) {
   TestParameters p;
   mfem::OptionsParser args(argc, argv);
   fill_parameters(args, p);
-
 
   print_memory_footprint("[Start]");
 
@@ -176,14 +176,13 @@ int main(int argc, char** argv) {
   //  defaultMaxNumOfIt}});
   //  solverParameters.insert(mfem_mgis::Parameters{{"Tolerance", Tol}});
   //
-/*
-  auto options = mfem_mgis::Parameters{{"VerbosityLevel", verbosity},
-                                       {"Strategy", "Elasticity"}};
-  auto preconditioner =
-      mfem_mgis::Parameters{{"Name", "HypreBoomerAMG"}, {"Options", options}};
-*/
-  auto preconditioner =
-      mfem_mgis::Parameters{{"Name", "HypreDiagScale"}};
+  /*
+    auto options = mfem_mgis::Parameters{{"VerbosityLevel", verbosity},
+                                         {"Strategy", "Elasticity"}};
+    auto preconditioner =
+        mfem_mgis::Parameters{{"Name", "HypreBoomerAMG"}, {"Options", options}};
+  */
+  auto preconditioner = mfem_mgis::Parameters{{"Name", "HypreDiagScale"}};
 
   solverParameters.insert(mfem_mgis::Parameters{
       {"Preconditioner", preconditioner}, {"Tolerance", 1e-9}});
@@ -216,9 +215,9 @@ int main(int argc, char** argv) {
     const auto r = opera_hpc::findFirstPrincipalStressValueAndLocation(
         problem.getMaterial(1));
     const auto max_vp_scaled = p.scale_factor_vp * r.value;
-    const auto all_locations_above_threshold = opera_hpc::
-    getPointsAboveStressThreshold(
-            problem.getMaterial(1), max_vp_scaled);
+    const auto all_locations_above_threshold =
+        opera_hpc::getPointsAboveStressThreshold(problem.getMaterial(1),
+                                                 max_vp_scaled);
     // for (auto &location : all_locations_above_threshold){
     //   Message("Here we are");
     //   Message(location[0], "\t",location[1], "\t",location[2], "\t");
@@ -227,38 +226,38 @@ int main(int argc, char** argv) {
     /*std::vector<mfem_mgis::size_type> all_bids;
       for (auto &b : bubbles)
         all_bids.push_back(b.boundary_identifier);*/
-    
-    auto all_bids = [&bubbles]{
+
+    auto all_bids = [&bubbles] {
       std::vector<mfem_mgis::size_type> temp;
-      for (auto &b : bubbles)
-        temp.push_back(b.boundary_identifier);
+      for (auto& b : bubbles) temp.push_back(b.boundary_identifier);
       return temp;
     }();
     {
       CatchTimeSection("New bdry values research");
-    auto lalla = opera_hpc::accessBoundaryClosestQPData(m, all_bids);
-    mfem_mgis::size_type nbroken{0};
-    //std::vector<mfem_mgis::size_type> all_broken_bubbles_identifiers;
-    auto max_vals = [&lalla]{
-      std::map<mfem_mgis::size_type, mfem_mgis::real> temp;
-      for (auto &idd : lalla){
-        if (temp.contains(idd.boundary_id)){
-          if (std::abs(temp[idd.boundary_id])<std::abs(idd.value))
+      auto lalla = opera_hpc::accessBoundaryClosestQPData(m, all_bids);
+      mfem_mgis::size_type nbroken{0};
+      // std::vector<mfem_mgis::size_type> all_broken_bubbles_identifiers;
+      auto max_vals = [&lalla] {
+        std::map<mfem_mgis::size_type, mfem_mgis::real> temp;
+        for (auto& idd : lalla) {
+          if (temp.contains(idd.boundary_id)) {
+            if (std::abs(temp[idd.boundary_id]) < std::abs(idd.value))
+              temp[idd.boundary_id] = idd.value;
+          } else
             temp[idd.boundary_id] = idd.value;
         }
-        else
-          temp[idd.boundary_id] = idd.value;
-      }
-      return temp;
-    }();
+        return temp;
+      }();
 
-    if (mfem_mgis::getMPIrank() == 0) {
-      write_message(output_file, "========= Surfaces IDs and stress values =========");
-      for (auto& ii : max_vals)
-        write_message(output_file, "Surface[", ii.first, "], stress = ", ii.second);
+      if (mfem_mgis::getMPIrank() == 0) {
+        write_message(output_file,
+                      "========= Surfaces IDs and stress values =========");
+        for (auto& ii : max_vals)
+          write_message(output_file, "Surface[", ii.first,
+                        "], stress = ", ii.second);
       }
     }
-    
+
     if (post_processing)
       post_process(problem, 0 + double(nstep), 1 + double(nstep));
 

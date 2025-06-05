@@ -1,6 +1,6 @@
 /*!
  * \file   BubbleDescription.cxx
- * \brief    
+ * \brief
  * \author Thomas Helfer
  * \date   29/09/2024
  */
@@ -15,8 +15,7 @@
 
 namespace opera_hpc {
 
-  std::vector<BubbleDescription> BubbleDescription::read(
-      const std::string& f) {
+  std::vector<BubbleDescription> BubbleDescription::read(const std::string& f) {
     auto tokenize = [](const std::string& line) {
       std::istringstream tokenizer(line);
       std::vector<std::string> tokens;

@@ -10,17 +10,16 @@
 
 namespace opera_hpc {
 
-    struct StressValueAndId{
-     mfem_mgis::real value;
-     mfem_mgis::size_type boundary_id;
+  struct StressValueAndId {
+    mfem_mgis::real value;
+    mfem_mgis::size_type boundary_id;
     //  std::array<mfem_mgis::real, 3u> position;
+  };
 
-    };
+  std::vector<StressValueAndId> accessBoundaryClosestQPData(
+      const mfem_mgis::Material &m,
+      std::vector<mfem_mgis::size_type> &target_boundary_attribute);
 
-    std::vector<StressValueAndId> accessBoundaryClosestQPData(
-        const mfem_mgis::Material &m, std::vector<mfem_mgis::size_type> &target_boundary_attribute
-    );
-
-}
+}  // namespace opera_hpc
 
 #endif
