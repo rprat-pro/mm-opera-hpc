@@ -5,11 +5,15 @@
  * \date   29/09/2024
  */
 
+#include <MFEMMGIS/Config.hxx>
 #include <cstdlib>
+#include <functional>
+#include <memory>
 #include "MFEMMGIS/Material.hxx"
 #include "MFEMMGIS/Profiler.hxx"
 #include "MFEMMGIS/PeriodicNonLinearEvolutionProblem.hxx"
 #include "MFEMMGIS/UniformImposedPressureBoundaryCondition.hxx"
+#include "OperaHPC/BoundaryElsUtilities.hxx"
 #include "OperaHPC/BubbleDescription.hxx"
 #include "OperaHPC/Utilities.hxx"
 #include "Common/Print.hxx"
@@ -115,7 +119,7 @@ int main(int argc, char** argv) {
 
   // reference pressure
   constexpr mfem_mgis::real pref = 1.0;
-  constexpr mfem_mgis::size_type maximumNumberSteps =1000;
+  constexpr mfem_mgis::size_type maximumNumberSteps = 1;
   // distance to determine if a bubble breaks
   constexpr mfem_mgis::real dmin = 0.600;
   //
@@ -219,45 +223,42 @@ int main(int argc, char** argv) {
     //   Message("Here we are");
     //   Message(location[0], "\t",location[1], "\t",location[2], "\t");
     // }
-    mfem_mgis::size_type nbroken{0};
-    std::vector<mfem_mgis::size_type> all_broken_bubbles_identifiers;
-    for (auto &b : bubbles) {
-      for (auto &location : all_locations_above_threshold) {
-        const auto d = opera_hpc::distance(b, location);
-        if (d < dmin) {
-          if (!b.broken) {
-            ++nbroken;
-          }
-          b.broken = true;
-        }
-      }
-      if (b.broken) {
-        all_broken_bubbles_identifiers.push_back(b.boundary_identifier);
-      }
-    }
 
-    if (nbroken == 0) {
-      Message("no bubble broke at step ", nstep, "\n");
-      break;
-    }
-
-    Message("step:", nstep);
-    Message("-", nbroken, "bubbles broke at this step.");
-    Message("-", all_broken_bubbles_identifiers.size(), "bubbles are broken");
-    Message("- value of the first principal stress:", r.value,
-            "at coordinate (", r.location[0], ",", r.location[1], ",",
-            r.location[2], ")");
+    /*std::vector<mfem_mgis::size_type> all_bids;
+      for (auto &b : bubbles)
+        all_bids.push_back(b.boundary_identifier);*/
     
-    if (mfem_mgis::getMPIrank() == 0) {
-      write_message(output_file, nbroken, "bubbles broke at this step.");
-      write_message(output_file, all_broken_bubbles_identifiers.size(),
-                    "bubbles are broken");
-      write_message(output_file,
-                    "Value of the first principal stress:", r.value,
-                    "at coordinate (", r.location[0], ",", r.location[1], ",",
-                    r.location[2], ")");
-    }
+    auto all_bids = [&bubbles]{
+      std::vector<mfem_mgis::size_type> temp;
+      for (auto &b : bubbles)
+        temp.push_back(b.boundary_identifier);
+      return temp;
+    }();
+    {
+      CatchTimeSection("New bdry values research");
+    auto lalla = opera_hpc::accessBoundaryClosestQPData(m, all_bids);
+    mfem_mgis::size_type nbroken{0};
+    //std::vector<mfem_mgis::size_type> all_broken_bubbles_identifiers;
+    auto max_vals = [&lalla]{
+      std::map<mfem_mgis::size_type, mfem_mgis::real> temp;
+      for (auto &idd : lalla){
+        if (temp.contains(idd.boundary_id)){
+          if (std::abs(temp[idd.boundary_id])<std::abs(idd.value))
+            temp[idd.boundary_id] = idd.value;
+        }
+        else
+          temp[idd.boundary_id] = idd.value;
+      }
+      return temp;
+    }();
 
+    if (mfem_mgis::getMPIrank() == 0) {
+      write_message(output_file, "========= Surfaces IDs and stress values =========");
+      for (auto& ii : max_vals)
+        write_message(output_file, "Surface[", ii.first, "], stress = ", ii.second);
+      }
+    }
+    
     if (post_processing)
       post_process(problem, 0 + double(nstep), 1 + double(nstep));
 

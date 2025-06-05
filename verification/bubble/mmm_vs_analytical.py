@@ -4,7 +4,7 @@ import os
 from matplotlib import pyplot as plt
 
 cur_path = os.getcwd()
-file_pvd = os.path.join(cur_path, 'TestCaseOneBubble.pvd')
+file_pvd = os.path.join(cur_path, 'TestCaseBubble', 'TestCaseBubble.pvd')
 bubble_radius = 400e-9
 rev_side_length = 10e-6
 bubble_center = (bubble_radius, 0., 0.)
@@ -26,13 +26,14 @@ analytical_hoop_stress = 0.5*bubble_pressure * \
     bubble_radius**3/np.power(coordinate, 3)
 
 plt.figure()
-p1 = plt.plot(coordinate, stress_tt, '-.', label="$\sigma_{YY}$, MMM")
+p1 = plt.plot(coordinate, stress_tt*bubble_pressure, '*', markevery=1, label="$\sigma_{YY}$, MMM")
 p2 = plt.plot(coordinate, analytical_hoop_stress,
-              '--', label="$\sigma_{YY}$, analytical")
+              '--', label="$\sigma_{YY}$, analytical", linewidth=4)
 plt.xlim([bubble_radius, rev_side_length/2])
 plt.xlabel("Distance from the bubble center, m")
 plt.ylabel("Stress, Pa")
 plt.legend()
 plt.grid(True)
+plt.tight_layout()
 plt.savefig('comparison.png')
 plt.close()
