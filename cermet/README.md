@@ -40,7 +40,12 @@ MeshOrder = 1
 MeshSize = 0.02
 ```
 
-### Output Example
+### Output Example: cermet-mini.msh
 
 ![Cermet Case](doc/cermet-mini.png)
 
+![Cermet Case png](doc/cermet-mini-png.png)
+
+### Output Example: cermet-big.msh
+
+![Cermet Case png](doc/cermet-big-png.png)
