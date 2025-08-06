@@ -6,6 +6,36 @@
 #include "MFEMMGIS/UniformDirichletBoundaryCondition.hxx"
 #include "MFEMMGIS/ParaviewExportIntegrationPointResultsAtNodes.hxx"
 
+
+/*
+
+Parameters : 
+
+start time = 0
+end time = 5s
+number of time step = 40
+
+Strain Gradient matrix : val = 0.012
+[ val / 2 ,         0 ,   0 ]
+[ 0         , val / 2 ,   0 ] 
+[ 0         ,          0, -val ]
+
+Solver : HyprePCG
+Preconditionner : HypreBoomerAMG
+
+Behavior law parameters : SaintVenantKirchhoffElasticity, ImplicitNortonThreshold
+[ parameters       , grain    , metal      ];    
+[ Young Modulus    , 8.182e9  , 2*8.182e9  ];
+[ Poisson Ratio    , 0.364    , 0.364      ];
+[ Stress Threshold , 100.0e6  , 100.0e12   ];
+[ Norton Exponent  , 3.333333 , 3.333333   ];
+[ Temperature      , 293.15   , 293.15     ];
+Element :
+
+Familly H1
+Order 1
+ */
+
 // display information
 long get_memory_checkpoint()
 {
@@ -51,12 +81,13 @@ void post_process(Problem &p, double start, double end) {
 struct TestParameters {
   //  const char *metal = "MO";
   const char *mesh_file = "mesh/cermet-mini.msh";
-  const char *behaviourGrain = "Elasticity";
-  const char *behaviourMetal = "Elasticity";
+  //const char *behaviourGrain = "Elasticity";
+  const char *behaviourGrain = "ImplicitNortonThreshold";
+  const char *behaviourMetal = "ImplicitNortonThreshold";
   const char *libraryGrain = "src/libBehaviour.so";
   const char *libraryMetal = "src/libBehaviour.so";
   int order = 1;
-  int refinement = 0;
+  int refinement = 1;
   int post_processing = 1; // default value : activated
   int verbosity_level = 0; // default value : lower level
 };
@@ -124,17 +155,17 @@ int main(int argc, char **argv) {
   int verbosity = p.verbosity_level;
   int post_processing = p.post_processing;
   double Tol = 1e-6;
-  int defaultMaxNumOfIt = 5000;
+  int defaultMaxNumOfIt = 2000;
   auto solverParameters = mfem_mgis::Parameters{};
   solverParameters.insert(mfem_mgis::Parameters{{"VerbosityLevel", verbosity}});
   solverParameters.insert(
       mfem_mgis::Parameters{{"MaximumNumberOfIterations", defaultMaxNumOfIt}});
   solverParameters.insert(mfem_mgis::Parameters{{"Tolerance", Tol}});
+
   //
-  auto options = mfem_mgis::Parameters{{"VerbosityLevel", verbosity},
-    {"Strategy", "Elasticity"}};
   auto preconditionner =
-    mfem_mgis::Parameters{{"Name", "HypreBoomerAMG"}, {"Options", options}};
+    mfem_mgis::Parameters{{"Name", "HypreDiagScale"}};
+  //    mfem_mgis::Parameters{{"Name", "HypreBoomerAMG"}};
   solverParameters.insert(
       mfem_mgis::Parameters{{"Preconditioner", preconditionner}});
   problem.setLinearSolver("HyprePCG", solverParameters);
@@ -146,11 +177,26 @@ int main(int argc, char **argv) {
   problem.addBehaviourIntegrator("Mechanics", 2, p.libraryMetal, p.behaviourMetal);
   auto& grain = problem.getMaterial(1);
   auto& metal = problem.getMaterial(2);
-    auto set_properties = [](auto& m, const double l, const double mu) {
-      mgis::behaviour::setMaterialProperty(m.s0, "FirstLameCoefficient", l);
-      mgis::behaviour::setMaterialProperty(m.s0, "ShearModulus", mu);
-      mgis::behaviour::setMaterialProperty(m.s1, "FirstLameCoefficient", l);
-      mgis::behaviour::setMaterialProperty(m.s1, "ShearModulus", mu);
+
+
+  auto set_properties_elasticity = [](auto& m, const double l, const double mu) {
+    mgis::behaviour::setMaterialProperty(m.s0, "FirstLameCoefficient", l);
+    mgis::behaviour::setMaterialProperty(m.s0, "ShearModulus", mu);
+    mgis::behaviour::setMaterialProperty(m.s1, "FirstLameCoefficient", l);
+    mgis::behaviour::setMaterialProperty(m.s1, "ShearModulus", mu);
+  };
+
+  auto set_properties_norton = [](auto& m, const double yo, const double po, const double st, const double no) 
+  {
+    setMaterialProperty(m.s0, "YoungModulus", yo);
+    setMaterialProperty(m.s0, "PoissonRatio", po);
+    setMaterialProperty(m.s0, "StressThreshold", st);
+    setMaterialProperty(m.s0, "NortonExponent", no);
+
+    setMaterialProperty(m.s1, "YoungModulus", yo);
+    setMaterialProperty(m.s1, "PoissonRatio", po);
+    setMaterialProperty(m.s1, "StressThreshold", st);
+    setMaterialProperty(m.s1, "NortonExponent", no);
   };
 
   auto set_temperature = [](auto& m) {
@@ -158,35 +204,61 @@ int main(int argc, char **argv) {
     setExternalStateVariable(m.s1, "Temperature", 293.15);
   };
 
-  std::array<mfem_mgis::real,2> lambda({100, 200});
-  std::array<mfem_mgis::real,2>     mu({75 , 150});
-  set_properties(grain, lambda[0], mu[0]); // TODO
-  set_properties(metal, lambda[1], mu[1]); // TODO
+  //  set_properties_elasticity(grain, 100 /*lambda*/, 75 /*mu*/); // TODO
+  set_properties_norton(grain, 8.182e9, 0.364, 100.0e6, 3.333333);
+  set_properties_norton(metal, 16.182e9, 0.364, 100.0e12, 3.333333); // TODO
+
   set_temperature(grain);
   set_temperature(metal);
 
-    // macroscopic strain
-    std::vector<mfem_mgis::real> e(6, mfem_mgis::real{});
-    const int zz = 2;
-		e[zz] = -1;
-		problem.setMacroscopicGradientsEvolution([e](const double) { return e; });
 
-    // postpro
-		if (post_processing) {
-			mfem_mgis::Profiler::Utils::Message("Define post processings");
-			problem.addPostProcessing("ParaviewExportResults",
-					{{"OutputFileName", "Displacement"}});
-			problem.addPostProcessing("MeanThermodynamicForces",
-					{{"OutputFileName", "avgStress"}});
-		}
 
-    // solve
-	  problem.solve(0, 1);
-		post_process(problem, 0, 1);
 
-    // end
-		print_memory_footprint("[End]");
-		mfem_mgis::Profiler::timers::print_and_write_timers();
-		return EXIT_SUCCESS;
+  // macroscopic strain
+  // macroscopic strain
+  std::vector<mfem_mgis::real> e(6, mfem_mgis::real{0});
+  const int xx = 0;
+  const int yy = 1;
+  const int zz = 2;
+
+  /* bar{E} = e33 *(-1/2 E1 x E1 + (-1/2) * E2 x E2 + E3 x E3)*/
+  const double eps = -0.012;
+  e[xx] = -0.5*eps;
+  e[yy] = -0.5*eps;
+  e[zz] = eps;
+  problem.setMacroscopicGradientsEvolution([e](const double t) { 
+      auto ret = e;
+      for(auto& it : ret) it *= t;
+      return ret; 
+      });
+
+
+  if (post_processing) {
+    mfem_mgis::Profiler::Utils::Message("Define post processings");
+    problem.addPostProcessing("ParaviewExportResults",
+        {{"OutputFileName", "Displacement"}});
+    problem.addPostProcessing("MeanThermodynamicForces",
+        {{"OutputFileName", "avgStress"}});
+    /* BUG
+       problem.addPostProcessing(
+       "ParaviewExportIntegrationPointResultsAtNodes",
+       {{"OutputFileName", "IntegrationPointOutput"}});
+     */
+  }
+
+  const double nstep = 40;
+  const double dt = 5. / nstep;
+  for (int i = 0; i < nstep; i++) {
+    mfem_mgis::Profiler::Utils::Message("Solving: from ", i*dt, " to ", (i+1)*dt);
+    auto statistics = problem.solve(i * dt, dt);
+    if (!statistics.status) {
+      mfem_mgis::Profiler::Utils::Message("INFO: FAILED");
+    }
+    if(post_processing) problem.executePostProcessings(i * dt, dt);
+    problem.update();
+  }
+  print_memory_footprint("[End]");
+  mfem_mgis::Profiler::timers::print_and_write_timers();
+  return EXIT_SUCCESS;
 }
 
