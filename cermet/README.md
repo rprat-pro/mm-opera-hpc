@@ -44,8 +44,8 @@ MeshSize = 0.02
 
 ![Cermet Case](doc/cermet-mini.png)
 
-![Cermet Case png](doc/cermet-mini-png.png)
+![Cermet Case png](doc/cermet-mini-vtk.png)
 
 ### Output Example: cermet-big.msh
 
-![Cermet Case png](doc/cermet-big-png.png)
+![Cermet Case png](doc/cermet-big-vtk.png)
