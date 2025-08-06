@@ -9,7 +9,7 @@ add_custom_command(
   DEPENDS ${PROJECT_BINARY_DIR}/law/Elasticity.mfront
   COMMENT "Performing mfront code generation")
 
-add_custom_target(lib-elasticity ALL
+add_custom_target(cermet-lib-elasticity ALL
   DEPENDS "src/libBehaviour.so")
 
 # build executable
@@ -26,19 +26,19 @@ target_link_libraries(cermet-elasticity
  PRIVATE TFELMath TFELException
  PUBLIC mfem-mgis::MFEMMGIS)
 
-target_include_directories(test-bubble
+target_include_directories(cermet-elasticity
    PUBLIC
    ${TFEL_INCLUDE_PATH} 
    ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-target_link_directories(test-bubble
+target_link_directories(cermet-elasticity
    PUBLIC
    ${TFEL_LIBRARY_PATH}) 
 
 
 # copy and install
 
-file(COPY Elasticity.mfront mesh DESTINATION ${PROJECT_BINARY_DIR})
+file(COPY law mesh DESTINATION ${PROJECT_BINARY_DIR})
 
 add_test(NAME CermetElasticity COMMAND cermet-elasticity --mesh ${PROJECT_BINARY_DIR}/mesh/cermet-mini.msh)
 
