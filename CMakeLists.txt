@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules)
-
+set(CMAKE_EXPORT_COMPILE_COMMANDS True)
 include(cmake/modules/tfel.cmake)
 
 find_package(MFEMMGIS REQUIRED)
