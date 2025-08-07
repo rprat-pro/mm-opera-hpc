@@ -49,3 +49,28 @@ MeshSize = 0.02
 ### Output Example: cermet-big.msh
 
 ![Cermet Case png](doc/cermet-big-vtk.png)
+
+## Run your simulation
+
+### cermet with a Norton law
+
+```
+Usage: ./cermet-norton [options] ...
+Options:
+   -h, --help
+	Print this help message and exit.
+   -m <string>, --mesh <string>, current value: mesh/cermet-mini.msh
+	Mesh file to use.
+   -o <int>, --order <int>, current value: 1
+	Finite element order (polynomial degree).
+   -r <int>, --refinement <int>, current value: 1
+	refinement level of the mesh, default = 1
+   -p <int>, --post-processing <int>, current value: 1
+	run post processing step
+   -v <int>, --verbosity-level <int>, current value: 0
+	choose the verbosity level
+   -d <double>, --duration <double>, current value: 5
+	choose the duration (default = 5)
+   -n <double>, --nstep <double>, current value: 5
+	choose the number of steps (default = 40)
+```

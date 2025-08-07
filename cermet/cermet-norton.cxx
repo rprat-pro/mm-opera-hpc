@@ -90,20 +90,24 @@ struct TestParameters {
   int refinement = 1;
   int post_processing = 1; // default value : activated
   int verbosity_level = 0; // default value : lower level
+  int nstep = 40;
+  double duration = 5.;
 };
 
 void fill_parameters(mfem::OptionsParser &args, TestParameters &p) {
   args.AddOption(&p.mesh_file, "-m", "--mesh", "Mesh file to use.");
-  //  args.AddOption(&p.metal, "-l", "--metal",
-  //                 "Metal material, MO or CR. Default is MO");
   args.AddOption(&p.order, "-o", "--order",
       "Finite element order (polynomial degree).");
   args.AddOption(&p.refinement, "-r", "--refinement",
-      "refinement level of the mesh, default = 0");
+      "refinement level of the mesh, default = 1");
   args.AddOption(&p.post_processing, "-p", "--post-processing",
       "run post processing step");
   args.AddOption(&p.verbosity_level, "-v", "--verbosity-level",
       "choose the verbosity level");
+  args.AddOption(&p.duration, "-d", "--duration",
+      "choose the duration (default = 5)");
+  args.AddOption(&p.duration, "-n", "--nstep",
+      "choose the number of steps (default = 40)");
   args.Parse();
   if (!args.Good()) {
     if (mfem_mgis::getMPIrank() == 0)
@@ -246,9 +250,8 @@ int main(int argc, char **argv) {
      */
   }
 
-  const double nstep = 40;
-  const double dt = 5. / nstep;
-  for (int i = 0; i < nstep; i++) {
+  const double dt = p.duration / double(p.nstep);
+  for (int i = 0; i < p.nstep; i++) {
     mfem_mgis::Profiler::Utils::Message("Solving: from ", i*dt, " to ", (i+1)*dt);
     auto statistics = problem.solve(i * dt, dt);
     if (!statistics.status) {
