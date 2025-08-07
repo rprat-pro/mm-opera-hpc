@@ -106,7 +106,7 @@ void fill_parameters(mfem::OptionsParser &args, TestParameters &p) {
       "choose the verbosity level");
   args.AddOption(&p.duration, "-d", "--duration",
       "choose the duration (default = 5)");
-  args.AddOption(&p.duration, "-n", "--nstep",
+  args.AddOption(&p.nstep, "-n", "--nstep",
       "choose the number of steps (default = 40)");
   args.Parse();
   if (!args.Good()) {
