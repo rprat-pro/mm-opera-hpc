@@ -67,6 +67,7 @@ target_link_directories(cermet-norton-bm
 # copy and install
 
 file(COPY law mesh DESTINATION ${PROJECT_BINARY_DIR})
+file(COPY mesh/vectors_5grains.txt DESTINATION ${PROJECT_BINARY_DIR})
 
 add_test(NAME CermetElasticity COMMAND cermet-elasticity --mesh ${PROJECT_BINARY_DIR}/mesh/cermet-mini.msh)
 add_test(NAME CermetNorton COMMAND cermet-norton --mesh ${PROJECT_BINARY_DIR}/mesh/cermet-mini.msh)

@@ -40,6 +40,8 @@ p.setGlossaryName("EquivalentViscoplasticStrain");
    
 }
 
+@StrainMeasure Hencky;
+
 @Integrator{
   const real eps = 1.e-12;
   const auto seq = sigmaeq(sig);

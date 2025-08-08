@@ -20,13 +20,16 @@ MeshSize = 0.05
 
 theSpheres = sac_de_billes.fillMaxRSA_3D(sac_de_billes.Tore, L, nbSpheres, randomSeed, distMin)
 
+i = 2
 for sphere in theSpheres:
-    sphere.phase = 1
+    sphere.phase = i
+    i = i+1
+
 
 sphInc = merope.LaguerreTess_3D(L,theSpheres)
 mi = merope.MultiInclusions_3D()
 mi.setInclusions(sphInc)
-mi.addLayer(mi.getAllIdentifiers(), 2, layer)
+mi.addLayer(mi.getAllIdentifiers(), 1, layer)
 
 meshGenerator = merope.mesh.MeshGenerator()
 meshGenerator.setMeshOrder(MeshOrder)
