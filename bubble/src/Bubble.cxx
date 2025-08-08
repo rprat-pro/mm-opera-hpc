@@ -5,12 +5,17 @@
  * \date   29/09/2024
  */
 
-#include <MFEMMGIS/PartialQuadratureFunction.hxx>
 #include "MFEMMGIS/Profiler.hxx"
 #include "Common/Memory.hxx"
 #include "Common/Print.hxx"
 
+#include "MGIS/Context.hxx"
+
+#include "MFEMMGIS/Config.hxx"
+#include "MFEMMGIS/MechanicalPostProcessings.hxx"
 #include "MFEMMGIS/Material.hxx"
+#include "MFEMMGIS/ParaviewExportIntegrationPointResultsAtNodes.hxx"
+#include "MFEMMGIS/PartialQuadratureFunction.hxx"
 #include "MFEMMGIS/PartialQuadratureSpace.hxx"
 #include "MFEMMGIS/PeriodicNonLinearEvolutionProblem.hxx"
 #include "MFEMMGIS/UniformImposedPressureBoundaryCondition.hxx"
@@ -127,11 +132,58 @@ void write_bubble_infos(
   }
 }
 
+template <bool parallel>
+static void calculateAverageHydroPressure(
+    std::ostream &os,
+    mfem_mgis::NonLinearEvolutionProblemImplementation<parallel> &prob,
+    const mfem_mgis::ImmutablePartialQuadratureFunctionView &f) {
+  const auto &s = f.getPartialQuadratureSpace();
+  const auto &fed = s.getFiniteElementDiscretization();
+  const auto &fespace = fed.getFiniteElementSpace<parallel>();
+  const auto m = s.getId();
+  std::vector<mfem_mgis::real> integrals;
+  std::vector<mfem_mgis::real> volumes;
+  mfem_mgis::real integr, vol;
+  for (mfem_mgis::size_type i = 0; i != fespace.GetNE(); ++i) {
+    if (fespace.GetAttribute(i) != m) {
+      continue;
+    }
+    const auto &fe = *(fespace.GetFE(i));
+    auto &tr = *(fespace.GetElementTransformation(i));
+    const auto &ir = s.getIntegrationRule(fe, tr);
+    integr = 0.;
+    vol = 0.;
+    for (mfem_mgis::size_type g = 0; g != ir.GetNPoints(); ++g) {
+      mfem::Vector p;
+      const auto &ip = ir.IntPoint(g);
+      tr.SetIntPoint(&ip);
+      const auto w =
+          prob.getBehaviourIntegrator(m).getIntegrationPointWeight(tr, ip);
+      tr.Transform(tr.GetIntPoint(), p);
+
+      integr += f.getIntegrationPointValue(i, g) * w;
+      vol += w;
+    }
+    integrals.push_back(integr);
+    volumes.push_back(vol);
+  }
+
+  mfem_mgis::real v = 0.;
+  mfem_mgis::real integral = 0.;
+  MPI_Reduce(integrals.data(), &integral, 1, MPI_DOUBLE, MPI_SUM, 0,
+             MPI_COMM_WORLD);
+  MPI_Reduce(volumes.data(), &v, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  if (mfem_mgis::getMPIrank() == 0) {
+    os << v << "," << integral << "," << integral / v << "\n";
+  }
+}
+
 int main(int argc, char **argv) {
   using namespace mfem_mgis::Profiler::Utils; // Use Message
   // options treatment
   mfem_mgis::initialize(argc, argv);
   mfem_mgis::Profiler::timers::init_timers();
+  auto ctx = mgis::Context();
 
   // file collecting the output
   std::string bubbles_selected = "bubbles_and_stresses_selected.txt";
@@ -228,12 +280,18 @@ int main(int argc, char **argv) {
     mgis::behaviour::setExternalStateVariable(*s, "Temperature", 293.15);
   }
   if (post_processing) {
-    auto results = std::vector<mfem_mgis::Parameter>{"Stress"};
+    auto results =
+        std::vector<mfem_mgis::Parameter>{"Stress", "HydrostaticPressure"};
     problem.addPostProcessing(
         "ParaviewExportIntegrationPointResultsAtNodes",
         {{"OutputFileName", p.testcase_name}, {"Results", results}});
   }
+
+  auto vim = mfem_mgis::PartialQuadratureFunction{
+      m.getPartialQuadratureSpacePointer(), 1};
+
   //
+
   mfem_mgis::size_type nstep{1};
 
   problem.solve(0, 1);
@@ -278,10 +336,31 @@ int main(int argc, char **argv) {
   }
   write_bubble_infos(output_file_locations, bubbles_information);
 
+  std::ofstream outfile("sig_hydro.txt");
+
+  if (mfem_mgis::getMPIrank() == 0)
+    write_message(outfile, "Volume","Integral","Average");
+
   if (post_processing) {
     post_process(problem, 0 + double(nstep), 1 + double(nstep));
+    post_process(problem, 0 + double(nstep), 1 + double(nstep));
+
+    auto end = mfem_mgis::Material::END_OF_TIME_STEP;
+    mfem_mgis::computeFirstEigenStress(ctx, vim, m, end);
+    mfem_mgis::ParaviewExportIntegrationPointResultsAtNodesImplementation<true>
+        export_stress(problem.getImplementation<true>(),
+                      {{.name = "Stress", .functions = {vim}}}, "Testcase-eig");
+    export_stress.execute(problem.getImplementation<true>(), 0 + double(nstep),
+                          1 + double(nstep));
+
+    auto pr = getInternalStateVariable(
+        static_cast<const mfem_mgis::Material &>(m), "HydrostaticPressure");
+    
+    calculateAverageHydroPressure<true>(outfile,
+                                        problem.getImplementation<true>(), pr);
   }
 
+  outfile.close();
   output_file_locations.close();
   print_memory_footprint("[End]");
   mfem_mgis::Profiler::timers::print_and_write_timers();
