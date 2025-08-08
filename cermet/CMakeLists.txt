@@ -5,8 +5,8 @@ project(OperaHPCBubble)
 
 add_custom_command(
   OUTPUT "src/libBehaviour.so"
-  COMMAND mfront --obuild --interface=generic ${PROJECT_BINARY_DIR}/law/Elasticity.mfront ${PROJECT_BINARY_DIR}/law/Norton.mfront ${PROJECT_BINARY_DIR}/law/SaintVenantKirchhoffElasticity.mfront
-  DEPENDS ${PROJECT_BINARY_DIR}/law/Elasticity.mfront ${PROJECT_BINARY_DIR}/law/Norton.mfront ${PROJECT_BINARY_DIR}/law/SaintVenantKirchhoffElasticity.mfront 
+  COMMAND mfront --obuild --interface=generic ${PROJECT_BINARY_DIR}/law/Elasticity.mfront ${PROJECT_BINARY_DIR}/law/Norton.mfront ${PROJECT_BINARY_DIR}/law/NortonCr.mfront  ${PROJECT_BINARY_DIR}/law/Mono_UO2_CosH_Jaco.mfront
+  DEPENDS ${PROJECT_BINARY_DIR}/law/Elasticity.mfront ${PROJECT_BINARY_DIR}/law/Norton.mfront ${PROJECT_BINARY_DIR}/law/NortonCr.mfront  ${PROJECT_BINARY_DIR}/law/Mono_UO2_CosH_Jaco.mfront
   COMMENT "Performing mfront code generation")
 
 add_custom_target(generate-lib-cermet ALL
@@ -16,9 +16,11 @@ add_custom_target(generate-lib-cermet ALL
 
 add_executable(cermet-elasticity cermet-elasticity.cxx)
 add_executable(cermet-norton cermet-norton.cxx)
+add_executable(cermet-norton-bm cermet-norton-bm.cxx)
 
 add_dependencies(cermet-elasticity generate-lib-cermet)
 add_dependencies(cermet-norton generate-lib-cermet)
+add_dependencies(cermet-norton-bm generate-lib-cermet)
 
 ## ELASTICITY
 target_link_libraries(cermet-elasticity
@@ -45,6 +47,20 @@ target_include_directories(cermet-norton
    ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 target_link_directories(cermet-norton
+   PUBLIC
+   ${TFEL_LIBRARY_PATH}) 
+
+## NORTON BRUNO MICHEL
+target_link_libraries(cermet-norton-bm
+ PRIVATE TFELMath TFELException
+ PUBLIC mfem-mgis::MFEMMGIS)
+
+target_include_directories(cermet-norton-bm
+   PUBLIC
+   ${TFEL_INCLUDE_PATH} 
+   ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+target_link_directories(cermet-norton-bm
    PUBLIC
    ${TFEL_LIBRARY_PATH}) 
 
