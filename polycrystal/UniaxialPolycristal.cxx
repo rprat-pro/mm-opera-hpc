@@ -20,7 +20,11 @@
 #include "MFEMMGIS/NonLinearEvolutionProblemImplementation.hxx"
 #include "MFEMMGIS/Parameters.hxx"
 #include "MFEMMGIS/PartialQuadratureSpace.hxx"
+#include "MFEMMGIS/PartialQuadratureFunctionsSet.hxx"
 #include "MFEMMGIS/PeriodicNonLinearEvolutionProblem.hxx"
+#include "MFEMMGIS/ParaviewExportIntegrationPointResultsAtNodes.hxx"
+#include "MFEMMGIS/PostProcessing.hxx"
+#include "MFEMMGIS/MechanicalPostProcessings.hxx"
 #include "MFEMMGIS/Profiler.hxx"
 #include "mfem/fem/datacollection.hpp"
 #include "mfem/general/optparser.hpp"
@@ -36,6 +40,58 @@
 
 #include <MFEMMGIS/Profiler.hxx>
 #include <functional>
+
+namespace mfem_mgis{
+
+  template <bool parallel>
+  struct ExportAtIntegrationPoints : PostProcessing<parallel> {
+    ExportAtIntegrationPoints(
+        NonLinearEvolutionProblemImplementation<parallel> &p,
+        const std::string &name,
+        const std::vector<size_type> &mids,
+        const size_type nc,
+        const PartialQuadratureFunctionsSet::UpdateFunction &ufct,
+        const std::string &d)
+        : fcts(getPartialQuadratureSpaces(p, mids), nc),
+          update_function(ufct),
+          exporter(p, makeExportedFunctionsDescription(name, this->fcts), d) {}
+    //
+    void execute(NonLinearEvolutionProblemImplementation<parallel> &p,
+                 const real t,
+                 const real dt) {
+      Context ctx;
+      if (!this->fcts.update(ctx, this->update_function)) {
+        raise(ctx.getErrorMessage());
+      }
+      this->exporter.execute(p, t, dt);
+    }  // end of execute
+
+   protected:
+    //
+    static std::vector<std::shared_ptr<const PartialQuadratureSpace>>
+    getPartialQuadratureSpaces(
+        NonLinearEvolutionProblemImplementation<parallel> &p,
+        const std::vector<size_type> &mids) {
+      auto qspaces =
+          std::vector<std::shared_ptr<const PartialQuadratureSpace>>{};
+      qspaces.reserve(mids.size());
+      for (const auto &mid : mids) {
+        qspaces.push_back(p.getBehaviourIntegrator(mid)
+                              .getMaterial()
+                              .getPartialQuadratureSpacePointer());
+      }
+      return qspaces;
+    }
+    //! \brief underlying quadrature functions set
+    PartialQuadratureFunctionsSet fcts;
+    //! \brief function used to update the quadrature functions set
+    PartialQuadratureFunctionsSet::UpdateFunction update_function;
+    //! \brief Paraview's writer
+    ParaviewExportIntegrationPointResultsAtNodesImplementation<parallel>
+        exporter;
+  };
+
+}  // end of namespace mfem_mgis
 
 /*
                 Problem :
@@ -165,11 +221,38 @@ void print_mesh_information(Implementation &impl) {
   Message("Info problem: Number of finite element unknowns: ", unknowns);
 }
 
-template <typename Problem>
-void add_post_processings(Problem &p, std::string msg) {
+void add_post_processings(mfem_mgis::PeriodicNonLinearEvolutionProblem &p,
+                          std::string msg) {
   p.addPostProcessing("ParaviewExportResults", {{"OutputFileName", msg}});
   p.addPostProcessing("MeanThermodynamicForces",
                       {{"OutputFileName", "avgStressPolycristal"}});
+#ifdef MGIS_FUNCTION_SUPPORT
+  p.getImplementation<true>().addPostProcessing(
+      std::make_unique<mfem_mgis::ExportAtIntegrationPoints<true>>(
+          p.getImplementation<true>(), "vonMisesStress",
+          p.getAssignedMaterialsIdentifiers(), 1,
+          [&p](mfem_mgis::Context &ctx,
+               mfem_mgis::PartialQuadratureFunction &f) {
+            const auto mid = f.getPartialQuadratureSpace().getId();
+            const auto &m = p.getBehaviourIntegrator(mid).getMaterial();
+            return mfem_mgis::computeVonMisesEquivalentStress(
+                ctx, f, m, mfem_mgis::Material::END_OF_TIME_STEP);
+          },
+          "vonMisesStressOutput"));
+  p.getImplementation<true>().addPostProcessing(
+      std::make_unique<mfem_mgis::ExportAtIntegrationPoints<true>>(
+          p.getImplementation<true>(), "FirstEigenStress",
+          p.getAssignedMaterialsIdentifiers(), 1,
+          [&p](mfem_mgis::Context &ctx,
+               mfem_mgis::PartialQuadratureFunction &f) {
+            const auto mid = f.getPartialQuadratureSpace().getId();
+            const auto &m = p.getBehaviourIntegrator(mid).getMaterial();
+            return mfem_mgis::computeFirstEigenStress(
+                ctx, f, m, mfem_mgis::Material::END_OF_TIME_STEP);
+          },
+          "FirstEigenStressOutput"));
+#endif
+
   // p.addPostProcessing(
   // 		"ParaviewExportIntegrationPointResultsAtNodes",
   // 		{{"OutputFileName", msg + "IntegrationPointOutputPKI"},
