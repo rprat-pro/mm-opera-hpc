@@ -28,7 +28,8 @@
 struct TestParameters {
   const char *mesh_file = "mesh/5grains.msh";
   const char *behaviourGrain = "MonoCristal_UO2";
-  const char *behaviourMetal = "NortonCr";
+  const char *behaviourMetal = "MonoCristal_UO2";
+//  const char *behaviourMetal = "NortonCr";
   const char *libraryGrain = "src/libBehaviour.so";
   const char *libraryMetal = "src/libBehaviour.so";
   const char *vector_file = "vectors_5grains.txt";
@@ -188,9 +189,7 @@ void setup_material_properties(ProblemT& problem, TestParameters& p)
   const double shear13 = shear12;
 
   // ceramic
-  problem.addBehaviourIntegrator("Mechanics", 1, p.libraryMetal, p.behaviourMetal);
-  auto& metal = problem.getMaterial(1);
-
+/*
   auto set_properties_norton = [](auto &m,
       const double young, const double poisson)
   {
@@ -199,14 +198,14 @@ void setup_material_properties(ProblemT& problem, TestParameters& p)
     setMaterialProperty(m.s1, "YoungModulus", young);
     setMaterialProperty(m.s1, "PoissonRatio", poisson);
   };
-
+*/
   auto set_temperature = [](auto& m) {
     setExternalStateVariable(m.s0, "Temperature", 1600);
     setExternalStateVariable(m.s1, "Temperature", 1600);
   };
 
-  set_properties_norton(metal, young1, poisson12);
-  set_temperature(metal);
+//  set_properties_norton(metal, young1, poisson12);
+//  set_temperature(metal);
 
 
   auto set_properties_mono = [](auto &m,
@@ -239,8 +238,20 @@ void setup_material_properties(ProblemT& problem, TestParameters& p)
 
   std::vector<std::array<mfem_mgis::real, 3u>> vectors = readVectorsFromFile(p.vector_file);
   if (vectors.size()!=2*(nMat-1)) {
-   std::cout << vectors.size() << "!=" << 2*(nMat-1) << std::endl; 
-   throw std::invalid_argument("setup_properties : incorrect number of vectors in vector file");
+   std::cout << vectors.size() << "!=" << 2*(nMat-1) << std::endl;
+   throw std::invalid_argument("setup_properties : incorrect number of vectors in vector file.");
+  }
+
+  // TEST metal
+  {
+    problem.addBehaviourIntegrator("Mechanics", 1, p.libraryMetal, p.behaviourMetal);
+    auto& metal = problem.getMaterial(1);
+    std::array<mfem_mgis::MaterialAxis3D, 2u> r;
+    r[0] = std::array<mfem_mgis::real, 3u>{0.7071067811865475, -0.4086070447619255, -0.5770964243269279};
+    r[1] = std::array<mfem_mgis::real, 3u>{0.7071067811865475, 0.4086070447619256, 0.5770964243269281};
+    metal.setRotationMatrix(mfem_mgis::RotationMatrix3D{r});
+    set_properties_mono(metal, young1, young2, young3, poisson12, poisson23, poisson13, shear12, shear23, shear13);
+    set_temperature(metal);
   }
 
   for(int grainID = 2 ; grainID <= nMat ; grainID++)
@@ -310,14 +321,19 @@ int main(int argc, char **argv) {
 
   setup_material_properties(problem, p);
 
-  const double def = -0.01;
+  const double def = 5e-4; // 0.01;
   problem.setMacroscopicGradientsEvolution([def](const double t) {
       const int xx = 0;
       const int yy = 1;
       const int zz = 2;
       auto ret = std::vector<mfem_mgis::real>(9, mfem_mgis::real{});
-      ret[xx] = 1 - 0.5 * def;
-      ret[yy] = 1 - 0.5 * def;
+/*
+      ret[xx] = 1 - 0.3 * def * t ;
+      ret[yy] = 1 - 0.3 * def * t ;
+      ret[zz] = 1 + def * t ;
+*/
+      ret[xx] = 1 - 0.0 * def;
+      ret[yy] = 1 - 0.0 * def;
       ret[zz] = 1 + def;
       return ret; });
 
