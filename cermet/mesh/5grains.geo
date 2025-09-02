@@ -957,4 +957,5 @@ Mesh.ElementOrder =2;
 Mesh 2;
 Mesh 3;
 Mesh.MshFileVersion = 2.2;
+Save "5grains.med";
 Save "5grains.vtk";

@@ -169,7 +169,6 @@ int main(int argc, char **argv) {
   //
   auto preconditionner =
     mfem_mgis::Parameters{{"Name", "HypreDiagScale"}};
-  //    mfem_mgis::Parameters{{"Name", "HypreBoomerAMG"}};
   solverParameters.insert(
       mfem_mgis::Parameters{{"Preconditioner", preconditionner}});
   problem.setLinearSolver("HyprePCG", solverParameters);
@@ -177,10 +176,8 @@ int main(int argc, char **argv) {
   // Boundary Conditions
   // TO DO
   // ceramic
-  problem.addBehaviourIntegrator("Mechanics", 1, p.libraryGrain, p.behaviourGrain);
-  problem.addBehaviourIntegrator("Mechanics", 2, p.libraryMetal, p.behaviourMetal);
-  auto& grain = problem.getMaterial(1);
-  auto& metal = problem.getMaterial(2);
+  auto& metal = problem.getMaterial(1);
+  problem.addBehaviourIntegrator("Mechanics", 1, p.libraryMetal, p.behaviourMetal);
 
 
   auto set_properties_elasticity = [](auto& m, const double l, const double mu) {
@@ -209,59 +206,51 @@ int main(int argc, char **argv) {
   };
 
   //  set_properties_elasticity(grain, 100 /*lambda*/, 75 /*mu*/); // TODO
-  set_properties_norton(grain, 8.182e9, 0.364, 100.0e6, 3.333333);
   set_properties_norton(metal, 16.182e9, 0.364, 100.0e12, 3.333333); // TODO
-
-  set_temperature(grain);
   set_temperature(metal);
 
+  const int nMat = getMaterialsAttributes(*(problem.getFiniteElementDiscretizationPointer())).Max();
 
 
+  for(int grainID = 2; grainID < nMat ; grainID++)
+	{ 
+		problem.addBehaviourIntegrator("Mechanics", grainID, p.libraryGrain, p.behaviourGrain);
+		auto& grain = problem.getMaterial(grainID);
+    set_properties_norton(grain, 8.182e9, 0.364, 100.0e6, 3.333333);
+		set_temperature(grain);
+	}
 
-  // macroscopic strain
-  // macroscopic strain
-  std::vector<mfem_mgis::real> e(6, mfem_mgis::real{0});
-  const int xx = 0;
-  const int yy = 1;
-  const int zz = 2;
-
-  /* bar{E} = e33 *(-1/2 E1 x E1 + (-1/2) * E2 x E2 + E3 x E3)*/
-  const double eps = -0.012;
-  e[xx] = -0.5*eps;
-  e[yy] = -0.5*eps;
-  e[zz] = eps;
-  problem.setMacroscopicGradientsEvolution([e](const double t) { 
-      auto ret = e;
-      for(auto& it : ret) it *= t;
-      return ret; 
-      });
+	// macroscopic strain
+	problem.setMacroscopicGradientsEvolution([](const double t) { 
+			std::vector<mfem_mgis::real> e(6, mfem_mgis::real{0});
+			const double eps = 5e-4;
+			e[0] = 1.0-0.3*eps*t;
+			e[1] = 1.0-0.3*eps*t;
+			e[2] = 1.0 + eps*t;
+			return e; 
+			});
 
 
-  if (post_processing) {
-    mfem_mgis::Profiler::Utils::Message("Define post processings");
-    problem.addPostProcessing("ParaviewExportResults",
-        {{"OutputFileName", "Displacement"}});
-    problem.addPostProcessing("MeanThermodynamicForces",
-        {{"OutputFileName", "avgStress"}});
-    /* BUG
-       problem.addPostProcessing(
-       "ParaviewExportIntegrationPointResultsAtNodes",
-       {{"OutputFileName", "IntegrationPointOutput"}});
-     */
-  }
+	if (post_processing) {
+		mfem_mgis::Profiler::Utils::Message("Define post processings");
+		problem.addPostProcessing("ParaviewExportResults",
+				{{"OutputFileName", "Displacement"}});
+		problem.addPostProcessing("MeanThermodynamicForces",
+				{{"OutputFileName", "avgStress"}});
+	}
 
-  const double dt = p.duration / double(p.nstep);
-  for (int i = 0; i < p.nstep; i++) {
-    mfem_mgis::Profiler::Utils::Message("Solving: from ", i*dt, " to ", (i+1)*dt);
-    auto statistics = problem.solve(i * dt, dt);
-    if (!statistics.status) {
-      mfem_mgis::Profiler::Utils::Message("INFO: FAILED");
-    }
-    if(post_processing) problem.executePostProcessings(i * dt, dt);
-    problem.update();
-  }
-  print_memory_footprint("[End]");
-  mfem_mgis::Profiler::timers::print_and_write_timers();
-  return EXIT_SUCCESS;
+	const double dt = p.duration / double(p.nstep);
+	for (int i = 0; i < p.nstep; i++) {
+		mfem_mgis::Profiler::Utils::Message("Solving: from ", i*dt, " to ", (i+1)*dt);
+		auto statistics = problem.solve(i * dt, dt);
+		if (!statistics.status) {
+			mfem_mgis::Profiler::Utils::Message("INFO: FAILED");
+		}
+		if(post_processing) problem.executePostProcessings(i * dt, dt);
+		problem.update();
+	}
+	print_memory_footprint("[End]");
+	mfem_mgis::Profiler::timers::print_and_write_timers();
+	return EXIT_SUCCESS;
 }
 

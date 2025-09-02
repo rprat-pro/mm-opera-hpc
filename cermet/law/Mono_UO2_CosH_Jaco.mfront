@@ -59,3 +59,10 @@
     dfg_ddeel(s) = -dt * sgn_s * dvs_dtau * (ss.mu[s] | dM_ddeel);
   }
 }
+
+@UpdateAuxiliaryStateVariables{
+  if(std::isnan(sig(0))){
+    std::cout << *this << '\n';
+    std::exit(-1);
+  }
+}

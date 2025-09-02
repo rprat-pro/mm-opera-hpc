@@ -6,7 +6,7 @@
   This file implements a Norton Law with thermally activated parameter:
  }
 
-@ModellingHypotheses {".+"};
+//@ModellingHypotheses {".+"};
 //@Epsilon 1.e-16;
 @Brick StandardElasticity;
 @MaterialProperty stress young;           /* mandatory for castem */

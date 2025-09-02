@@ -264,8 +264,8 @@ void setup_material_properties(ProblemT& problem, TestParameters& p)
     std::array<mfem_mgis::MaterialAxis3D, 2u> r;
     if (grain.b.symmetry == mgis::behaviour::Behaviour::ORTHOTROPIC)
     {
-      r[0] = vectors[2 * (grainID - 1)];
-      r[1] = vectors[2 * (grainID - 1) + 1 ];
+      r[0] = vectors.at(2*(grainID - 2));
+      r[1] = vectors.at(2*(grainID - 2) + 1);
       grain.setRotationMatrix(mfem_mgis::RotationMatrix3D{r});
     }
   }
@@ -327,14 +327,9 @@ int main(int argc, char **argv) {
       const int yy = 1;
       const int zz = 2;
       auto ret = std::vector<mfem_mgis::real>(9, mfem_mgis::real{});
-/*
-      ret[xx] = 1 - 0.3 * def * t ;
-      ret[yy] = 1 - 0.3 * def * t ;
-      ret[zz] = 1 + def * t ;
-*/
-      ret[xx] = 1 - 0.0 * def;
-      ret[yy] = 1 - 0.0 * def;
-      ret[zz] = 1 + def;
+      ret[xx] = 1 - 0.3 * def * t;
+      ret[yy] = 1 - 0.3 * def * t;
+      ret[zz] = 1 + def * t;
       return ret; });
 
   if (post_processing) {
