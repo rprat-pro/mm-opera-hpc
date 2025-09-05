@@ -29,16 +29,16 @@ struct TestParameters {
   const char *mesh_file = "mesh/5grains.msh";
   const char *behaviourGrain = "MonoCristal_UO2";
   const char *behaviourMetal = "MonoCristal_UO2";
-//  const char *behaviourMetal = "NortonCr";
   const char *libraryGrain = "src/libBehaviour.so";
   const char *libraryMetal = "src/libBehaviour.so";
   const char *vector_file = "vectors_5grains.txt";
-  int order = 2;
+  int order = 1;
   int refinement = 0;
   int post_processing = 1; // default value : activated
   int verbosity_level = 0; // default value : lower level
-  int nstep = 40;
-  double duration = 1.;
+  int nstep = 400;
+  //double duration = 100.;
+  double duration = 200.;
 };
 
 void fill_parameters(mfem::OptionsParser &args, TestParameters &p) {
@@ -189,24 +189,10 @@ void setup_material_properties(ProblemT& problem, TestParameters& p)
   const double shear13 = shear12;
 
   // ceramic
-/*
-  auto set_properties_norton = [](auto &m,
-      const double young, const double poisson)
-  {
-    setMaterialProperty(m.s0, "YoungModulus", young);
-    setMaterialProperty(m.s0, "PoissonRatio", poisson);
-    setMaterialProperty(m.s1, "YoungModulus", young);
-    setMaterialProperty(m.s1, "PoissonRatio", poisson);
-  };
-*/
   auto set_temperature = [](auto& m) {
     setExternalStateVariable(m.s0, "Temperature", 1600);
     setExternalStateVariable(m.s1, "Temperature", 1600);
   };
-
-//  set_properties_norton(metal, young1, poisson12);
-//  set_temperature(metal);
-
 
   auto set_properties_mono = [](auto &m,
       const double yo1, const double yo2, const double yo3,
@@ -314,21 +300,25 @@ int main(int argc, char **argv) {
 
   //
   auto preconditionner =
-    mfem_mgis::Parameters{{"Name", "HypreDiagScale"}};
+//    mfem_mgis::Parameters{{"Name", "HypreDiagScale"}};
+    mfem_mgis::Parameters{{"Name", "HypreBoomerAMG"}, {"Options",  mfem_mgis::Parameters{{"VerbosityLevel", verbosity}}}};
   solverParameters.insert(
       mfem_mgis::Parameters{{"Preconditioner", preconditionner}});
   problem.setLinearSolver("HyprePCG", solverParameters);
+  problem.setLinearSolver("HypreGMRES", solverParameters);
+  //problem.setLinearSolver("MUMPSSolver", {});
 
   setup_material_properties(problem, p);
 
+  // Traction
   const double def = 5e-4; // 0.01;
   problem.setMacroscopicGradientsEvolution([def](const double t) {
       const int xx = 0;
       const int yy = 1;
       const int zz = 2;
       auto ret = std::vector<mfem_mgis::real>(9, mfem_mgis::real{});
-      ret[xx] = 1 - 0.3 * def * t;
-      ret[yy] = 1 - 0.3 * def * t;
+      ret[xx] = 1 - 0.0; //0.3 * def * t;
+      ret[yy] = 1 - 0.0; // 0.3 * def * t;
       ret[zz] = 1 + def * t;
       return ret; });
 

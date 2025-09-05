@@ -15,7 +15,7 @@ nbSpheres = 5
 distMin = 0.4
 randomSeed = 0
 layer=0.02
-MeshOrder = 2
+MeshOrder = 1
 MeshSize = 0.05
 
 theSpheres = sac_de_billes.fillMaxRSA_3D(sac_de_billes.Tore, L, nbSpheres, randomSeed, distMin)
@@ -35,6 +35,6 @@ meshGenerator = merope.mesh.MeshGenerator()
 meshGenerator.setMeshOrder(MeshOrder)
 meshGenerator.setMeshSize(MeshSize)
 meshGenerator.setMultiInclusions(mi)
-meshGenerator.set_nameOutput(["5grains.vtk"])
+meshGenerator.set_nameOutput(["5grains.med"])
 meshGenerator.setAdimMergeDistance(1e-7)
 meshGenerator.write("5grains.geo", merope.mesh.MeshMethod.OpenCascade)

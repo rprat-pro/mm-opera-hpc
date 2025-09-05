@@ -953,9 +953,8 @@ Physical Surface(7) = {s1,s4,s6,s7,s8,s9,s10,s11,s12,s13,s14,s16,s17,s18,s19,s20
 
 MeshSize {:} =0.050000000000000003;
 
-Mesh.ElementOrder =2;
+Mesh.ElementOrder =1;
 Mesh 2;
 Mesh 3;
 Mesh.MshFileVersion = 2.2;
 Save "5grains.med";
-Save "5grains.vtk";
