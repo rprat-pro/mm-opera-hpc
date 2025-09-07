@@ -92,3 +92,14 @@ Full test (time 200s, 400 timesteps, 1 level of uniform refinement, and your own
 ```
 mpirun -n 12 ./cermet --duration 200 --nstep 400 -r 1 --mesh yourmesh.msh
 ```
+
+## Results
+
+Current results (07/09/25) need to be check.
+
+### 5 Grains
+
+
+![Boundary conditions of type 0](doc/cermet-bcs-type-0.png)
+
+![Boundary conditions of type 1](doc/cermet-bcs-type-1.png)
