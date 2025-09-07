@@ -11,18 +11,18 @@
 
 /*
 
-  Problem:
+Problem:
 
-  Definition:
+Definition:
 
-  - contact law
+- contact law
 
-  - Parameters:
+- Parameters:
 
-  material: [grain, metal]
+material: [grain, metal]
 
-  element: H1
-  order: 2
+element: H1
+order: 2
 
  */
 struct TestParameters {
@@ -40,6 +40,62 @@ struct TestParameters {
   //double duration = 100.;
   double duration = 200.;
 };
+
+
+struct MaterialParameters
+{
+  double nueff;
+  double Eeff;
+  double Geff;
+
+  void operator()(double young, double poisson, double shear)
+  {
+    // ===========================
+    // effective moduli estimations
+    // ===========================
+    const double C11 = young * (poisson - 1) / (2 * poisson * poisson + poisson - 1);
+    const double C12 = -(poisson * young) / (2 * poisson * poisson + poisson - 1);
+    const double C44 = shear;
+    // ---- Bulk Modulus ----
+    const double Keff = 1. / 3. * (C11 + 2 * C12);
+    // ---- Shear Modulus ----
+    // Reuss & Voigt bounds
+    const double aniso = 2 * C44 / (C11 - C12);
+    const double GReuss = 5 * C44 / (3 + 2 * aniso);
+    const double GVoigt = (3 * aniso + 2) / (5 * aniso) * C44;
+    // Hashin–Shtrikman bounds
+    const double Gv = (C11 - C12) / 2;
+    const double beta1 = -3 * (Keff + 2 * Gv) / (5 * Gv * (3 * Keff + 4 * Gv));
+    const double beta2 = -3 * (Keff + 2 * C44) / (5 * C44 * (3 * Keff + 4 * C44));
+    const double GHSl = Gv + 3 * ((C44 - Gv) - 4 * beta1) / 5;
+    const double GHSu = C44 + 3 * ((Gv - C44) - 6 * beta2) / 5;
+    // Kroener
+    double m0, mus;
+    double D1, sD1, D2;
+    double GK = 0.;
+    do
+    {
+      m0 = GK;
+      D1 = Keff + 2 * GK;
+      sD1 = 6 * D1;
+      mus = GK * (9 * Keff + 8 * GK) / sD1;
+      D2 = 5 * mus + 2 * C44 + 3 * Gv;
+      GK = (3 * C44 * mus + 2 * Gv * mus + 5 * Gv * C44) / D2;
+    } while (fabs(GK - m0) / Keff > 1e-10);
+
+    // Shear modulus choice
+    mfem_mgis::Profiler::Utils::Message("GReuss =", GReuss);
+    mfem_mgis::Profiler::Utils::Message("GVoigt =", GVoigt);
+    mfem_mgis::Profiler::Utils::Message("GHSl =", GHSl);
+    mfem_mgis::Profiler::Utils::Message("GHSu =", GHSu);
+    mfem_mgis::Profiler::Utils::Message("GK =", GK);
+
+    Geff = GK; // GHSu
+               // Young and Poisson effective moduli
+    nueff = (3 * Keff - 2 * Geff) / (2 * (3 * Keff + Geff));
+    Eeff = 9 * Keff * Geff / (3 * Keff + Geff);
+  }
+}; // struct MaterialParameters
 
 void fill_parameters(mfem::OptionsParser &args, TestParameters &p) {
   args.AddOption(&p.mesh_file, "-m", "--mesh", "Mesh file to use.");
@@ -174,7 +230,7 @@ void post_process(Problem &p, double start, double end) {
 }
 
   template<typename ProblemT>
-void setup_material_properties(ProblemT& problem, TestParameters& p)
+void setup_material_properties(ProblemT& problem, TestParameters& p, MaterialParameters& mp)
 {
 
   // cubic symmetry elasticity
@@ -187,6 +243,8 @@ void setup_material_properties(ProblemT& problem, TestParameters& p)
   const double shear12 = 54.e9;
   const double shear23 = shear12;
   const double shear13 = shear12;
+
+  mp(young1, poisson12, shear12); // used in solve_null_strain
 
   // ceramic
   auto set_temperature = [](auto& m) {
@@ -224,8 +282,8 @@ void setup_material_properties(ProblemT& problem, TestParameters& p)
 
   std::vector<std::array<mfem_mgis::real, 3u>> vectors = readVectorsFromFile(p.vector_file);
   if (vectors.size()!=2*(nMat-1)) {
-   std::cout << vectors.size() << "!=" << 2*(nMat-1) << std::endl;
-   throw std::invalid_argument("setup_properties : incorrect number of vectors in vector file.");
+    std::cout << vectors.size() << "!=" << 2*(nMat-1) << std::endl;
+    throw std::invalid_argument("setup_properties : incorrect number of vectors in vector file.");
   }
 
   // TEST metal
@@ -257,6 +315,165 @@ void setup_material_properties(ProblemT& problem, TestParameters& p)
   }
 }
 
+// Version 1
+  template<typename Problem>
+void solve_impose_displ(Problem& problem, double dt, int nstep, bool post_processing)
+{
+  // Traction
+  const double def = 5e-4; // 0.01;
+  problem.setMacroscopicGradientsEvolution([def](const double t) {
+      const int xx = 0;
+      const int yy = 1;
+      const int zz = 2;
+      auto ret = std::vector<mfem_mgis::real>(9, mfem_mgis::real{});
+      ret[xx] = 1 - 0.0; //0.3 * def * t;
+      ret[yy] = 1 - 0.0; // 0.3 * def * t;
+      ret[zz] = 1 + def * t;
+      return ret; });
+
+  for (int i = 0; i < nstep; i++) {
+    mfem_mgis::Profiler::Utils::Message("Solving: from ", i*dt, " to ", (i+1)*dt);
+    auto statistics = problem.solve(i * dt, dt);
+    if (!statistics.status) {
+      mfem_mgis::Profiler::Utils::Message("INFO: FAILED");
+    }
+    if(post_processing) problem.executePostProcessings(i * dt, dt);
+    problem.update();
+    print_memory_footprint("[At timestep: " + std::to_string(i) + "]");
+  }
+}
+
+// Version 2
+  template<typename Problem>
+void solve_null_strain(Problem& problem, double dt, int nstep, bool post_processing, MaterialParameters& mp)
+{
+  // Traction
+  const double def = 5e-4;
+
+  double Fxx, Fyy, Fzz;
+  // init macro cauchy stress components
+  double Sxx = 0.;
+  double Syy = 0.;
+
+  // --- use for MPI Reductions --- //
+  double SIG_local[2];
+  double SIG_global[2];
+
+  // --- variables used to loop to compute Fyy and Fxx --- //
+  // --- fixed-point param
+  const double tolFP = 1.e4;
+  const int maxitFP = 50;
+
+  // warning Fxx, Fyy, and Fzz are defined during the following loop
+  problem.setMacroscopicGradientsEvolution([&Fxx, &Fyy, &Fzz](const double t)
+      { 
+      auto ret = std::vector<mfem_mgis::real>(9, mfem_mgis::real{});
+      ret[0] = Fxx;
+      ret[1] = Fyy;
+      ret[2] = Fzz;
+      return ret; });
+
+
+  for (int i = 0; i < nstep; i++) 
+  {
+    mfem_mgis::Profiler::Utils::Message("Solving: from ", i*dt, " to ", (i+1)*dt);
+
+    // -- update F from input data, here def = 5e-4. -- //
+    Fzz = 1. + def * (i + 1.) * dt; // / end);
+
+    
+    if (i == 0) 
+    {
+      Fxx = 1.;// / std::sqrt(Fzz);
+      Fyy = 1.;// / std::sqrt(Fzz);
+    }
+    // try another start for fixed point
+    //Fxx =  1.;
+    //Fyy =  1.;
+    Sxx = 0.0;
+    Syy = 0.0;
+    // --- reset fixed point variables --- //
+    int itFP = 0;
+    double newRes = 0.0;
+    double oldRes = 1.e6;
+
+    // --- fixed point loop --- // 
+    while ((abs(oldRes - newRes) > tolFP) && (itFP <= maxitFP))
+    {
+      // -- Debug -- //
+      mfem_mgis::Profiler::Utils::Message("debug: Sxx -> ", Sxx, " Syy -> ", Syy );
+      mfem_mgis::Profiler::Utils::Message("debug:: Eeff -> ", mp.Eeff, " mp.nueff -> ", mp.nueff );
+
+      double Fcorr[2];
+      // -- compute correction -- //
+      // -- note that Sxx and Syy are computed at the end of this loop section, default is 0 -- //
+      Fcorr[0] = ((mp.nueff*mp.nueff-1)*Sxx)/mp.Eeff+(mp.nueff*(mp.nueff+1)*Syy)/mp.Eeff;
+      Fcorr[1] = ((mp.nueff*mp.nueff-1)*Syy)/mp.Eeff+(mp.nueff*(mp.nueff+1)*Sxx)/mp.Eeff;
+
+      // -- Increment F with F correction -- //
+      Fxx += Fcorr[0];
+      Fyy += Fcorr[1];
+
+      mfem_mgis::Profiler::Utils::Message("debug: ", Fxx, Fyy, Fcorr[0], Fcorr[1], Fzz);
+
+      // -- note that MacroscopicGradientsEvolution taktes into account of new Fxx and Fyy -- //
+      auto statistics = problem.solve(i * dt, dt);
+      if (!statistics.status) {
+        mfem_mgis::Profiler::Utils::Message("The Linear Solver has failed.");
+        //std::exit(EXIT_FAILURE);
+      }
+      problem.update();
+
+      // -- Get stress and volume for all mateirals -- //
+      auto [tf_integrals, volumes] = mfem_mgis::computeMeanThermodynamicForcesValues<true>(problem.template getImplementation<true>());
+
+      // -- compute volume on all Materials Identifiers -- //
+      // -- compute partial contribution to Sxx and Syy
+      double volume = 0.0;
+      Sxx = 0.0;
+      Syy = 0.0;
+      for (const auto &m : problem.getAssignedMaterialsIdentifiers())
+      {
+        volume += volumes[m];
+        Sxx += tf_integrals[m][0];
+        Syy += tf_integrals[m][1];
+      }
+      assert(volume > 0.0);
+
+      // -- Get volume from other subdomains -- //
+      // -- local volume -> global volume
+      MPI_Allreduce(MPI_IN_PLACE, &volume, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+      // -- compute mean value of Thermodynamic Forces on all Materials Identifiers -- //
+      Sxx /= volume;
+      Syy /= volume;
+
+      // -- PKI to VM -- //
+      Sxx = Sxx*Fxx/(Fxx*Fyy*Fzz);
+      Syy = Syy*Fyy/(Fxx*Fyy*Fzz);
+
+      // -- get Sxx and Syy from other subdomains -- //
+      SIG_local[0] = Sxx;
+      SIG_local[1] = Syy;
+      MPI_Allreduce(SIG_local, SIG_global, 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      Sxx = SIG_global[0];
+      Syy = SIG_global[1];
+
+      oldRes = newRes;
+      newRes = std::sqrt(Sxx * Sxx + Syy * Syy);
+
+      mfem_mgis::Profiler::Utils::Message("Fixed Point iteration", itFP, ": |res| =", abs(oldRes - newRes));
+      if (abs(oldRes - newRes) > tolFP) { problem.revert(); }      
+      itFP++;
+    }
+
+    if (itFP >= maxitFP) mfem_mgis::Profiler::Utils::Message("warning: maximum number of iterations for the fixed-point algorithm attained, before the requested tolerance is reached");
+
+    if(post_processing) problem.executePostProcessings(i * dt, dt);
+    print_memory_footprint("[At timestep: " + std::to_string(i) + "]");
+  }
+}
+
 int main(int argc, char **argv) {
   using namespace mfem_mgis::Profiler::Utils; // Use Message
                                               // options treatment
@@ -284,13 +501,13 @@ int main(int argc, char **argv) {
 
   // non linear solver
   problem.setSolverParameters({{"VerbosityLevel", 1},
-      {"RelativeTolerance", 1e-6},
+      {"RelativeTolerance", 1e-8},
       {"AbsoluteTolerance", 0.},
-      {"MaximumNumberOfIterations", 6}});
+      {"MaximumNumberOfIterations", 15}});
   // choix du solver linéaire +
   int verbosity = p.verbosity_level;
   int post_processing = p.post_processing;
-  double Tol = 1e-6;
+  double Tol = 1e-12;
   int defaultMaxNumOfIt = 2000;
   auto solverParameters = mfem_mgis::Parameters{};
   solverParameters.insert(mfem_mgis::Parameters{{"VerbosityLevel", verbosity}});
@@ -300,29 +517,22 @@ int main(int argc, char **argv) {
 
   //
   auto preconditionner =
-//    mfem_mgis::Parameters{{"Name", "HypreDiagScale"}};
+    //    mfem_mgis::Parameters{{"Name", "HypreDiagScale"}};
     mfem_mgis::Parameters{{"Name", "HypreBoomerAMG"}, {"Options",  mfem_mgis::Parameters{{"VerbosityLevel", verbosity}}}};
   solverParameters.insert(
       mfem_mgis::Parameters{{"Preconditioner", preconditionner}});
   problem.setLinearSolver("HyprePCG", solverParameters);
-  problem.setLinearSolver("HypreGMRES", solverParameters);
+  //problem.setLinearSolver("HypreGMRES", solverParameters);
   //problem.setLinearSolver("MUMPSSolver", {});
 
-  setup_material_properties(problem, p);
 
-  // Traction
-  const double def = 5e-4; // 0.01;
-  problem.setMacroscopicGradientsEvolution([def](const double t) {
-      const int xx = 0;
-      const int yy = 1;
-      const int zz = 2;
-      auto ret = std::vector<mfem_mgis::real>(9, mfem_mgis::real{});
-      ret[xx] = 1 - 0.0; //0.3 * def * t;
-      ret[yy] = 1 - 0.0; // 0.3 * def * t;
-      ret[zz] = 1 + def * t;
-      return ret; });
+  // --- Define material porperties directly into setup_material_properties --- //
+  // --- Initialize "MaterialParameters mp" that is required for "solve_null_strain" --- // 
+  MaterialParameters mp;
+  setup_material_properties(problem, p, mp);
 
-  if (post_processing) {
+  if (post_processing) 
+  {
     mfem_mgis::Profiler::Utils::Message("Define post processings");
     problem.addPostProcessing("ParaviewExportResults",
         {{"OutputFileName", "Displacement"}});
@@ -336,16 +546,9 @@ int main(int argc, char **argv) {
   }
 
   const double dt = p.duration / double(p.nstep);
-  for (int i = 0; i < p.nstep; i++) {
-    mfem_mgis::Profiler::Utils::Message("Solving: from ", i*dt, " to ", (i+1)*dt);
-    auto statistics = problem.solve(i * dt, dt);
-    if (!statistics.status) {
-      mfem_mgis::Profiler::Utils::Message("INFO: FAILED");
-    }
-    if(post_processing) problem.executePostProcessings(i * dt, dt);
-    problem.update();
-    print_memory_footprint("[At timestep: " + std::to_string(i) + "]");
-  }
+  //solve_impose_displ(problem, dt, p.nstep, post_processing); 
+  solve_null_strain(problem, dt, p.nstep, post_processing, mp); 
+
   print_memory_footprint("[End]");
   mfem_mgis::Profiler::timers::print_and_write_timers();
   return EXIT_SUCCESS;
