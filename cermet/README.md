@@ -2,7 +2,7 @@
 
 ## Mesh generation
 
-Mesh example: `cermet-opera-hpc-mini.py`
+Mesh example: `5grains.py`
 
 
 Please load `MEROPE_DIR` before.
