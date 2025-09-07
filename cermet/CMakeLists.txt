@@ -32,6 +32,7 @@ target_link_directories(cermet
 file(COPY law mesh DESTINATION ${PROJECT_BINARY_DIR})
 file(COPY mesh/vectors_5grains.txt DESTINATION ${PROJECT_BINARY_DIR})
 
-add_test(NAME Cermet COMMAND cermet --duration 0.5 --nstep 1)
+add_test(NAME CermetNullStrainXXYY COMMAND cermet --duration 0.5 --nstep 1 --bcs_type 0)
+add_test(NAME CermetImposeGradXXYY COMMAND cermet --duration 0.5 --nstep 1 --bcs_type 1)
 
 install(TARGETS cermet DESTINATION bin)

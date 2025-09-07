@@ -8,23 +8,28 @@
 #include "MFEMMGIS/UniformDirichletBoundaryCondition.hxx"
 #include "MFEMMGIS/ParaviewExportIntegrationPointResultsAtNodes.hxx"
 
-
 /*
-
 Problem:
+
+This simulation consists of applying a tensile load on a cermet RVE. The cermet is a polycrystal where each grain has a material ID (from 2 to Nmat – 1) and a different orientation. A metallic interface is present between the different polycrystals (material ID 1)
 
 Definition:
 
 - contact law
 
+MonoCristal_UO2 for all materials
+
 - Parameters:
 
 material: [grain, metal]
 
-element: H1
-order: 2
+- FEM
 
- */
+element: H1
+order: 1
+
+*/
+
 struct TestParameters {
   const char *mesh_file = "mesh/5grains.msh";
   const char *behaviourGrain = "MonoCristal_UO2";
@@ -37,8 +42,8 @@ struct TestParameters {
   int post_processing = 1; // default value : activated
   int verbosity_level = 0; // default value : lower level
   int nstep = 400;
-  //double duration = 100.;
   double duration = 200.;
+  int bcs_type = 0;
 };
 
 
@@ -113,6 +118,8 @@ void fill_parameters(mfem::OptionsParser &args, TestParameters &p) {
       "choose the number of steps (default = 40)");
   args.AddOption(&p.vector_file, "-f", "--file",
       "Vector file to use");
+  args.AddOption(&p.bcs_type, "-bcs", "--bcs_type",
+      "Types of boundary conditions. For all BCs, a displacement of def = 5e-4 m/s is imposed. Type 0: zero strain in xx and yy. Type 1: imposed displacement of -0.3 * def in xx and yy.");
   args.Parse();
   if (!args.Good()) {
     if (mfem_mgis::getMPIrank() == 0)
@@ -326,8 +333,8 @@ void solve_impose_displ(Problem& problem, double dt, int nstep, bool post_proces
       const int yy = 1;
       const int zz = 2;
       auto ret = std::vector<mfem_mgis::real>(9, mfem_mgis::real{});
-      ret[xx] = 1 - 0.0; //0.3 * def * t;
-      ret[yy] = 1 - 0.0; // 0.3 * def * t;
+      ret[xx] = 1 - 0.3 * def * t;
+      ret[yy] = 1 - 0.3 * def * t;
       ret[zz] = 1 + def * t;
       return ret; });
 
@@ -381,7 +388,7 @@ void solve_null_strain(Problem& problem, double dt, int nstep, bool post_process
     // -- update F from input data, here def = 5e-4. -- //
     Fzz = 1. + def * (i + 1.) * dt; // / end);
 
-    
+
     if (i == 0) 
     {
       Fxx = 1.;// / std::sqrt(Fzz);
@@ -401,8 +408,8 @@ void solve_null_strain(Problem& problem, double dt, int nstep, bool post_process
     while ((abs(oldRes - newRes) > tolFP) && (itFP <= maxitFP))
     {
       // -- Debug -- //
-      mfem_mgis::Profiler::Utils::Message("debug: Sxx -> ", Sxx, " Syy -> ", Syy );
-      mfem_mgis::Profiler::Utils::Message("debug:: Eeff -> ", mp.Eeff, " mp.nueff -> ", mp.nueff );
+      // -- mfem_mgis::Profiler::Utils::Message("debug: Sxx -> ", Sxx, " Syy -> ", Syy );
+      // -- mfem_mgis::Profiler::Utils::Message("debug:: Eeff -> ", mp.Eeff, " mp.nueff -> ", mp.nueff );
 
       double Fcorr[2];
       // -- compute correction -- //
@@ -414,7 +421,8 @@ void solve_null_strain(Problem& problem, double dt, int nstep, bool post_process
       Fxx += Fcorr[0];
       Fyy += Fcorr[1];
 
-      mfem_mgis::Profiler::Utils::Message("debug: ", Fxx, Fyy, Fcorr[0], Fcorr[1], Fzz);
+      // -- Debug -- //
+      // -- mfem_mgis::Profiler::Utils::Message("debug: ", Fxx, Fyy, Fcorr[0], Fcorr[1], Fzz);
 
       // -- note that MacroscopicGradientsEvolution taktes into account of new Fxx and Fyy -- //
       auto statistics = problem.solve(i * dt, dt);
@@ -546,8 +554,9 @@ int main(int argc, char **argv) {
   }
 
   const double dt = p.duration / double(p.nstep);
-  //solve_impose_displ(problem, dt, p.nstep, post_processing); 
-  solve_null_strain(problem, dt, p.nstep, post_processing, mp); 
+  if(p.bcs_type == 0) solve_null_strain(problem, dt, p.nstep, post_processing, mp);
+  if(p.bcs_type == 1) solve_impose_displ(problem, dt, p.nstep, post_processing);
+  if(p.bcs_type > 1) std::exit(EXIT_FAILURE); 
 
   print_memory_footprint("[End]");
   mfem_mgis::Profiler::timers::print_and_write_timers();
