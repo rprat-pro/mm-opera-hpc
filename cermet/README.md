@@ -9,8 +9,8 @@ Please load `MEROPE_DIR` before.
 
 ```
 source ${MEROPE_DIR}/Env_Merope.sh
-python3 mesh/cermet-opera-hpc-mini.py # generate cermet-mini.geo
-gmsh -3 cermet-mini.geo # generate cermet-mini.msh
+python3 mesh/5grains.py # generate 5grains.geo
+gmsh -3 5grains.geo # generate 5grains.msh
 ```
 
 ### Options
