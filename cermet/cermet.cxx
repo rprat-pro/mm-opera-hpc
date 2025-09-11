@@ -298,8 +298,12 @@ void setup_material_properties(ProblemT& problem, TestParameters& p, MaterialPar
     problem.addBehaviourIntegrator("Mechanics", 1, p.libraryMetal, p.behaviourMetal);
     auto& metal = problem.getMaterial(1);
     std::array<mfem_mgis::MaterialAxis3D, 2u> r;
-    r[0] = std::array<mfem_mgis::real, 3u>{0.7071067811865475, -0.4086070447619255, -0.5770964243269279};
-    r[1] = std::array<mfem_mgis::real, 3u>{0.7071067811865475, 0.4086070447619256, 0.5770964243269281};
+//    r[0] = std::array<mfem_mgis::real, 3u>{0.7071067811865475, -0.4086070447619255, -0.5770964243269279};
+//    r[1] = std::array<mfem_mgis::real, 3u>{0.7071067811865475, 0.4086070447619256, 0.5770964243269281};
+///*
+    r[0] = std::array<mfem_mgis::real, 3u>{1.0, 0.0, 0.0};
+    r[1] = std::array<mfem_mgis::real, 3u>{0.0, 1.0, 0.0};
+//*/
     metal.setRotationMatrix(mfem_mgis::RotationMatrix3D{r});
     set_properties_mono(metal, young1, young2, young3, poisson12, poisson23, poisson13, shear12, shear23, shear13);
     set_temperature(metal);
@@ -315,8 +319,16 @@ void setup_material_properties(ProblemT& problem, TestParameters& p, MaterialPar
     std::array<mfem_mgis::MaterialAxis3D, 2u> r;
     if (grain.b.symmetry == mgis::behaviour::Behaviour::ORTHOTROPIC)
     {
-      r[0] = vectors.at(2*(grainID - 2));
-      r[1] = vectors.at(2*(grainID - 2) + 1);
+///*
+//      r[0] = vectors.at(2*(grainID - 2));
+//      r[1] = vectors.at(2*(grainID - 2) + 1);
+//*/
+//    r[0] = std::array<mfem_mgis::real, 3u>{0.7071067811865475, -0.4086070447619255, -0.5770964243269279};
+//    r[1] = std::array<mfem_mgis::real, 3u>{0.7071067811865475, 0.4086070447619256, 0.5770964243269281};
+///*
+      r[0] = std::array<mfem_mgis::real, 3u>{1.0, 0.0, 0.0};
+      r[1] = std::array<mfem_mgis::real, 3u>{0.0, 1.0, 0.0};
+//*/
       grain.setRotationMatrix(mfem_mgis::RotationMatrix3D{r});
     }
   }
@@ -361,10 +373,11 @@ void solve_null_strain(Problem& problem, double dt, int nstep, bool post_process
   // init macro cauchy stress components
   double Sxx = 0.;
   double Syy = 0.;
+  double Szz = 0.;
 
   // --- use for MPI Reductions --- //
   double SIG_local[2];
-  double SIG_global[2];
+  double SIG_global[3];
 
   // --- variables used to loop to compute Fyy and Fxx --- //
   // --- fixed-point param
@@ -372,14 +385,16 @@ void solve_null_strain(Problem& problem, double dt, int nstep, bool post_process
   const int maxitFP = 50;
 
   // warning Fxx, Fyy, and Fzz are defined during the following loop
-  problem.setMacroscopicGradientsEvolution([&Fxx, &Fyy, &Fzz](const double t)
-      { 
-      auto ret = std::vector<mfem_mgis::real>(9, mfem_mgis::real{});
-      ret[0] = Fxx;
-      ret[1] = Fyy;
-      ret[2] = Fzz;
-      return ret; });
-
+  problem.setMacroscopicGradientsEvolution([&Fxx, &Fyy, &Fzz](const double t) {
+    auto ret = std::vector<mfem_mgis::real>(9, mfem_mgis::real{});
+    ret[0] = Fxx;
+    ret[1] = Fyy;
+    ret[2] = Fzz;
+    //       std::cout << "Imposed deformation gradients: " << Fxx << " " << Fyy
+    //       << " "
+    //                 << Fzz << std::endl;
+    return ret;
+  });
 
   for (int i = 0; i < nstep; i++) 
   {
@@ -387,12 +402,16 @@ void solve_null_strain(Problem& problem, double dt, int nstep, bool post_process
 
     // -- update F from input data, here def = 5e-4. -- //
     Fzz = 1. + def * (i + 1.) * dt; // / end);
-
+    //     std::cout << "Imposed deformation gradient: " << Fzz << std::endl;
 
     if (i == 0) 
     {
+      Fxx = 1. / std::sqrt(Fzz);
+      Fyy = 1. / std::sqrt(Fzz);
+/*
       Fxx = 1.;// / std::sqrt(Fzz);
       Fyy = 1.;// / std::sqrt(Fzz);
+*/
     }
     // try another start for fixed point
     //Fxx =  1.;
@@ -404,12 +423,22 @@ void solve_null_strain(Problem& problem, double dt, int nstep, bool post_process
     double newRes = 0.0;
     double oldRes = 1.e6;
 
-    // --- fixed point loop --- // 
-    while ((abs(oldRes - newRes) > tolFP) && (itFP <= maxitFP))
+    if( i > 0)
+    {
+      Fxx *= (1. + def * (i + 1) * dt) / (1. + def * i * dt) ; // FXX_t_2 = FZZ_t_2 * FXX_t_1 / FZZ_t_1
+      Fyy *= (1. + def * (i + 1) * dt) / (1. + def * i * dt) ; // FYY_t_2 = FZZ_t_2 * FYY_t_1 / FZZ_t_1
+    }
+  
+    // --- fixed point loop --- //
+    bool converged = false;
+    while ((!converged) && (itFP <= maxitFP))
     {
       // -- Debug -- //
-      // -- mfem_mgis::Profiler::Utils::Message("debug: Sxx -> ", Sxx, " Syy -> ", Syy );
-      // -- mfem_mgis::Profiler::Utils::Message("debug:: Eeff -> ", mp.Eeff, " mp.nueff -> ", mp.nueff );
+      // --
+      //      mfem_mgis::Profiler::Utils::Message("debug: Sxx -> ", Sxx, " Syy
+      //      -> ", Syy );
+      // -- mfem_mgis::Profiler::Utils::Message("debug:: Eeff -> ", mp.Eeff, "
+      // mp.nueff -> ", mp.nueff );
 
       double Fcorr[2];
       // -- compute correction -- //
@@ -430,7 +459,7 @@ void solve_null_strain(Problem& problem, double dt, int nstep, bool post_process
         mfem_mgis::Profiler::Utils::Message("The Linear Solver has failed.");
         //std::exit(EXIT_FAILURE);
       }
-      problem.update();
+      //      problem.update();
 
       // -- Get stress and volume for all mateirals -- //
       auto [tf_integrals, volumes] = mfem_mgis::computeMeanThermodynamicForcesValues<true>(problem.template getImplementation<true>());
@@ -440,11 +469,13 @@ void solve_null_strain(Problem& problem, double dt, int nstep, bool post_process
       double volume = 0.0;
       Sxx = 0.0;
       Syy = 0.0;
+      Szz = 0.0;
       for (const auto &m : problem.getAssignedMaterialsIdentifiers())
       {
         volume += volumes[m];
         Sxx += tf_integrals[m][0];
         Syy += tf_integrals[m][1];
+        Szz += tf_integrals[m][2];
       }
       assert(volume > 0.0);
 
@@ -452,28 +483,38 @@ void solve_null_strain(Problem& problem, double dt, int nstep, bool post_process
       // -- local volume -> global volume
       MPI_Allreduce(MPI_IN_PLACE, &volume, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
+      // -- get Sxx and Syy from other subdomains -- //
+      SIG_local[0] = Sxx;
+      SIG_local[1] = Syy;
+      SIG_local[2] = Szz;
+      MPI_Allreduce(SIG_local, SIG_global, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      Sxx = SIG_global[0];
+      Syy = SIG_global[1];
+      Szz = SIG_global[2];
+
       // -- compute mean value of Thermodynamic Forces on all Materials Identifiers -- //
       Sxx /= volume;
       Syy /= volume;
+      Szz /= volume;
 
       // -- PKI to VM -- //
       Sxx = Sxx*Fxx/(Fxx*Fyy*Fzz);
       Syy = Syy*Fyy/(Fxx*Fyy*Fzz);
+      Szz = Szz*Fzz/(Fxx*Fyy*Fzz);
 
-      // -- get Sxx and Syy from other subdomains -- //
-      SIG_local[0] = Sxx;
-      SIG_local[1] = Syy;
-      MPI_Allreduce(SIG_local, SIG_global, 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-      Sxx = SIG_global[0];
-      Syy = SIG_global[1];
 
       oldRes = newRes;
       newRes = std::sqrt(Sxx * Sxx + Syy * Syy);
 
       mfem_mgis::Profiler::Utils::Message("Fixed Point iteration", itFP, ": |res| =", abs(oldRes - newRes));
-      if (abs(oldRes - newRes) > tolFP) { problem.revert(); }      
+      converged = std::abs(oldRes - newRes) < tolFP;
+      //      if (abs(oldRes - newRes) > tolFP) { problem.revert(); }
       itFP++;
     }
+    problem.update();
+
+    mfem_mgis::Profiler::Utils::Message("Solution at time", (i + 1.) * dt, ":", //
+                                        Fzz, Sxx, Syy, Szz);
 
     if (itFP >= maxitFP) mfem_mgis::Profiler::Utils::Message("warning: maximum number of iterations for the fixed-point algorithm attained, before the requested tolerance is reached");
 
@@ -509,9 +550,11 @@ int main(int argc, char **argv) {
 
   // non linear solver
   problem.setSolverParameters({{"VerbosityLevel", 1},
-      {"RelativeTolerance", 1e-8},
-      {"AbsoluteTolerance", 0.},
-      {"MaximumNumberOfIterations", 15}});
+      {"RelativeTolerance", 1e-6},
+//      {"AbsoluteTolerance", 0.},
+      {"AbsoluteTolerance", 1e-6},
+      {"MaximumNumberOfIterations", 6}});
+
   // choix du solver linéaire +
   int verbosity = p.verbosity_level;
   int post_processing = p.post_processing;
