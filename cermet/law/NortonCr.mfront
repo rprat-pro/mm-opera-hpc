@@ -6,8 +6,10 @@
   This file implements a Norton Law with thermally activated parameter:
  }
 
-//@ModellingHypotheses {".+"};
-//@Epsilon 1.e-16;
+@ModellingHypotheses {".+"};
+@StrainMeasure Hencky;
+@Epsilon 1.e-14;
+
 @Brick StandardElasticity;
 @MaterialProperty stress young;           /* mandatory for castem */
 young.setGlossaryName("YoungModulus");
@@ -39,8 +41,6 @@ p.setGlossaryName("EquivalentViscoplasticStrain");
   D1 = D0*exp(-1.*Q/(R*T));
    
 }
-
-@StrainMeasure Hencky;
 
 @Integrator{
   const real eps = 1.e-12;
