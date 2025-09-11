@@ -1,17 +1,20 @@
 #include <cstdlib>
-#include <sys/resource.h>
 #include <functional>
+#include <sys/resource.h>
 
 #include "MFEMMGIS/Material.hxx"
-#include "MFEMMGIS/Profiler.hxx"
-#include "MFEMMGIS/PeriodicNonLinearEvolutionProblem.hxx"
-#include "MFEMMGIS/UniformDirichletBoundaryCondition.hxx"
 #include "MFEMMGIS/ParaviewExportIntegrationPointResultsAtNodes.hxx"
+#include "MFEMMGIS/PeriodicNonLinearEvolutionProblem.hxx"
+#include "MFEMMGIS/Profiler.hxx"
+#include "MFEMMGIS/UniformDirichletBoundaryCondition.hxx"
 
 /*
 Problem:
 
-This simulation consists of applying a tensile load on a cermet RVE. The cermet is a polycrystal where each grain has a material ID (from 2 to Nmat – 1) and a different orientation. A metallic interface is present between the different polycrystals (material ID 1)
+This simulation consists of applying a tensile load on a cermet RVE. The cermet
+is a polycrystal where each grain has a material ID (from 2 to Nmat – 1) and a
+different orientation. A metallic interface is present between the different
+polycrystals (material ID 1)
 
 Definition:
 
@@ -46,20 +49,19 @@ struct TestParameters {
   int bcs_type = 0;
 };
 
-
-struct MaterialParameters
-{
+struct MaterialParameters {
   double nueff;
   double Eeff;
   double Geff;
 
-  void operator()(double young, double poisson, double shear)
-  {
+  void operator()(double young, double poisson, double shear) {
     // ===========================
     // effective moduli estimations
     // ===========================
-    const double C11 = young * (poisson - 1) / (2 * poisson * poisson + poisson - 1);
-    const double C12 = -(poisson * young) / (2 * poisson * poisson + poisson - 1);
+    const double C11 =
+        young * (poisson - 1) / (2 * poisson * poisson + poisson - 1);
+    const double C12 =
+        -(poisson * young) / (2 * poisson * poisson + poisson - 1);
     const double C44 = shear;
     // ---- Bulk Modulus ----
     const double Keff = 1. / 3. * (C11 + 2 * C12);
@@ -71,15 +73,15 @@ struct MaterialParameters
     // Hashin–Shtrikman bounds
     const double Gv = (C11 - C12) / 2;
     const double beta1 = -3 * (Keff + 2 * Gv) / (5 * Gv * (3 * Keff + 4 * Gv));
-    const double beta2 = -3 * (Keff + 2 * C44) / (5 * C44 * (3 * Keff + 4 * C44));
+    const double beta2 =
+        -3 * (Keff + 2 * C44) / (5 * C44 * (3 * Keff + 4 * C44));
     const double GHSl = Gv + 3 * ((C44 - Gv) - 4 * beta1) / 5;
     const double GHSu = C44 + 3 * ((Gv - C44) - 6 * beta2) / 5;
     // Kroener
     double m0, mus;
     double D1, sD1, D2;
     double GK = 0.;
-    do
-    {
+    do {
       m0 = GK;
       D1 = Keff + 2 * GK;
       sD1 = 6 * D1;
@@ -105,21 +107,22 @@ struct MaterialParameters
 void fill_parameters(mfem::OptionsParser &args, TestParameters &p) {
   args.AddOption(&p.mesh_file, "-m", "--mesh", "Mesh file to use.");
   args.AddOption(&p.order, "-o", "--order",
-      "Finite element order (polynomial degree).");
+                 "Finite element order (polynomial degree).");
   args.AddOption(&p.refinement, "-r", "--refinement",
-      "refinement level of the mesh, default = 1");
+                 "refinement level of the mesh, default = 1");
   args.AddOption(&p.post_processing, "-p", "--post-processing",
-      "run post processing step");
+                 "run post processing step");
   args.AddOption(&p.verbosity_level, "-v", "--verbosity-level",
-      "choose the verbosity level");
+                 "choose the verbosity level");
   args.AddOption(&p.duration, "-d", "--duration",
-      "choose the duration (default = 5)");
+                 "choose the duration (default = 5)");
   args.AddOption(&p.nstep, "-n", "--nstep",
-      "choose the number of steps (default = 40)");
-  args.AddOption(&p.vector_file, "-f", "--file",
-      "Vector file to use");
+                 "choose the number of steps (default = 40)");
+  args.AddOption(&p.vector_file, "-f", "--file", "Vector file to use");
   args.AddOption(&p.bcs_type, "-bcs", "--bcs_type",
-      "Types of boundary conditions. For all BCs, a displacement of def = 5e-4 m/s is imposed. Type 0: zero strain in xx and yy. Type 1: imposed displacement of -0.3 * def in xx and yy.");
+                 "Types of boundary conditions. For all BCs, a displacement of "
+                 "def = 5e-4 m/s is imposed. Type 0: zero strain in xx and yy. "
+                 "Type 1: imposed displacement of -0.3 * def in xx and yy.");
   args.Parse();
   if (!args.Good()) {
     if (mfem_mgis::getMPIrank() == 0)
@@ -138,8 +141,7 @@ void fill_parameters(mfem::OptionsParser &args, TestParameters &p) {
 }
 
 // display information
-long get_memory_checkpoint()
-{
+long get_memory_checkpoint() {
   rusage obj;
   int who = 0;
   [[maybe_unused]] auto test = getrusage(who, &obj);
@@ -148,15 +150,13 @@ long get_memory_checkpoint()
   MPI_Reduce(&(obj.ru_maxrss), &(res), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
   return res;
 };
-void print_memory_footprint(std::string msg)
-{
+void print_memory_footprint(std::string msg) {
   long mem = get_memory_checkpoint();
   double m = double(mem) * 1e-6; // conversion kb to Gb
   mfem_mgis::Profiler::Utils::Message(msg, " memory footprint: ", m, " GB");
 }
 
-template <typename Mesh>
-void print_mesh_information(Mesh& mesh) {
+template <typename Mesh> void print_mesh_information(Mesh &mesh) {
   using mfem_mgis::Profiler::Utils::Message;
   using mfem_mgis::Profiler::Utils::sum;
 
@@ -172,53 +172,45 @@ void print_mesh_information(Mesh& mesh) {
   Message("INFO: number of elements -> ", numbers_of_elements);
 }
 
-auto norm(std::array<mfem_mgis::real, 3u> &u)
-{
+auto norm(std::array<mfem_mgis::real, 3u> &u) {
   mfem_mgis::real ret = 0.;
-  for (auto val : u)
-  {
+  for (auto val : u) {
     ret += val * val;
   }
   return (std::sqrt(ret));
 }
 
-std::vector<std::array<mfem_mgis::real, 3u>> readVectorsFromFile(const std::string &filename)
-{
+std::vector<std::array<mfem_mgis::real, 3u>>
+readVectorsFromFile(const std::string &filename) {
   // TODO: check if vectors size is equal to nMat
   std::vector<std::array<mfem_mgis::real, 3u>> vectors;
   std::ifstream inputFile(filename);
 
-  auto checknorm = [](std::array<mfem_mgis::real, 3u> v)
-  {
+  auto checknorm = [](std::array<mfem_mgis::real, 3u> v) {
     mfem_mgis::real normv = norm(v);
-    if (normv < 1.e-15)
-    {
+    if (normv < 1.e-15) {
       throw std::invalid_argument("checknorm : vectors must not be null");
     }
-    if (abs(normv - 1.) > 1.e-15)
-    {
+    if (abs(normv - 1.) > 1.e-15) {
       std::cout << "checknorm : normalizing vector..." << std::endl;
-      for (auto &comp : v)
-      {
+      for (auto &comp : v) {
         comp *= 1. / normv;
       }
     }
     return v;
   };
 
-  if (!inputFile.is_open())
-  {
-    std::cout << "Erreur lors de l'ouverture du fichier " << filename << std::endl;
+  if (!inputFile.is_open()) {
+    std::cout << "Erreur lors de l'ouverture du fichier " << filename
+              << std::endl;
     return vectors;
   }
 
   std::string line;
-  while (std::getline(inputFile, line))
-  {
+  while (std::getline(inputFile, line)) {
     std::istringstream iss(line);
     std::array<mfem_mgis::real, 3u> vector;
-    if (!(iss >> vector[0] >> vector[1] >> vector[2]))
-    {
+    if (!(iss >> vector[0] >> vector[1] >> vector[2])) {
       std::cout << "Erreur de lecture du vecteur : " << line << std::endl;
       continue;
     }
@@ -236,9 +228,9 @@ void post_process(Problem &p, double start, double end) {
   p.executePostProcessings(start, end);
 }
 
-  template<typename ProblemT>
-void setup_material_properties(ProblemT& problem, TestParameters& p, MaterialParameters& mp)
-{
+template <typename ProblemT>
+void setup_material_properties(ProblemT &problem, TestParameters &p,
+                               MaterialParameters &mp) {
 
   // cubic symmetry elasticity
   const double young1 = 222.e9;
@@ -254,271 +246,232 @@ void setup_material_properties(ProblemT& problem, TestParameters& p, MaterialPar
   mp(young1, poisson12, shear12); // used in solve_null_strain
 
   // ceramic
-  auto set_temperature = [](auto& m) {
+  auto set_temperature = [](auto &m) {
     setExternalStateVariable(m.s0, "Temperature", 1600);
     setExternalStateVariable(m.s1, "Temperature", 1600);
   };
 
-  auto set_properties_mono = [](auto &m,
-      const double yo1, const double yo2, const double yo3,
-      const double po12, const double po23, const double po13,
-      const double sm12, const double sm23, const double sm13)
-  {
-    setMaterialProperty(m.s0, "YoungModulus1", yo1);
-    setMaterialProperty(m.s0, "YoungModulus2", yo2);
-    setMaterialProperty(m.s0, "YoungModulus3", yo3);
-    setMaterialProperty(m.s0, "PoissonRatio12", po12);
-    setMaterialProperty(m.s0, "PoissonRatio23", po23);
-    setMaterialProperty(m.s0, "PoissonRatio13", po13);
-    setMaterialProperty(m.s0, "ShearModulus12", sm12);
-    setMaterialProperty(m.s0, "ShearModulus23", sm23);
-    setMaterialProperty(m.s0, "ShearModulus13", sm13);
+  auto set_properties_mono =
+      [](auto &m, const double yo1, const double yo2, const double yo3,
+         const double po12, const double po23, const double po13,
+         const double sm12, const double sm23, const double sm13) {
+        setMaterialProperty(m.s0, "YoungModulus1", yo1);
+        setMaterialProperty(m.s0, "YoungModulus2", yo2);
+        setMaterialProperty(m.s0, "YoungModulus3", yo3);
+        setMaterialProperty(m.s0, "PoissonRatio12", po12);
+        setMaterialProperty(m.s0, "PoissonRatio23", po23);
+        setMaterialProperty(m.s0, "PoissonRatio13", po13);
+        setMaterialProperty(m.s0, "ShearModulus12", sm12);
+        setMaterialProperty(m.s0, "ShearModulus23", sm23);
+        setMaterialProperty(m.s0, "ShearModulus13", sm13);
 
-    setMaterialProperty(m.s1, "YoungModulus1", yo1);
-    setMaterialProperty(m.s1, "YoungModulus2", yo2);
-    setMaterialProperty(m.s1, "YoungModulus3", yo3);
-    setMaterialProperty(m.s1, "PoissonRatio12", po12);
-    setMaterialProperty(m.s1, "PoissonRatio23", po23);
-    setMaterialProperty(m.s1, "PoissonRatio13", po13);
-    setMaterialProperty(m.s1, "ShearModulus12", sm12);
-    setMaterialProperty(m.s1, "ShearModulus23", sm23);
-    setMaterialProperty(m.s1, "ShearModulus13", sm13);
-  };
+        setMaterialProperty(m.s1, "YoungModulus1", yo1);
+        setMaterialProperty(m.s1, "YoungModulus2", yo2);
+        setMaterialProperty(m.s1, "YoungModulus3", yo3);
+        setMaterialProperty(m.s1, "PoissonRatio12", po12);
+        setMaterialProperty(m.s1, "PoissonRatio23", po23);
+        setMaterialProperty(m.s1, "PoissonRatio13", po13);
+        setMaterialProperty(m.s1, "ShearModulus12", sm12);
+        setMaterialProperty(m.s1, "ShearModulus23", sm23);
+        setMaterialProperty(m.s1, "ShearModulus13", sm13);
+      };
 
-  const int nMat = getMaterialsAttributes(*(problem.getFiniteElementDiscretizationPointer())).Max();
+  const int nMat =
+      getMaterialsAttributes(*(problem.getFiniteElementDiscretizationPointer()))
+          .Max();
 
-  std::vector<std::array<mfem_mgis::real, 3u>> vectors = readVectorsFromFile(p.vector_file);
-  if (vectors.size()!=2*(nMat-1)) {
-    std::cout << vectors.size() << "!=" << 2*(nMat-1) << std::endl;
-    throw std::invalid_argument("setup_properties : incorrect number of vectors in vector file.");
+  std::vector<std::array<mfem_mgis::real, 3u>> vectors =
+      readVectorsFromFile(p.vector_file);
+  if (vectors.size() != 2 * (nMat - 1)) {
+    std::cout << vectors.size() << "!=" << 2 * (nMat - 1) << std::endl;
+    throw std::invalid_argument(
+        "setup_properties : incorrect number of vectors in vector file.");
   }
 
   // TEST metal
   {
-    problem.addBehaviourIntegrator("Mechanics", 1, p.libraryMetal, p.behaviourMetal);
-    auto& metal = problem.getMaterial(1);
+    problem.addBehaviourIntegrator("Mechanics", 1, p.libraryMetal,
+                                   p.behaviourMetal);
+    auto &metal = problem.getMaterial(1);
     std::array<mfem_mgis::MaterialAxis3D, 2u> r;
-//    r[0] = std::array<mfem_mgis::real, 3u>{0.7071067811865475, -0.4086070447619255, -0.5770964243269279};
-//    r[1] = std::array<mfem_mgis::real, 3u>{0.7071067811865475, 0.4086070447619256, 0.5770964243269281};
-///*
-    r[0] = std::array<mfem_mgis::real, 3u>{1.0, 0.0, 0.0};
-    r[1] = std::array<mfem_mgis::real, 3u>{0.0, 1.0, 0.0};
-//*/
+    r[0] = std::array<mfem_mgis::real, 3u>{
+        0.7071067811865475, -0.4086070447619255, -0.5770964243269279};
+    r[1] = std::array<mfem_mgis::real, 3u>{
+        0.7071067811865475, 0.4086070447619256, 0.5770964243269281};
+    ///*
+    //    r[0] = std::array<mfem_mgis::real, 3u>{1.0, 0.0, 0.0};
+    //    r[1] = std::array<mfem_mgis::real, 3u>{0.0, 1.0, 0.0};
+    //*/
     metal.setRotationMatrix(mfem_mgis::RotationMatrix3D{r});
-    set_properties_mono(metal, young1, young2, young3, poisson12, poisson23, poisson13, shear12, shear23, shear13);
+    set_properties_mono(metal, young1, young2, young3, poisson12, poisson23,
+                        poisson13, shear12, shear23, shear13);
     set_temperature(metal);
   }
 
-  for(int grainID = 2 ; grainID <= nMat ; grainID++)
-  {
-    problem.addBehaviourIntegrator("Mechanics", grainID, p.libraryGrain, p.behaviourGrain);
-    auto& grain = problem.getMaterial(grainID);
-    set_properties_mono(grain, young1, young2, young3, poisson12, poisson23, poisson13, shear12, shear23, shear13);
+  for (int grainID = 2; grainID <= nMat; grainID++) {
+    problem.addBehaviourIntegrator("Mechanics", grainID, p.libraryGrain,
+                                   p.behaviourGrain);
+    auto &grain = problem.getMaterial(grainID);
+    set_properties_mono(grain, young1, young2, young3, poisson12, poisson23,
+                        poisson13, shear12, shear23, shear13);
     set_temperature(grain);
 
     std::array<mfem_mgis::MaterialAxis3D, 2u> r;
-    if (grain.b.symmetry == mgis::behaviour::Behaviour::ORTHOTROPIC)
-    {
-///*
-//      r[0] = vectors.at(2*(grainID - 2));
-//      r[1] = vectors.at(2*(grainID - 2) + 1);
-//*/
-//    r[0] = std::array<mfem_mgis::real, 3u>{0.7071067811865475, -0.4086070447619255, -0.5770964243269279};
-//    r[1] = std::array<mfem_mgis::real, 3u>{0.7071067811865475, 0.4086070447619256, 0.5770964243269281};
-///*
-      r[0] = std::array<mfem_mgis::real, 3u>{1.0, 0.0, 0.0};
-      r[1] = std::array<mfem_mgis::real, 3u>{0.0, 1.0, 0.0};
-//*/
+    if (grain.b.symmetry == mgis::behaviour::Behaviour::ORTHOTROPIC) {
+      r[0] = vectors.at(2 * (grainID - 2));
+      r[1] = vectors.at(2 * (grainID - 2) + 1);
       grain.setRotationMatrix(mfem_mgis::RotationMatrix3D{r});
     }
   }
 }
 
 // Version 1
-  template<typename Problem>
-void solve_impose_displ(Problem& problem, double dt, int nstep, bool post_processing)
-{
+template <typename Problem>
+void solve_impose_displ(Problem &problem, double dt, int nstep,
+                        bool post_processing) {
   // Traction
   const double def = 5e-4; // 0.01;
   problem.setMacroscopicGradientsEvolution([def](const double t) {
-      const int xx = 0;
-      const int yy = 1;
-      const int zz = 2;
-      auto ret = std::vector<mfem_mgis::real>(9, mfem_mgis::real{});
-      ret[xx] = 1 - 0.3 * def * t;
-      ret[yy] = 1 - 0.3 * def * t;
-      ret[zz] = 1 + def * t;
-      return ret; });
+    const int xx = 0;
+    const int yy = 1;
+    const int zz = 2;
+    auto ret = std::vector<mfem_mgis::real>(9, mfem_mgis::real{});
+    ret[xx] = 1 - 0.3 * def * t;
+    ret[yy] = 1 - 0.3 * def * t;
+    ret[zz] = 1 + def * t;
+    return ret;
+  });
 
   for (int i = 0; i < nstep; i++) {
-    mfem_mgis::Profiler::Utils::Message("Solving: from ", i*dt, " to ", (i+1)*dt);
+    mfem_mgis::Profiler::Utils::Message("Solving: from ", i * dt, " to ",
+                                        (i + 1) * dt);
     auto statistics = problem.solve(i * dt, dt);
     if (!statistics.status) {
       mfem_mgis::Profiler::Utils::Message("INFO: FAILED");
     }
-    if(post_processing) problem.executePostProcessings(i * dt, dt);
+    if (post_processing)
+      problem.executePostProcessings(i * dt, dt);
     problem.update();
     print_memory_footprint("[At timestep: " + std::to_string(i) + "]");
   }
 }
 
+template <typename Problem>
+[[nodiscard]] static const std::array<mfem_mgis::real, 3u>
+computeMacroscopicCauchyStress(Problem &problem,
+                               const std::array<mfem_mgis::real, 3u> &F) {
+  // integrals of the diagonal components of the First Piola-Kirchhoff stress
+  auto pk1_integral = std::array<mfem_mgis::real, 3u>{};
+  auto volume = mfem_mgis::real{};
+  // get pk1 integral and volume on all materials //
+  auto [pk1_integrals, volumes] =
+      mfem_mgis::computeMeanThermodynamicForcesValues<true>(
+          problem.template getImplementation<true>());
+  // sum volume of all materials
+  // sum pk1 integrals
+  for (const auto &m : problem.getAssignedMaterialsIdentifiers()) {
+    volume += volumes[m];
+    pk1_integral[0] += pk1_integrals[m][0];
+    pk1_integral[1] += pk1_integrals[m][1];
+    pk1_integral[2] += pk1_integrals[m][2];
+  }
+  assert(volume > 0.0);
+  // -- sum volumes of all processess
+  MPI_Allreduce(MPI_IN_PLACE, &volume, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  // -- sum integrals from all processes
+  MPI_Allreduce(MPI_IN_PLACE, pk1_integral.data(), 3, MPI_DOUBLE, MPI_SUM,
+                MPI_COMM_WORLD);
+  // macroscopic values of the First Piola-Kirchhoff stress
+  const auto pk1 = std::array<mfem_mgis::real, 3u>{pk1_integral[0] / volume,
+                                                   pk1_integral[1] / volume,
+                                                   pk1_integral[2] / volume};
+  // macroscopic change of volume
+  const auto det = F[0] * F[1] * F[2];
+  // computation of the diagonal components of the Cauchy stress
+  return {pk1[0] * F[0] / det, pk1[1] * F[1] / det, pk1[2] * F[2] / det};
+} // end of computeMacroscopicCauchyStress
+
 // Version 2
-  template<typename Problem>
-void solve_null_strain(Problem& problem, double dt, int nstep, bool post_processing, MaterialParameters& mp)
-{
+template <typename Problem>
+void solve_null_strain(Problem &problem, double dt, int nstep,
+                       bool post_processing, MaterialParameters &mp) {
+  using namespace mfem_mgis::Profiler::Utils;
   // Traction
   const double def = 5e-4;
-
-  double Fxx, Fyy, Fzz;
-  // init macro cauchy stress components
-  double Sxx = 0.;
-  double Syy = 0.;
-  double Szz = 0.;
-
-  // --- use for MPI Reductions --- //
-  double SIG_local[2];
-  double SIG_global[3];
-
-  // --- variables used to loop to compute Fyy and Fxx --- //
+  // diagonal part of the deformation gradient
+  auto F = std::array<mfem_mgis::real, 3u>{};
+  // diagonal components of the macroscropic Cauchy stress
+  auto S = std::array<mfem_mgis::real, 3u>{};
+  // --- variables used to loop to compute F[1] and Fxx --- //
   // --- fixed-point param
   const double tolFP = 1.e4;
   const int maxitFP = 50;
 
-  // warning Fxx, Fyy, and Fzz are defined during the following loop
-  problem.setMacroscopicGradientsEvolution([&Fxx, &Fyy, &Fzz](const double t) {
+  // warning Fxx, F[1], and Fzz are defined during the following loop
+  problem.setMacroscopicGradientsEvolution([&F](const double t) {
     auto ret = std::vector<mfem_mgis::real>(9, mfem_mgis::real{});
-    ret[0] = Fxx;
-    ret[1] = Fyy;
-    ret[2] = Fzz;
-    //       std::cout << "Imposed deformation gradients: " << Fxx << " " << Fyy
-    //       << " "
-    //                 << Fzz << std::endl;
+    std::copy(F.begin(), F.end(), ret.begin());
     return ret;
   });
 
-  for (int i = 0; i < nstep; i++) 
-  {
-    mfem_mgis::Profiler::Utils::Message("Solving: from ", i*dt, " to ", (i+1)*dt);
+  for (int i = 0; i < nstep; i++) {
+    Message("Solving: from ", i * dt, " to ", (i + 1) * dt);
 
     // -- update F from input data, here def = 5e-4. -- //
-    Fzz = 1. + def * (i + 1.) * dt; // / end);
-    //     std::cout << "Imposed deformation gradient: " << Fzz << std::endl;
-
-    if (i == 0) 
-    {
-      Fxx = 1. / std::sqrt(Fzz);
-      Fyy = 1. / std::sqrt(Fzz);
-/*
-      Fxx = 1.;// / std::sqrt(Fzz);
-      Fyy = 1.;// / std::sqrt(Fzz);
-*/
+    F[2] = 1. + def * (i + 1.) * dt; // / end);
+    if (i == 0) {
+      F[0] = 1. / std::sqrt(F[2]);
+      F[1] = 1. / std::sqrt(F[2]);
+    } else {
+      F[0] *= (1. + def * (i + 1) * dt) /
+              (1. + def * i * dt); // FXX_t_2 = FZZ_t_2 * FXX_t_1 / FZZ_t_1
+      F[1] *= (1. + def * (i + 1) * dt) /
+              (1. + def * i * dt); // FYY_t_2 = FZZ_t_2 * FYY_t_1 / FZZ_t_1
     }
-    // try another start for fixed point
-    //Fxx =  1.;
-    //Fyy =  1.;
-    Sxx = 0.0;
-    Syy = 0.0;
-    // --- reset fixed point variables --- //
+
+    S[0] = 0.0;
+    S[2] = 0.0;
+    // --- fixed point iteration number
     int itFP = 0;
-    double newRes = 0.0;
-    double oldRes = 1.e6;
-
-    if( i > 0)
-    {
-      Fxx *= (1. + def * (i + 1) * dt) / (1. + def * i * dt) ; // FXX_t_2 = FZZ_t_2 * FXX_t_1 / FZZ_t_1
-      Fyy *= (1. + def * (i + 1) * dt) / (1. + def * i * dt) ; // FYY_t_2 = FZZ_t_2 * FYY_t_1 / FZZ_t_1
-    }
-  
     // --- fixed point loop --- //
     bool converged = false;
-    while ((!converged) && (itFP <= maxitFP))
-    {
-      // -- Debug -- //
-      // --
-      //      mfem_mgis::Profiler::Utils::Message("debug: Sxx -> ", Sxx, " Syy
-      //      -> ", Syy );
-      // -- mfem_mgis::Profiler::Utils::Message("debug:: Eeff -> ", mp.Eeff, "
-      // mp.nueff -> ", mp.nueff );
-
-      double Fcorr[2];
+    while ((!converged) && (itFP <= maxitFP)) {
       // -- compute correction -- //
-      // -- note that Sxx and Syy are computed at the end of this loop section, default is 0 -- //
-      Fcorr[0] = ((mp.nueff*mp.nueff-1)*Sxx)/mp.Eeff+(mp.nueff*(mp.nueff+1)*Syy)/mp.Eeff;
-      Fcorr[1] = ((mp.nueff*mp.nueff-1)*Syy)/mp.Eeff+(mp.nueff*(mp.nueff+1)*Sxx)/mp.Eeff;
-
-      // -- Increment F with F correction -- //
-      Fxx += Fcorr[0];
-      Fyy += Fcorr[1];
-
-      // -- Debug -- //
-      // -- mfem_mgis::Profiler::Utils::Message("debug: ", Fxx, Fyy, Fcorr[0], Fcorr[1], Fzz);
-
-      // -- note that MacroscopicGradientsEvolution taktes into account of new Fxx and Fyy -- //
+      // -- note that S[0] and S[1] are updated at the end of this loop section,
+      // default is 0 -- //
+      F[0] += ((mp.nueff * mp.nueff - 1) * S[0]) / mp.Eeff +
+              (mp.nueff * (mp.nueff + 1) * S[1]) / mp.Eeff;
+      F[1] += ((mp.nueff * mp.nueff - 1) * S[1]) / mp.Eeff +
+              (mp.nueff * (mp.nueff + 1) * S[0]) / mp.Eeff;
+      // -- note that MacroscopicGradientsEvolution taktes into account of new
+      // F[0] and F[1] -- //
       auto statistics = problem.solve(i * dt, dt);
       if (!statistics.status) {
-        mfem_mgis::Profiler::Utils::Message("The Linear Solver has failed.");
-        //std::exit(EXIT_FAILURE);
+        Message("error: the resolution failed.");
+        return;
       }
-      //      problem.update();
 
-      // -- Get stress and volume for all mateirals -- //
-      auto [tf_integrals, volumes] = mfem_mgis::computeMeanThermodynamicForcesValues<true>(problem.template getImplementation<true>());
-
-      // -- compute volume on all Materials Identifiers -- //
-      // -- compute partial contribution to Sxx and Syy
-      double volume = 0.0;
-      Sxx = 0.0;
-      Syy = 0.0;
-      Szz = 0.0;
-      for (const auto &m : problem.getAssignedMaterialsIdentifiers())
-      {
-        volume += volumes[m];
-        Sxx += tf_integrals[m][0];
-        Syy += tf_integrals[m][1];
-        Szz += tf_integrals[m][2];
-      }
-      assert(volume > 0.0);
-
-      // -- Get volume from other subdomains -- //
-      // -- local volume -> global volume
-      MPI_Allreduce(MPI_IN_PLACE, &volume, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-
-      // -- get Sxx and Syy from other subdomains -- //
-      SIG_local[0] = Sxx;
-      SIG_local[1] = Syy;
-      SIG_local[2] = Szz;
-      MPI_Allreduce(SIG_local, SIG_global, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-      Sxx = SIG_global[0];
-      Syy = SIG_global[1];
-      Szz = SIG_global[2];
-
-      // -- compute mean value of Thermodynamic Forces on all Materials Identifiers -- //
-      Sxx /= volume;
-      Syy /= volume;
-      Szz /= volume;
-
-      // -- PKI to VM -- //
-      Sxx = Sxx*Fxx/(Fxx*Fyy*Fzz);
-      Syy = Syy*Fyy/(Fxx*Fyy*Fzz);
-      Szz = Szz*Fzz/(Fxx*Fyy*Fzz);
-
-
-      oldRes = newRes;
-      newRes = std::sqrt(Sxx * Sxx + Syy * Syy);
-
-      mfem_mgis::Profiler::Utils::Message("Fixed Point iteration", itFP, ": |res| =", abs(oldRes - newRes));
-      converged = std::abs(oldRes - newRes) < tolFP;
-      //      if (abs(oldRes - newRes) > tolFP) { problem.revert(); }
+      S = computeMacroscopicCauchyStress(problem, F);
+      const auto r = std::sqrt(S[0] * S[0] + S[1] * S[1]);
+      //
+      Message("Fixed Point iteration", itFP, ": |res| =", r);
+      converged = std::abs(r) < tolFP;
       itFP++;
     }
+    //
+    Message("Solution at time", (i + 1.) * dt, ":", F[2], S[0], S[1], S[2]);
+    //
+    if (itFP >= maxitFP) {
+      Message("error: maximum number of iterations for the "
+              "fixed-point algorithm reached");
+      return;
+    }
+    // update state variable for the next time step
     problem.update();
-
-    mfem_mgis::Profiler::Utils::Message("Solution at time", (i + 1.) * dt, ":", //
-                                        Fzz, Sxx, Syy, Szz);
-
-    if (itFP >= maxitFP) mfem_mgis::Profiler::Utils::Message("warning: maximum number of iterations for the fixed-point algorithm attained, before the requested tolerance is reached");
-
-    if(post_processing) problem.executePostProcessings(i * dt, dt);
+    //
+    if (post_processing) {
+      problem.executePostProcessings(i * dt, dt);
+    }
     print_memory_footprint("[At timestep: " + std::to_string(i) + "]");
   }
 }
@@ -535,13 +488,14 @@ int main(int argc, char **argv) {
   fill_parameters(args, p);
   // definition of the nonlinear problem
   auto fed = std::make_shared<mfem_mgis::FiniteElementDiscretization>(
-      mfem_mgis::Parameters{{"MeshFileName", p.mesh_file},
-      {"FiniteElementFamily", "H1"},
-      {"FiniteElementOrder", p.order},
-      {"UnknownsSize", 3},
-      {"NumberOfUniformRefinements", p.refinement}, // faster for testing
-      {"MeshReadMode", "FromScratch"},
-      {"Parallel", true}});
+      mfem_mgis::Parameters{
+          {"MeshFileName", p.mesh_file},
+          {"FiniteElementFamily", "H1"},
+          {"FiniteElementOrder", p.order},
+          {"UnknownsSize", 3},
+          {"NumberOfUniformRefinements", p.refinement}, // faster for testing
+          {"MeshReadMode", "FromScratch"},
+          {"Parallel", true}});
   mfem_mgis::PeriodicNonLinearEvolutionProblem problem(fed);
 
   // get problem information
@@ -550,10 +504,10 @@ int main(int argc, char **argv) {
 
   // non linear solver
   problem.setSolverParameters({{"VerbosityLevel", 1},
-      {"RelativeTolerance", 1e-6},
-//      {"AbsoluteTolerance", 0.},
-      {"AbsoluteTolerance", 1e-6},
-      {"MaximumNumberOfIterations", 6}});
+                               {"RelativeTolerance", 1e-6},
+                               //      {"AbsoluteTolerance", 0.},
+                               {"AbsoluteTolerance", 1e-6},
+                               {"MaximumNumberOfIterations", 6}});
 
   // choix du solver linéaire +
   int verbosity = p.verbosity_level;
@@ -568,27 +522,29 @@ int main(int argc, char **argv) {
 
   //
   auto preconditionner =
-    //    mfem_mgis::Parameters{{"Name", "HypreDiagScale"}};
-    mfem_mgis::Parameters{{"Name", "HypreBoomerAMG"}, {"Options",  mfem_mgis::Parameters{{"VerbosityLevel", verbosity}}}};
+      //    mfem_mgis::Parameters{{"Name", "HypreDiagScale"}};
+      mfem_mgis::Parameters{
+          {"Name", "HypreBoomerAMG"},
+          {"Options", mfem_mgis::Parameters{{"VerbosityLevel", verbosity}}}};
   solverParameters.insert(
       mfem_mgis::Parameters{{"Preconditioner", preconditionner}});
   problem.setLinearSolver("HyprePCG", solverParameters);
-  //problem.setLinearSolver("HypreGMRES", solverParameters);
-  //problem.setLinearSolver("MUMPSSolver", {});
+  // problem.setLinearSolver("HypreGMRES", solverParameters);
+  // problem.setLinearSolver("MUMPSSolver", {});
 
-
-  // --- Define material porperties directly into setup_material_properties --- //
-  // --- Initialize "MaterialParameters mp" that is required for "solve_null_strain" --- // 
+  // --- Define material porperties directly into setup_material_properties ---
+  // //
+  // --- Initialize "MaterialParameters mp" that is required for
+  // "solve_null_strain" --- //
   MaterialParameters mp;
   setup_material_properties(problem, p, mp);
 
-  if (post_processing) 
-  {
+  if (post_processing) {
     mfem_mgis::Profiler::Utils::Message("Define post processings");
     problem.addPostProcessing("ParaviewExportResults",
-        {{"OutputFileName", "Displacement"}});
+                              {{"OutputFileName", "Displacement"}});
     problem.addPostProcessing("MeanThermodynamicForces",
-        {{"OutputFileName", "avgStress"}});
+                              {{"OutputFileName", "avgStress"}});
     /* BUG
        problem.addPostProcessing(
        "ParaviewExportIntegrationPointResultsAtNodes",
@@ -597,9 +553,12 @@ int main(int argc, char **argv) {
   }
 
   const double dt = p.duration / double(p.nstep);
-  if(p.bcs_type == 0) solve_null_strain(problem, dt, p.nstep, post_processing, mp);
-  if(p.bcs_type == 1) solve_impose_displ(problem, dt, p.nstep, post_processing);
-  if(p.bcs_type > 1) std::exit(EXIT_FAILURE); 
+  if (p.bcs_type == 0)
+    solve_null_strain(problem, dt, p.nstep, post_processing, mp);
+  if (p.bcs_type == 1)
+    solve_impose_displ(problem, dt, p.nstep, post_processing);
+  if (p.bcs_type > 1)
+    std::exit(EXIT_FAILURE);
 
   print_memory_footprint("[End]");
   mfem_mgis::Profiler::timers::print_and_write_timers();
