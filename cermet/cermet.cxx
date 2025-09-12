@@ -36,7 +36,7 @@ order: 1
 struct TestParameters {
   const char *mesh_file = "mesh/5grains.msh";
   const char *behaviourGrain = "MonoCristal_UO2";
-  const char *behaviourMetal = "MonoCristal_UO2";
+  const char *behaviourMetal = "NortonCr";
   const char *libraryGrain = "src/libBehaviour.so";
   const char *libraryMetal = "src/libBehaviour.so";
   const char *vector_file = "vectors_5grains.txt";
@@ -271,6 +271,7 @@ void setup_material_properties(ProblemT &problem, TestParameters &p,
         setMaterialProperty(m.s1, "PoissonRatio12", po12);
         setMaterialProperty(m.s1, "PoissonRatio23", po23);
         setMaterialProperty(m.s1, "PoissonRatio13", po13);
+
         setMaterialProperty(m.s1, "ShearModulus12", sm12);
         setMaterialProperty(m.s1, "ShearModulus23", sm23);
         setMaterialProperty(m.s1, "ShearModulus13", sm13);
@@ -293,18 +294,6 @@ void setup_material_properties(ProblemT &problem, TestParameters &p,
     problem.addBehaviourIntegrator("Mechanics", 1, p.libraryMetal,
                                    p.behaviourMetal);
     auto &metal = problem.getMaterial(1);
-    std::array<mfem_mgis::MaterialAxis3D, 2u> r;
-    r[0] = std::array<mfem_mgis::real, 3u>{
-        0.7071067811865475, -0.4086070447619255, -0.5770964243269279};
-    r[1] = std::array<mfem_mgis::real, 3u>{
-        0.7071067811865475, 0.4086070447619256, 0.5770964243269281};
-    ///*
-    //    r[0] = std::array<mfem_mgis::real, 3u>{1.0, 0.0, 0.0};
-    //    r[1] = std::array<mfem_mgis::real, 3u>{0.0, 1.0, 0.0};
-    //*/
-    metal.setRotationMatrix(mfem_mgis::RotationMatrix3D{r});
-    set_properties_mono(metal, young1, young2, young3, poisson12, poisson23,
-                        poisson13, shear12, shear23, shear13);
     set_temperature(metal);
   }
 
