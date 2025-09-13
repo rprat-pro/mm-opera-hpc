@@ -7,7 +7,7 @@ This test case illustrates the simulation of a Representative Volume Element (`R
 In addition to the mechanical analysis, this example demonstrates how to set up a fixed-point algorithm to handle the nonlinearities associated with crystalline plasticity at the grain scale.
 
 - Boundary conditions: periodic boundary conditions are applied on the RVE faces. The loading is imposed in one direction, ensuring compatibility and equilibrium across periodic faces.
-- Constitutive law: UO₂ crystalline plasticity law. <cite>[2][2]</cite>
+- Constitutive law: UO₂ crystalline plasticity law[^2].
 - Finite element order: 1 (linear interpolation).
 - Finite element space: H1.
 - Simulation duration: 200 s.
@@ -25,7 +25,7 @@ python3 mesh/5cristals.py # generate 5grains.geo
 gmsh -3 5cristals.geo # generate 5grains.msh
 ```
 
-The geometry of the RVE is generated using the > -- <cite>[Mérope][1]</cite> meshing toolkit. For this example, a polycrystal with 5 grains is built.
+The geometry of the RVE is generated using the Mérope [^1] toolkit. For this example, a polycrystal with 5 grains is built.
 
 Make sure to load the `MEROPE` environment before running the mesh generation script:
 
@@ -93,5 +93,5 @@ Note: To generate the grain orientation vectors, use the randomVectorGeneration 
 
 ## References
 
-[1]: JOSIEN, Marc. Mérope: A microstructure generator for simulation of heterogeneous materials. Journal of Computational Science, 2024, vol. 81, p. 102359.
-[2]: PORTELETTE, Luc, AMODEO, Jonathan, MADEC, Ronan, et al. Crystal viscoplastic modeling of UO2 single crystal. Journal of Nuclear Materials, 2018, vol. 510, p. 635-643.
+[^1]: JOSIEN, Marc. Mérope: A microstructure generator for simulation of heterogeneous materials. Journal of Computational Science, 2024, vol. 81, p. 102359.
+[^2]: PORTELETTE, Luc, AMODEO, Jonathan, MADEC, Ronan, et al. Crystal viscoplastic modeling of UO2 single crystal. Journal of Nuclear Materials, 2018, vol. 510, p. 635-643.
