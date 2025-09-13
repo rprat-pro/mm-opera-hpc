@@ -27,20 +27,15 @@ endif(CMAKE_CONFIGURATION_TYPES)
 # Copy needed file for execution
 file(COPY
   ${PROJECT_SOURCE_DIR}/Mono_UO2_CosH_Jaco.mfront
-  ${PROJECT_SOURCE_DIR}/Elasticity.mfront
-  ${PROJECT_SOURCE_DIR}/ElasticityOrtho.mfront
-  ${PROJECT_SOURCE_DIR}/SaintVenantKirchhoffElasticity.mfront
-  ${PROJECT_SOURCE_DIR}/periodic-cube.msh
-  ${PROJECT_SOURCE_DIR}/cube_2mat_per.mesh
-  ${PROJECT_SOURCE_DIR}/n8-id1.msh
-  ${PROJECT_SOURCE_DIR}/n8-id1-vecteurs.txt
   DESTINATION ${PROJECT_BINARY_DIR})
+
+file(COPY law mesh DESTINATION ${PROJECT_BINARY_DIR})
   
   # Use mfront to generate libBehaviour.so
 add_custom_command(
   OUTPUT "src/libBehaviour.so"
-  COMMAND mfront --obuild --interface=generic ${PROJECT_BINARY_DIR}/Mono_UO2_CosH_Jaco.mfront ${PROJECT_BINARY_DIR}/Elasticity.mfront ${PROJECT_BINARY_DIR}/SaintVenantKirchhoffElasticity.mfront ${PROJECT_BINARY_DIR}/ElasticityOrtho.mfront
-  DEPENDS ${PROJECT_BINARY_DIR}/Mono_UO2_CosH_Jaco.mfront ${PROJECT_BINARY_DIR}/Elasticity.mfront ${PROJECT_BINARY_DIR}/SaintVenantKirchhoffElasticity.mfront ${PROJECT_BINARY_DIR}/ElasticityOrtho.mfront
+  COMMAND mfront --obuild --interface=generic ${PROJECT_BINARY_DIR}/Mono_UO2_CosH_Jaco.mfront
+  DEPENDS ${PROJECT_BINARY_DIR}/Mono_UO2_CosH_Jaco.mfront
   COMMENT "Performing mfront code generation")
   
 add_custom_target(generate-libBehaviour-polycrystal ALL
@@ -57,18 +52,8 @@ function(build_polycrystal binFile srcFile)
 endfunction(build_polycrystal)
 
 build_polycrystal(uniaxial-polycristal UniaxialPolycristal.cxx)
-build_polycrystal(uniaxial-elastic UniaxialElastic.cxx)
-build_polycrystal(uniaxial-nonlinearelastic UniaxialNonLinearElastic.cxx)
-build_polycrystal(uniaxial-elastic-ortho UniaxialElasticOrtho.cxx)
     
-add_dependencies(check uniaxial-polycristal uniaxial-elastic uniaxial-elastic-ortho uniaxial-nonlinearelastic generate-libBehaviour-polycrystal)
+add_dependencies(check uniaxial-polycristal generate-libBehaviour-polycrystal)
 
 set(test "UniaxialPolycristalTest")
 add_test(NAME ${test} COMMAND uniaxial-polycristal --postprocessings 0)
-
-set(test "UniaxialElasticTest")
-add_test(NAME ${test} COMMAND uniaxial-elastic --postprocessings 0)
-
-set(test "UniaxialNonLinearElasticTest")
-add_test(NAME ${test} COMMAND uniaxial-nonlinearelastic --postprocessings 0)
-

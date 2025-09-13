@@ -30,7 +30,7 @@
 #include "mfem/linalg/petsc.hpp"
 #endif /* MFEM_USE_PETSC */
 
-#ifdef MFEM_USE_PETSC
+#ifdef MFEM_USE_MUMPS
 #include "mfem/linalg/mumps.hpp"
 #endif /* MFEM_USE_MUMPS */
 
@@ -42,17 +42,20 @@
                 Parameters :
 */
 
+
 // We need this class for test case sources
 struct TestParameters {
-  const char *mesh_file = "periodic-cube.msh";
-  const char *vect_file = "periodic-cube-vecteurs.txt";
+  const char *mesh_file = "mesh/5cristals.msh";
+  const char *vect_file = "mesh/vectors_5cristals.txt";
   const char *behaviour = "MonoCristal_UO2";
   const char *library = "src/libBehaviour.so";
-  int order = 2;
+  int order = 1;
   bool parallel = true;
   int refinement = 0;
   int post_processing = 1; // default value : disabled
   int verbosity_level = 0; // default value : lower level
+  double duration = 200;
+  int nstep = 600;
 };
 
 void common_parameters(mfem::OptionsParser &args, TestParameters &p) {
@@ -67,6 +70,10 @@ void common_parameters(mfem::OptionsParser &args, TestParameters &p) {
                  "run post processing step");
   args.AddOption(&p.verbosity_level, "-v", "--verbosity-level",
                  "choose the verbosity level");
+  args.AddOption(&p.duration, "-d", "--duration",
+                 "choose the duration (default = 5)");
+  args.AddOption(&p.nstep, "-n", "--nstep",
+                 "choose the number of steps (default = 40)");
 
   args.Parse();
 
@@ -527,8 +534,8 @@ int main(int argc, char *argv[]) {
   setLinearSolver(problem, p.verbosity_level);
 
   problem.setSolverParameters({{"VerbosityLevel", p.verbosity_level},
-                               {"RelativeTolerance", 1e-4},
-                               {"AbsoluteTolerance", 1e-4},
+                               {"RelativeTolerance", 1e-6},
+                               {"AbsoluteTolerance", 1e-6},
                                {"MaximumNumberOfIterations", 15}});
 
   // add post processings
@@ -536,9 +543,9 @@ int main(int argc, char *argv[]) {
     add_post_processings(problem, "OutputFile-Uniaxial-polycristal");
 
   // main function here
-  int nStep = 600;
+  int nStep = p.nstep;
   double start = 0;
-  double end = 200;
+  double end = p.duration;
   const double dt = (end - start) / nStep;
   simulation(problem, start, end, dt, use_post_processing);
 
