@@ -52,7 +52,7 @@ The resulting polycrystal is composed of 5 grains.
 
 ### Mesh Polycristal composed of 5 cristals
 
-![Polycristal input mesh](doc/5cristalsGmsh.png.png)
+![Polycristal input mesh](doc/5cristalsGmsh.png)
 
 
 ## Simulation options
