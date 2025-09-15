@@ -44,9 +44,8 @@ struct TestParameters {
   int refinement = 0;
   int post_processing = 1; // default value : activated
   int verbosity_level = 0; // default value : lower level
-  int nstep = 400;
+  int nsteps = 500;
   double duration = 200.;
-  int bcs_type = 0;
 };
 
 struct MaterialParameters {
@@ -104,7 +103,7 @@ struct MaterialParameters {
   }
 }; // struct MaterialParameters
 
-void fill_parameters(mfem::OptionsParser &args, TestParameters &p) {
+static void fill_parameters(mfem::OptionsParser &args, TestParameters &p) {
   args.AddOption(&p.mesh_file, "-m", "--mesh", "Mesh file to use.");
   args.AddOption(&p.order, "-o", "--order",
                  "Finite element order (polynomial degree).");
@@ -116,13 +115,9 @@ void fill_parameters(mfem::OptionsParser &args, TestParameters &p) {
                  "choose the verbosity level");
   args.AddOption(&p.duration, "-d", "--duration",
                  "choose the duration (default = 5)");
-  args.AddOption(&p.nstep, "-n", "--nstep",
+  args.AddOption(&p.nsteps, "-n", "--nsteps",
                  "choose the number of steps (default = 40)");
   args.AddOption(&p.vector_file, "-f", "--file", "Vector file to use");
-  args.AddOption(&p.bcs_type, "-bcs", "--bcs_type",
-                 "Types of boundary conditions. For all BCs, a displacement of "
-                 "def = 5e-4 m/s is imposed. Type 0: zero strain in xx and yy. "
-                 "Type 1: imposed displacement of -0.3 * def in xx and yy.");
   args.Parse();
   if (!args.Good()) {
     if (mfem_mgis::getMPIrank() == 0)
@@ -141,7 +136,7 @@ void fill_parameters(mfem::OptionsParser &args, TestParameters &p) {
 }
 
 // display information
-long get_memory_checkpoint() {
+static long get_memory_checkpoint() {
   rusage obj;
   int who = 0;
   [[maybe_unused]] auto test = getrusage(who, &obj);
@@ -150,13 +145,14 @@ long get_memory_checkpoint() {
   MPI_Reduce(&(obj.ru_maxrss), &(res), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
   return res;
 };
-void print_memory_footprint(std::string msg) {
+
+static void print_memory_footprint(std::string msg) {
   long mem = get_memory_checkpoint();
   double m = double(mem) * 1e-6; // conversion kb to Gb
   mfem_mgis::Profiler::Utils::Message(msg, " memory footprint: ", m, " GB");
 }
 
-template <typename Mesh> void print_mesh_information(Mesh &mesh) {
+static void print_mesh_information(mfem_mgis::Mesh<true> &mesh) {
   using mfem_mgis::Profiler::Utils::Message;
   using mfem_mgis::Profiler::Utils::sum;
 
@@ -172,7 +168,8 @@ template <typename Mesh> void print_mesh_information(Mesh &mesh) {
   Message("INFO: number of elements -> ", numbers_of_elements);
 }
 
-auto norm(std::array<mfem_mgis::real, 3u> &u) {
+[[nodiscard]] static mfem_mgis::real
+norm(const std::array<mfem_mgis::real, 3u> &u) {
   mfem_mgis::real ret = 0.;
   for (auto val : u) {
     ret += val * val;
@@ -180,7 +177,7 @@ auto norm(std::array<mfem_mgis::real, 3u> &u) {
   return (std::sqrt(ret));
 }
 
-std::vector<std::array<mfem_mgis::real, 3u>>
+[[nodiscard]] static std::vector<std::array<mfem_mgis::real, 3u>>
 readVectorsFromFile(const std::string &filename) {
   // TODO: check if vectors size is equal to nMat
   std::vector<std::array<mfem_mgis::real, 3u>> vectors;
@@ -222,15 +219,15 @@ readVectorsFromFile(const std::string &filename) {
 }
 
 // add postprocessing
-template <typename Problem>
-void post_process(Problem &p, double start, double end) {
+static void post_process(mfem_mgis::PeriodicNonLinearEvolutionProblem &p,
+                         double start, double end) {
   CatchTimeSection("common::post_processing_step");
   p.executePostProcessings(start, end);
 }
 
-template <typename ProblemT>
-void setup_material_properties(ProblemT &problem, TestParameters &p,
-                               MaterialParameters &mp) {
+static void
+setup_material_properties(mfem_mgis::PeriodicNonLinearEvolutionProblem &problem,
+                          TestParameters &p, MaterialParameters &mp) {
 
   // cubic symmetry elasticity
   const double young1 = 222.e9;
@@ -314,41 +311,10 @@ void setup_material_properties(ProblemT &problem, TestParameters &p,
   }
 }
 
-// Version 1
-template <typename Problem>
-void solve_impose_displ(Problem &problem, double dt, int nstep,
-                        bool post_processing) {
-  // Traction
-  const double def = 5e-4; // 0.01;
-  problem.setMacroscopicGradientsEvolution([def](const double t) {
-    const int xx = 0;
-    const int yy = 1;
-    const int zz = 2;
-    auto ret = std::vector<mfem_mgis::real>(9, mfem_mgis::real{});
-    ret[xx] = 1 - 0.3 * def * t;
-    ret[yy] = 1 - 0.3 * def * t;
-    ret[zz] = 1 + def * t;
-    return ret;
-  });
-
-  for (int i = 0; i < nstep; i++) {
-    mfem_mgis::Profiler::Utils::Message("Solving: from ", i * dt, " to ",
-                                        (i + 1) * dt);
-    auto statistics = problem.solve(i * dt, dt);
-    if (!statistics.status) {
-      mfem_mgis::Profiler::Utils::Message("INFO: FAILED");
-    }
-    if (post_processing)
-      problem.executePostProcessings(i * dt, dt);
-    problem.update();
-    print_memory_footprint("[At timestep: " + std::to_string(i) + "]");
-  }
-}
-
-template <typename Problem>
 [[nodiscard]] static const std::array<mfem_mgis::real, 3u>
-computeMacroscopicCauchyStress(Problem &problem,
-                               const std::array<mfem_mgis::real, 3u> &F) {
+computeMacroscopicCauchyStress(
+    mfem_mgis::PeriodicNonLinearEvolutionProblem &problem,
+    const std::array<mfem_mgis::real, 3u> &F) {
   // integrals of the diagonal components of the First Piola-Kirchhoff stress
   auto pk1_integral = std::array<mfem_mgis::real, 3u>{};
   auto volume = mfem_mgis::real{};
@@ -380,89 +346,141 @@ computeMacroscopicCauchyStress(Problem &problem,
   return {pk1[0] * F[0] / det, pk1[1] * F[1] / det, pk1[2] * F[2] / det};
 } // end of computeMacroscopicCauchyStress
 
-// Version 2
-template <typename Problem>
-void solve_null_strain(Problem &problem, double dt, int nstep,
-                       bool post_processing, MaterialParameters &mp) {
-  using namespace mfem_mgis::Profiler::Utils;
-  // Traction
-  const double def = 5e-4;
+struct MacroscopicVariables {
   // diagonal part of the deformation gradient
-  auto F = std::array<mfem_mgis::real, 3u>{};
+  std::array<mfem_mgis::real, 3u> F = std::array<mfem_mgis::real, 3u>{1, 1, 1};
+  // increment of the diagonal part of the deformation gradient during the
+  // previous time step
+  std::array<mfem_mgis::real, 3u> dF = std::array<mfem_mgis::real, 3u>{};
   // diagonal components of the macroscropic Cauchy stress
-  auto S = std::array<mfem_mgis::real, 3u>{};
-  // --- variables used to loop to compute F[1] and Fxx --- //
+  std::array<mfem_mgis::real, 3u> S = std::array<mfem_mgis::real, 3u>{};
+};
+
+[[nodiscard]] static bool simulateOverATimeStep(
+    mfem_mgis::PeriodicNonLinearEvolutionProblem &problem,
+    MacroscopicVariables &macroscopic_variables, //
+    const bool post_processing, const MaterialParameters &mp,
+    const mfem_mgis::real bts, //
+    const mfem_mgis::real ets) {
+  using namespace mfem_mgis::Profiler::Utils;
+  Message("Solving temporal sequence from ", bts, " to ", ets);
   // --- fixed-point param
   const double tolFP = 1.e4;
   const int maxitFP = 50;
+  // Traction
+  const double def = 5e-4;
+  const auto dt = ets - bts;
+  auto &F = macroscopic_variables.F;
+  auto &S = macroscopic_variables.S;
+  auto &dF = macroscopic_variables.dF;
+  // deformation gradient at the beginning of the time step
+  auto F0 = F;
+
+  // -- update F from input data, here def = 5e-4. -- //
+  F[0] += dF[0];
+  F[1] += dF[1];
+  F[2] = 1. + def * ets; // / end);
+
+  // --- fixed point iteration number
+  int itFP = 0;
+  // --- fixed point loop --- //
+  bool converged = false;
+  while ((!converged) && (itFP <= maxitFP)) {
+    // -- compute correction -- //
+    // -- note that S[0] and S[1] are updated at the end of this loop section,
+    // default is 0 -- //
+    F[0] += ((mp.nueff * mp.nueff - 1) * S[0]) / mp.Eeff +
+            (mp.nueff * (mp.nueff + 1) * S[1]) / mp.Eeff;
+    F[1] += ((mp.nueff * mp.nueff - 1) * S[1]) / mp.Eeff +
+            (mp.nueff * (mp.nueff + 1) * S[0]) / mp.Eeff;
+    // -- note that MacroscopicGradientsEvolution taktes into account of new
+    // F[0] and F[1] -- //
+    auto statistics = problem.solve(bts, dt);
+    if (!statistics.status) {
+      Message("error: the resolution failed.");
+      problem.revert();
+      return false;
+    }
+
+    S = computeMacroscopicCauchyStress(problem, F);
+    const auto r = std::sqrt(S[0] * S[0] + S[1] * S[1]);
+    //
+    Message("Fixed Point iteration", itFP, ": |res| =", r);
+    converged = std::abs(r) < tolFP;
+    itFP++;
+  }
+  //
+  Message("Solution at time", ets, ":", F[2], S[0], S[1], S[2]);
+  //
+  if (itFP >= maxitFP) {
+    Message("error: maximum number of iterations for the "
+            "fixed-point algorithm reached");
+    problem.revert();
+    return false;
+  }
+  //
+  if (post_processing) {
+    problem.executePostProcessings(bts, dt);
+  }
+  // update state variable for the next time step
+  problem.update();
+  //
+  for (std::size_t i = 0; i != 3; ++i) {
+    dF[i] = F[i] - F0[i];
+  }
+  return true;
+}
+
+[[nodiscard]] static bool simulateOverATemporalSequence(
+    mfem_mgis::PeriodicNonLinearEvolutionProblem &problem,
+    MacroscopicVariables &macroscopic_variables, //
+    const bool post_processing, const MaterialParameters &mp,
+    const mfem_mgis::real bts, //
+    const mfem_mgis::real ets) {
+  using namespace mfem_mgis::Profiler::Utils;
+  if (!simulateOverATimeStep(problem, macroscopic_variables, post_processing,
+                             mp, bts, ets)) {
+    return false;
+  }
+  //
+  print_memory_footprint("[At end of temporal sequence: " + std::to_string(ets) + "]");
+  return true;
+} // end of simulateOverATemporalSequence
+
+[[nodiscard]] static bool
+solve_null_strain(mfem_mgis::PeriodicNonLinearEvolutionProblem &problem,
+                  const double te, const std::size_t nsteps,
+                  const bool post_processing, const MaterialParameters &mp) {
+  //
+  const auto temporal_sequences = [&te, &nsteps] {
+    auto times = std::vector<mfem_mgis::real>{};
+    const double dt = te / nsteps;
+    times.reserve(nsteps + 1);
+    for (std::size_t i = 0; i != nsteps + 1; ++i) {
+      times.push_back(i * dt);
+    }
+    return times;
+  }();
+  //
+  MacroscopicVariables macroscopic_variables;
 
   // warning Fxx, F[1], and Fzz are defined during the following loop
-  problem.setMacroscopicGradientsEvolution([&F](const double t) {
-    auto ret = std::vector<mfem_mgis::real>(9, mfem_mgis::real{});
-    std::copy(F.begin(), F.end(), ret.begin());
-    return ret;
-  });
+  problem.setMacroscopicGradientsEvolution(
+      [&macroscopic_variables](const double t) {
+        auto &F = macroscopic_variables.F;
+        auto ret = std::vector<mfem_mgis::real>(9, mfem_mgis::real{});
+        std::copy(F.begin(), F.end(), ret.begin());
+        return ret;
+      });
 
-  for (int i = 0; i < nstep; i++) {
-    Message("Solving: from ", i * dt, " to ", (i + 1) * dt);
-
-    // -- update F from input data, here def = 5e-4. -- //
-    F[2] = 1. + def * (i + 1.) * dt; // / end);
-    if (i == 0) {
-      F[0] = 1. / std::sqrt(F[2]);
-      F[1] = 1. / std::sqrt(F[2]);
-    } else {
-      F[0] *= (1. + def * (i + 1) * dt) /
-              (1. + def * i * dt); // FXX_t_2 = FZZ_t_2 * FXX_t_1 / FZZ_t_1
-      F[1] *= (1. + def * (i + 1) * dt) /
-              (1. + def * i * dt); // FYY_t_2 = FZZ_t_2 * FYY_t_1 / FZZ_t_1
+  for (std::size_t i = 0; i < temporal_sequences.size(); i++) {
+    if (!simulateOverATemporalSequence(
+            problem, macroscopic_variables, post_processing, mp,
+            temporal_sequences[i], temporal_sequences[i + 1])) {
+      return false;
     }
-
-    S[0] = 0.0;
-    S[2] = 0.0;
-    // --- fixed point iteration number
-    int itFP = 0;
-    // --- fixed point loop --- //
-    bool converged = false;
-    while ((!converged) && (itFP <= maxitFP)) {
-      // -- compute correction -- //
-      // -- note that S[0] and S[1] are updated at the end of this loop section,
-      // default is 0 -- //
-      F[0] += ((mp.nueff * mp.nueff - 1) * S[0]) / mp.Eeff +
-              (mp.nueff * (mp.nueff + 1) * S[1]) / mp.Eeff;
-      F[1] += ((mp.nueff * mp.nueff - 1) * S[1]) / mp.Eeff +
-              (mp.nueff * (mp.nueff + 1) * S[0]) / mp.Eeff;
-      // -- note that MacroscopicGradientsEvolution taktes into account of new
-      // F[0] and F[1] -- //
-      auto statistics = problem.solve(i * dt, dt);
-      if (!statistics.status) {
-        Message("error: the resolution failed.");
-        return;
-      }
-
-      S = computeMacroscopicCauchyStress(problem, F);
-      const auto r = std::sqrt(S[0] * S[0] + S[1] * S[1]);
-      //
-      Message("Fixed Point iteration", itFP, ": |res| =", r);
-      converged = std::abs(r) < tolFP;
-      itFP++;
-    }
-    //
-    Message("Solution at time", (i + 1.) * dt, ":", F[2], S[0], S[1], S[2]);
-    //
-    if (itFP >= maxitFP) {
-      Message("error: maximum number of iterations for the "
-              "fixed-point algorithm reached");
-      return;
-    }
-    // update state variable for the next time step
-    problem.update();
-    //
-    if (post_processing) {
-      problem.executePostProcessings(i * dt, dt);
-    }
-    print_memory_footprint("[At timestep: " + std::to_string(i) + "]");
   }
+  return true;
 }
 
 int main(int argc, char **argv) {
@@ -541,15 +559,10 @@ int main(int argc, char **argv) {
      */
   }
 
-  const double dt = p.duration / double(p.nstep);
-  if (p.bcs_type == 0)
-    solve_null_strain(problem, dt, p.nstep, post_processing, mp);
-  if (p.bcs_type == 1)
-    solve_impose_displ(problem, dt, p.nstep, post_processing);
-  if (p.bcs_type > 1)
-    std::exit(EXIT_FAILURE);
+  const auto success =
+      solve_null_strain(problem, p.duration, p.nsteps, post_processing, mp);
 
   print_memory_footprint("[End]");
   mfem_mgis::Profiler::timers::print_and_write_timers();
-  return EXIT_SUCCESS;
+  return success ? EXIT_SUCCESS : EXIT_FAILURE;
 }
