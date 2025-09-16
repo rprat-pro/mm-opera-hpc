@@ -1,4 +1,5 @@
 #include <cstdlib>
+#include <optional>
 #include <functional>
 #include <sys/resource.h>
 
@@ -6,7 +7,6 @@
 #include "MFEMMGIS/ParaviewExportIntegrationPointResultsAtNodes.hxx"
 #include "MFEMMGIS/PeriodicNonLinearEvolutionProblem.hxx"
 #include "MFEMMGIS/Profiler.hxx"
-#include "MFEMMGIS/UniformDirichletBoundaryCondition.hxx"
 
 /*
 Problem:
@@ -36,6 +36,7 @@ order: 1
 struct TestParameters {
   const char *mesh_file = "mesh/5grains.msh";
   const char *behaviourGrain = "MonoCristal_UO2";
+  //  const char *behaviourGrain = "Mono_UO2_Cosh_Jaco2";
   const char *behaviourMetal = "NortonCr";
   const char *libraryGrain = "src/libBehaviour.so";
   const char *libraryMetal = "src/libBehaviour.so";
@@ -354,6 +355,8 @@ struct MacroscopicVariables {
   std::array<mfem_mgis::real, 3u> dF = std::array<mfem_mgis::real, 3u>{};
   // diagonal components of the macroscropic Cauchy stress
   std::array<mfem_mgis::real, 3u> S = std::array<mfem_mgis::real, 3u>{};
+  // previous succesful time step
+  std::optional<mfem_mgis::real> previous_time_increment;
 };
 
 [[nodiscard]] static bool simulateOverATimeStep(
@@ -363,24 +366,28 @@ struct MacroscopicVariables {
     const mfem_mgis::real bts, //
     const mfem_mgis::real ets) {
   using namespace mfem_mgis::Profiler::Utils;
-  Message("Solving temporal sequence from ", bts, " to ", ets);
+  Message("Solving time step from ", bts, " to ", ets);
   // --- fixed-point param
   const double tolFP = 1.e4;
   const int maxitFP = 50;
   // Traction
   const double def = 5e-4;
   const auto dt = ets - bts;
+
   auto &F = macroscopic_variables.F;
   auto &S = macroscopic_variables.S;
-  auto &dF = macroscopic_variables.dF;
   // deformation gradient at the beginning of the time step
+  auto S0 = S;
   auto F0 = F;
 
-  // -- update F from input data, here def = 5e-4. -- //
-  F[0] += dF[0];
-  F[1] += dF[1];
+  if (macroscopic_variables.previous_time_increment.has_value()) {
+    auto &dF = macroscopic_variables.dF;
+    const auto pdt = *(macroscopic_variables.previous_time_increment);
+    // -- update F from input data, here def = 5e-4. -- //
+    F[0] += dF[0] * (dt / pdt);
+    F[1] += dF[1] * (dt / pdt);
+  }
   F[2] = 1. + def * ets; // / end);
-
   // --- fixed point iteration number
   int itFP = 0;
   // --- fixed point loop --- //
@@ -398,6 +405,8 @@ struct MacroscopicVariables {
     auto statistics = problem.solve(bts, dt);
     if (!statistics.status) {
       Message("error: the resolution failed.");
+      S = S0;
+      F = F0;
       problem.revert();
       return false;
     }
@@ -415,6 +424,8 @@ struct MacroscopicVariables {
   if (itFP >= maxitFP) {
     Message("error: maximum number of iterations for the "
             "fixed-point algorithm reached");
+    S = S0;
+    F = F0;
     problem.revert();
     return false;
   }
@@ -424,7 +435,9 @@ struct MacroscopicVariables {
   }
   // update state variable for the next time step
   problem.update();
-  //
+  // update information for time extrapolation
+  auto &dF = macroscopic_variables.dF;
+  macroscopic_variables.previous_time_increment = dt;
   for (std::size_t i = 0; i != 3; ++i) {
     dF[i] = F[i] - F0[i];
   }
@@ -438,9 +451,30 @@ struct MacroscopicVariables {
     const mfem_mgis::real bts, //
     const mfem_mgis::real ets) {
   using namespace mfem_mgis::Profiler::Utils;
-  if (!simulateOverATimeStep(problem, macroscopic_variables, post_processing,
-                             mp, bts, ets)) {
-    return false;
+  constexpr auto maximum_of_substeps = std::size_t{10};
+  auto nsubsteps = std::size_t{};
+  auto nstep = std::size_t{1};
+  auto t = bts;
+  auto dt = ets - bts;
+  while (nstep != 0) {
+    const auto do_post_processing = post_processing && (nstep == 1);
+    const auto success = simulateOverATimeStep(
+        problem, macroscopic_variables, do_post_processing, mp, t, t + dt);
+    if (success) {
+      t += dt;
+      --nstep;
+    } else {
+      ++nsubsteps;
+      if (nsubsteps == maximum_of_substeps) {
+        Message("Maximum number of substeps reached for temporal sequence from",
+                bts, "to", ets);
+        return false;
+      } else {
+        Message("dividing time step by 2");
+      }
+      dt *= mfem_mgis::real{0.5};
+      nstep *= 2;
+    }
   }
   //
   print_memory_footprint("[At end of temporal sequence: " + std::to_string(ets) + "]");
@@ -514,7 +548,7 @@ int main(int argc, char **argv) {
                                {"RelativeTolerance", 1e-6},
                                //      {"AbsoluteTolerance", 0.},
                                {"AbsoluteTolerance", 1e-6},
-                               {"MaximumNumberOfIterations", 6}});
+                               {"MaximumNumberOfIterations", 20}});
 
   // choix du solver linéaire +
   int verbosity = p.verbosity_level;
