@@ -7,7 +7,6 @@
 #include "MFEMMGIS/ParaviewExportIntegrationPointResultsAtNodes.hxx"
 #include "MFEMMGIS/PeriodicNonLinearEvolutionProblem.hxx"
 #include "MFEMMGIS/Profiler.hxx"
-#include "MFEMMGIS/UniformDirichletBoundaryCondition.hxx"
 
 /*
 Problem:
@@ -378,6 +377,7 @@ struct MacroscopicVariables {
   auto &F = macroscopic_variables.F;
   auto &S = macroscopic_variables.S;
   // deformation gradient at the beginning of the time step
+  auto S0 = S;
   auto F0 = F;
 
   if (macroscopic_variables.previous_time_increment.has_value()) {
@@ -405,6 +405,8 @@ struct MacroscopicVariables {
     auto statistics = problem.solve(bts, dt);
     if (!statistics.status) {
       Message("error: the resolution failed.");
+      S = S0;
+      F = F0;
       problem.revert();
       return false;
     }
@@ -422,6 +424,8 @@ struct MacroscopicVariables {
   if (itFP >= maxitFP) {
     Message("error: maximum number of iterations for the "
             "fixed-point algorithm reached");
+    S = S0;
+    F = F0;
     problem.revert();
     return false;
   }
@@ -471,10 +475,6 @@ struct MacroscopicVariables {
       dt *= mfem_mgis::real{0.5};
       nstep *= 2;
     }
-  }
-  // disabling extrapolation
-  if (nsubsteps != 0) {
-    macroscopic_variables.previous_time_increment.reset();
   }
   //
   print_memory_footprint("[At end of temporal sequence: " + std::to_string(ets) + "]");
