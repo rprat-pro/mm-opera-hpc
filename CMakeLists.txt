@@ -23,6 +23,7 @@ find_package(MFEMMGIS REQUIRED)
 
 enable_testing()
 
+add_subdirectory(src)
 add_subdirectory(polycrystal)
 add_subdirectory(bubble)
 add_subdirectory(cermet)

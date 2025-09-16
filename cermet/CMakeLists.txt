@@ -15,17 +15,7 @@ add_executable(cermet cermet.cxx)
 add_dependencies(cermet generate-lib-cermet)
 
 target_link_libraries(cermet
- PRIVATE TFELMath TFELException
- PUBLIC mfem-mgis::MFEMMGIS)
-
-target_include_directories(cermet
-   PUBLIC
-   ${TFEL_INCLUDE_PATH} 
-   ${CMAKE_CURRENT_SOURCE_DIR}/include)
-
-target_link_directories(cermet
-   PUBLIC
-   ${TFEL_LIBRARY_PATH}) 
+ PUBLIC MMOPERAHPC)
 
 # copy and install
 
