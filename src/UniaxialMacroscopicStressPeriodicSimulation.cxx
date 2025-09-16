@@ -5,12 +5,12 @@
  * \date   16/09/2025
  */
 
-#include <cmath>
-#include <sys/resource.h>
 #include "MFEMMGIS/NonLinearEvolutionProblemImplementation.hxx"
 #include "MFEMMGIS/PeriodicNonLinearEvolutionProblem.hxx"
 #include "MFEMMGIS/Profiler.hxx"
 #include "MM_OPERA_HPC/UniaxialMacroscopicStressPeriodicSimulation.hxx"
+#include <cmath>
+#include <sys/resource.h>
 
 namespace mm_opera_hpc {
 
@@ -68,28 +68,32 @@ computeMacroscopicCauchyStress(
 
 [[nodiscard]] static bool simulateOverATimeStep(
     mfem_mgis::PeriodicNonLinearEvolutionProblem &problem,
-    MacroscopicVariables &macroscopic_variables, //
-    const std::function<mfem_mgis::real(mfem_mgis::real)>& imposed_axial_deformation_gradient_value,
-    const MacroscropicElasticMaterialProperties &mp, const bool post_processing, 
+    UniaxialMacroscopicStressPeriodicSimulation::MacroscopicUnknowns
+        &macroscopic_unknowns, //
+    const std::function<mfem_mgis::real(mfem_mgis::real)>
+        &imposed_axial_deformation_gradient_value,
+    const UniaxialMacroscopicStressPeriodicSimulation::NumericalParameters
+        &np, //
+    const bool post_processing,
     const mfem_mgis::real bts, //
     const mfem_mgis::real ets) {
   using namespace mfem_mgis::Profiler::Utils;
   Message("Solving time step from ", bts, " to ", ets);
   // --- fixed-point param
-  const double tolFP = 1.e4;
-  const int maxitFP = 50;
+  const double tolFP = np.macroscopic_stress_absolute_tolerance;
+  const int maxitFP = np.macroscopic_stress_maximum_number_of_iterations;
   // Traction
   const auto dt = ets - bts;
 
-  auto &F = macroscopic_variables.F;
-  auto &S = macroscopic_variables.S;
+  auto &F = macroscopic_unknowns.F;
+  auto &S = macroscopic_unknowns.S;
   // deformation gradient at the beginning of the time step
   auto S0 = S;
   auto F0 = F;
 
-  if (macroscopic_variables.previous_time_increment.has_value()) {
-    auto &dF = macroscopic_variables.dF;
-    const auto pdt = *(macroscopic_variables.previous_time_increment);
+  if (macroscopic_unknowns.previous_time_increment.has_value()) {
+    auto &dF = macroscopic_unknowns.dF;
+    const auto pdt = *(macroscopic_unknowns.previous_time_increment);
     // -- update F from input data, here def = 5e-4. -- //
     F[0] += dF[0] * (dt / pdt);
     F[1] += dF[1] * (dt / pdt);
@@ -99,7 +103,9 @@ computeMacroscopicCauchyStress(
   int itFP = 0;
   // --- fixed point loop --- //
   bool converged = false;
+  auto initial_residual = mfem_mgis::real{};
   while ((!converged) && (itFP <= maxitFP)) {
+    const auto &mp = np.macroscopic_elastic_material_properties;
     // -- compute correction -- //
     // -- note that S[0] and S[1] are updated at the end of this loop section,
     // default is 0 -- //
@@ -107,8 +113,23 @@ computeMacroscopicCauchyStress(
             (mp.nueff * (mp.nueff + 1) * S[1]) / mp.Eeff;
     F[1] += ((mp.nueff * mp.nueff - 1) * S[1]) / mp.Eeff +
             (mp.nueff * (mp.nueff + 1) * S[0]) / mp.Eeff;
-    // -- note that MacroscopicGradientsEvolution taktes into account of new
+    // -- note that MacroscopicGradientsEvolution takes into account of new
     // F[0] and F[1] -- //
+    if (itFP == 0) {
+      problem.setSolverParameters(
+          {{"VerbosityLevel", np.microscopic_equilibrium_verbosity_level},
+           {"RelativeTolerance", np.microscopic_equilibrium_relative_tolerance},
+           {"AbsoluteTolerance",
+            np.microscopic_equilibrium_absolute_tolerance}});
+    } else {
+      if (np.switch_microscopic_equilibrium_convergence_criterion) {
+        const auto atol =
+            initial_residual * np.microscopic_equilibrium_relative_tolerance;
+        problem.setSolverParameters(
+            {{"VerbosityLevel", np.microscopic_equilibrium_verbosity_level},
+             {"AbsoluteTolerance", atol}});
+      }
+    }
     auto statistics = problem.solve(bts, dt);
     if (!statistics.status) {
       Message("error: the resolution failed.");
@@ -117,7 +138,9 @@ computeMacroscopicCauchyStress(
       problem.revert();
       return false;
     }
-
+    if (itFP == 0) {
+      initial_residual = statistics.initial_residual_norm;
+    }
     S = computeMacroscopicCauchyStress(problem, F);
     const auto r = std::sqrt(S[0] * S[0] + S[1] * S[1]);
     //
@@ -145,8 +168,8 @@ computeMacroscopicCauchyStress(
   // update state variable for the next time step
   problem.update();
   // update information for time extrapolation
-  auto &dF = macroscopic_variables.dF;
-  macroscopic_variables.previous_time_increment = dt;
+  auto &dF = macroscopic_unknowns.dF;
+  macroscopic_unknowns.previous_time_increment = dt;
   for (std::size_t i = 0; i != 3; ++i) {
     dF[i] = F[i] - F0[i];
   }
@@ -155,9 +178,13 @@ computeMacroscopicCauchyStress(
 
 [[nodiscard]] static bool simulateOverATemporalSequence(
     mfem_mgis::PeriodicNonLinearEvolutionProblem &problem,
-    MacroscopicVariables &macroscopic_variables, //
-    const std::function<mfem_mgis::real(mfem_mgis::real)> &imposed_axial_deformation_gradient_value,
-    const bool post_processing, const MacroscropicElasticMaterialProperties &mp,
+    UniaxialMacroscopicStressPeriodicSimulation::MacroscopicUnknowns
+        &macroscopic_unknowns, //
+    const std::function<mfem_mgis::real(mfem_mgis::real)>
+        &imposed_axial_deformation_gradient_value,
+    const UniaxialMacroscopicStressPeriodicSimulation::NumericalParameters
+        &np, //
+    const bool post_processing,
     const mfem_mgis::real bts, //
     const mfem_mgis::real ets) {
   using namespace mfem_mgis::Profiler::Utils;
@@ -168,10 +195,9 @@ computeMacroscopicCauchyStress(
   auto dt = ets - bts;
   while (nstep != 0) {
     const auto do_post_processing = post_processing && (nstep == 1);
-    const auto success =
-        simulateOverATimeStep(problem, macroscopic_variables,
-                              imposed_axial_deformation_gradient_value, mp,
-                              do_post_processing, t, t + dt);
+    const auto success = simulateOverATimeStep(
+        problem, macroscopic_unknowns, imposed_axial_deformation_gradient_value,
+        np, do_post_processing, t, t + dt);
     if (success) {
       t += dt;
       --nstep;
@@ -198,12 +224,12 @@ UniaxialMacroscopicStressPeriodicSimulation::
     UniaxialMacroscopicStressPeriodicSimulation(
         mfem_mgis::PeriodicNonLinearEvolutionProblem &p,
         const std::function<mfem_mgis::real(mfem_mgis::real)> Fzz,
-        const MacroscropicElasticMaterialProperties &mp, const bool b) noexcept
+        const NumericalParameters &np, const bool b) noexcept
     : problem(p), imposed_axial_deformation_gradient_value(Fzz),
-      macroscopic_elastic_material_properties(mp), post_processing(b) {
+      numerical_parameters(np), post_processing(b) {
   // warning Fxx, F[1], and Fzz are defined during the following loop
   problem.setMacroscopicGradientsEvolution([this](const double) {
-    const auto &F = this->macroscopic_variables.F;
+    const auto &F = this->macroscopic_unknowns.F;
     auto ret = std::vector<mfem_mgis::real>(9, mfem_mgis::real{});
     std::copy(F.begin(), F.end(), ret.begin());
     return ret;
@@ -214,10 +240,9 @@ bool UniaxialMacroscopicStressPeriodicSimulation::run(
     const std::vector<mfem_mgis::real> &temporal_sequences) noexcept {
   for (std::size_t i = 0; i + 1 != temporal_sequences.size(); i++) {
     if (!simulateOverATemporalSequence(
-            this->problem, this->macroscopic_variables,
+            this->problem, this->macroscopic_unknowns,
             this->imposed_axial_deformation_gradient_value,
-            this->post_processing,
-            this->macroscopic_elastic_material_properties,
+            this->numerical_parameters, this->post_processing,
             temporal_sequences[i], temporal_sequences[i + 1])) {
       return false;
     }

@@ -211,14 +211,6 @@ int main(int argc, char **argv) {
   print_mesh_information(fed->getMesh<true>());
   mm_opera_hpc::print_memory_footprint("[Building problem]");
 
-  // non linear solver
-  problem.setSolverParameters(
-      {{"VerbosityLevel", 1},
-       {"RelativeTolerance", 1e-4},
-       {"AbsoluteTolerance", 0.},
-       //                               {"AbsoluteTolerance", 1e-6},
-       {"MaximumNumberOfIterations", 20}});
-
   // choix du solver linéaire +
   int verbosity = p.verbosity_level;
   int post_processing = p.post_processing;
@@ -263,7 +255,6 @@ int main(int argc, char **argv) {
        {{"OutputFileName", "IntegrationPointOutput"}});
      */
   }
-
   //
   const auto te = p.duration;
   const auto nsteps = p.nsteps;
@@ -276,7 +267,10 @@ int main(int argc, char **argv) {
     }
     return times;
   }();
-  mm_opera_hpc::UniaxialMacroscopicStressPeriodicSimulation s(problem, Fzz, mp,
+  //
+  const auto np = mm_opera_hpc::UniaxialMacroscopicStressPeriodicSimulation::
+      NumericalParameters{.macroscopic_elastic_material_properties = mp};
+  mm_opera_hpc::UniaxialMacroscopicStressPeriodicSimulation s(problem, Fzz, np,
                                                               post_processing);
   const auto success = s.run(temporal_sequences);
   //
