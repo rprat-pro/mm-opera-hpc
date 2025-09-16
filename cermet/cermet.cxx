@@ -507,7 +507,7 @@ solve_null_strain(mfem_mgis::PeriodicNonLinearEvolutionProblem &problem,
         return ret;
       });
 
-  for (std::size_t i = 0; i < temporal_sequences.size(); i++) {
+  for (std::size_t i = 0; i + 1 != temporal_sequences.size(); i++) {
     if (!simulateOverATemporalSequence(
             problem, macroscopic_variables, post_processing, mp,
             temporal_sequences[i], temporal_sequences[i + 1])) {
