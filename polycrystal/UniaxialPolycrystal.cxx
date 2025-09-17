@@ -39,7 +39,6 @@ struct TestParameters {
   const char *mesh_file = "mesh/5cristals.msh";
   const char *vect_file = "mesh/vectors_5cristals.txt";
   const char *behaviour = "MonoCristal_UO2";
-  //  const char *behaviour = "Mono_UO2_Cosh_Jaco3";
   const char *library = "src/libBehaviour.so";
   int order = 1;
   bool parallel = true;
