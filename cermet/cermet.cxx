@@ -36,8 +36,8 @@ order: 1
 
 struct TestParameters {
   const char *mesh_file = "mesh/5grains.msh";
-  const char *behaviourGrain = "MonoCristal_UO2";
-  //  const char *behaviourGrain = "Mono_UO2_Cosh_Jaco2";
+  //  const char *behaviourGrain = "MonoCristal_UO2";
+  const char *behaviourGrain = "Mono_UO2_Cosh_Jaco3";
   const char *behaviourMetal = "NortonCr";
   const char *libraryGrain = "src/libBehaviour.so";
   const char *libraryMetal = "src/libBehaviour.so";
