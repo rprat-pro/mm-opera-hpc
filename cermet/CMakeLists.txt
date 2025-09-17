@@ -3,8 +3,12 @@ project(OperaHPCBubble)
 # behavior law
 add_custom_command(
   OUTPUT "src/libBehaviour.so"
-  COMMAND mfront --obuild --interface=generic ${PROJECT_BINARY_DIR}/law/NortonCr.mfront  ${PROJECT_BINARY_DIR}/law/Mono_UO2_CosH_Jaco.mfront
-  DEPENDS ${PROJECT_BINARY_DIR}/law/NortonCr.mfront  ${PROJECT_BINARY_DIR}/law/Mono_UO2_CosH_Jaco.mfront
+  COMMAND mfront --obuild --interface=generic ${PROJECT_BINARY_DIR}/law/NortonCr.mfront
+          ${PROJECT_BINARY_DIR}/law/Mono_UO2_CosH_Jaco.mfront
+          ${PROJECT_BINARY_DIR}/law/Mono_UO2_CosH_Jaco3.mfront
+  DEPENDS ${PROJECT_BINARY_DIR}/law/NortonCr.mfront
+          ${PROJECT_BINARY_DIR}/law/Mono_UO2_CosH_Jaco.mfront
+          ${PROJECT_BINARY_DIR}/law/Mono_UO2_CosH_Jaco3.mfront
   COMMENT "Performing mfront code generation")
 
 add_custom_target(generate-lib-cermet ALL

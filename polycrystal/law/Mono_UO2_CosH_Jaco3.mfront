@@ -1,0 +1,124 @@
+@DSL ImplicitFiniteStrain;
+@Behaviour Mono_UO2_Cosh_Jaco3;
+@Author Thomas Helfer;
+@Description{
+  "Test d'implantation d'une loi "
+  "singlecrystalline en grandes déformations"
+}
+
+@ModellingHypothesis Tridimensional;
+@OrthotropicBehaviour;
+@RequireStiffnessTensor;
+
+@Algorithm NewtonRaphson;
+@Theta 1.;
+@Epsilon 1.e-11;
+
+// Systèmes de glissement de l'UO2
+@CrystalStructure FCC;
+@SlidingSystems{<0, 1, 1>{1, 0, 0}, <0, 1, 1>{0, 1, -1}, <0, 1, 1>{1, 1, -1}};
+
+@IntegrationVariable StrainStensor eel;
+eel.setMaximumIncrementValuePerIteration(1e-5);
+
+@AuxiliaryStateVariable Tensor shifted_Fe;
+
+@LocalVariable Tensor Fe;
+@LocalVariable Tensor Fe_tr;
+@LocalVariable Tensor Fe0;
+@LocalVariable StressStensor S;
+@LocalVariable DeformationGradientTensor idFp;
+@LocalVariable st2tot2<N, real> didFp_ddeel;
+@LocalVariable real tau0[Nss];
+@LocalVariable real gp0[Nss];
+
+@InitLocalVariables{
+  const Tensor dF = F1 * invert(F0);
+  Fe = shifted_Fe + Tensor::Id();
+  Fe0 = Fe;
+  Fe_tr = dF*Fe0;
+  eel = computeGreenLagrangeTensor(Fe);
+  //
+  constexpr real kb = 1.38064852E-23;      // COnstante de Boltzman en J/K
+  constexpr real nuD = 4.9356532213000e13; // Fréquence de Debye
+  constexpr real a0 = 5.47e-10;            // Paramètre de maille en m
+  constexpr auto rhom = 1.0e12;
+  const real b = a0 * Cste<real>::isqrt2; // Norme du vecteur de Burgers en m
+  const auto T_ = T + theta * dT;
+  /****initialisation des paramètres de chaque mode****/
+  for (unsigned short s = 0; s != Nss; ++s) {
+    auto DH0 = real{};
+    if (s < 6) { /**** Système 1 *******/
+      // Moyenne 100 interessante
+      tau0[s] = 1.179e6;
+      DH0 = 4.989 * 1.602e-19;
+    } else if ((s >= 6) && (s < 12)) { /**** Système 2 *******/
+      tau0[s] = 4.750e6;
+      DH0 = 5.246 * 1.602e-19;
+    } else { /**** Système 3 *******/
+      tau0[s] = 9.215e6;
+      DH0 = 12.13 * 1.602e-19;
+    }
+    gp0[s] = rhom * nuD * b * b * exp(-DH0 / (kb * T_));
+  }
+} // end of @InitLocalVars
+
+@Integrator{
+  const auto& ss = Mono_UO2_Cosh_Jaco3SlidingSystems<real>::getSlidingSystems();
+  S = D * (eel + deel);
+  const StrainStensor tmp(StrainStensor::Id() + 2 * (eel + deel));
+  const StressTensor M = tmp * S;
+  const st2tot2<N, real> dM_ddeel(2 * st2tot2<N, real>::tpld(S) +
+                                  st2tot2<N, real>::tprd(tmp, D));
+  idFp = Tensor::Id();
+  didFp_ddeel = st2tot2<N, real>{};
+  for (unsigned short i = 0; i != Nss; ++i) {
+    const auto tau = ss.mu[i] | M ;
+    const auto sgn_s = tau >= 0 ? 1 : -1;
+    const auto e = exp(tau / tau0[i]);
+    const auto ch = (e + 1 / e) / 2;
+    const auto sh = (e - 1 / e) / 2;
+    const auto vs = gp0[i] * (ch - 1);
+    const auto dvs_dtau = gp0[i] * sh / tau0[i];
+    idFp -= dt * sgn_s * vs* ss.mu[i];
+    didFp_ddeel -=
+        dt * sgn_s * dvs_dtau * (ss.mu[i]) ^ (ss.mu[i] | dM_ddeel);
+  }
+  real J_idFp = det(idFp);
+  idFp /= CubicRoots::cbrt(J_idFp);
+  Fe  = Fe_tr*idFp;
+  feel = eel + deel - computeGreenLagrangeTensor(Fe);
+  //
+  const t2tot2<N, real> tprd = t2tot2<N, real>::tprd(Fe_tr);
+  const t2tost2<N, real> dfeel_didFp =
+      -0.5 * t2tost2<N, real>::dCdF(Fe) * tprd;
+  dfeel_ddeel += dfeel_didFp * didFp_ddeel;
+} // end of @Integrator
+
+@ComputeFinalStress{
+  sig = convertSecondPiolaKirchhoffStressToCauchyStress(S,Fe);
+}
+
+@UpdateAuxiliaryStateVariables {
+  shifted_Fe = Fe - Tensor::Id();
+}
+
+@TangentOperator<DTAU_DDF> {
+  static_cast<void>(smt); // on supprime un warning, on ne traite que
+                          // la tangente cohérente
+  const t2tost2<N, stress> dC_dFe = t2tost2<N, real>::dCdF(Fe);
+  const t2tost2<N, stress> dS_dFe = 0.5 * D * dC_dFe;
+  t2tost2<N, stress> dtau_dFe;
+  computePushForwardDerivative(dtau_dFe, dS_dFe, S, Fe);
+  //
+  const auto dFe_tr_ddF = t2tot2<N, real>::tpld(Fe0);
+  // computation of ddeel_ddF
+  dfeel_ddF = -0.5 * dC_dFe * dFe_tr_ddF;
+  auto ddeel_ddF = t2tost2<N, real>{};
+  getIntegrationVariablesDerivatives_F(ddeel_ddF);
+  //
+  auto dFe_ddF = t2tot2<N, real>::tpld(idFp, dFe_tr_ddF) +
+                 t2tot2<N, real>::tprd(Fe_tr) * didFp_ddeel * ddeel_ddF;
+  //
+  Dt = dtau_dFe * dFe_ddF;
+}
