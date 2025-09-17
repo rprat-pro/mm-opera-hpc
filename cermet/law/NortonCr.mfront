@@ -1,0 +1,51 @@
+@DSL       Implicit;
+@Behaviour NortonCr;
+@Author    Bruno Michel (simple Norton for Chromium material);
+@Date      07/08/2025;
+@Description{
+  This file implements a Norton Law with thermally activated parameter:
+ }
+
+@ModellingHypotheses {".+"};
+@StrainMeasure Hencky;
+@Epsilon 1.e-14;
+
+@Brick StandardElasticity;
+@ElasticMaterialProperties{276e+09, 0.3};
+
+@StateVariable strain p;
+p.setGlossaryName("EquivalentViscoplasticStrain");
+
+@Parameter real A = 2.5e+11;
+@Parameter real n1 = 4.75;
+@Parameter real Q = 306.27e+03;
+@Parameter real D0 = 1.55e-5;
+@Parameter real b = 2.5e-10;
+
+@LocalVariable real Ae;
+@Theta 1.;
+
+@InitLocalVariables{
+  constexpr real R = 8.314;
+  //
+  const auto T_mts = T + theta * dT;
+  const auto C = 264110 - 10 * T_mts - 0.025 * T_mts * T_mts;
+  const auto D1 = D0 * exp(-Q / (R * T_mts));
+  Ae = A * D1 * pow(1.e-06, n1) / (b * b * pow(C, n1));
+}
+
+@Integrator {
+  const real eps = 1.e-12;
+  const auto seq = sigmaeq(sig);
+  const auto tmp = Ae* pow(seq, n1 - 1);
+  const auto df_dseq = n1 * tmp;
+  const auto iseq = 1 / max(seq, eps * young);
+  const Stensor n = 3 * deviator(sig) * iseq / 2;
+  // implicit system
+  feel += dp * n;
+  fp -= tmp * seq * dt;
+  // jacobian
+  dfeel_ddeel += 2. * mu * theta * dp * iseq * (Stensor4::M() - (n ^ n));
+  dfeel_ddp = n;
+  dfp_ddeel = -2 * mu * theta * df_dseq * dt * n;
+} // end of @Integrator
