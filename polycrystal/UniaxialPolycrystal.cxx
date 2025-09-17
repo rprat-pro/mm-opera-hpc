@@ -23,8 +23,8 @@
 #include "MFEMMGIS/PartialQuadratureSpace.hxx"
 #include "MFEMMGIS/PeriodicNonLinearEvolutionProblem.hxx"
 #include "MFEMMGIS/Profiler.hxx"
-#include <MFEMMGIS/Profiler.hxx>
-
+#include "MFEMMGIS/MechanicalPostProcessings.hxx"
+#include "MFEMMGIS/ParaviewExportIntegrationPointResultsAtNodes.hxx"
 #include "MM_OPERA_HPC/GrainOrientations.hxx"
 #include "MM_OPERA_HPC/MacroscropicElasticMaterialProperties.hxx"
 #include "MM_OPERA_HPC/UniaxialMacroscopicStressPeriodicSimulation.hxx"
@@ -123,6 +123,32 @@ add_post_processings(mfem_mgis::PeriodicNonLinearEvolutionProblem &p,
   p.addPostProcessing("ParaviewExportResults", {{"OutputFileName", msg}});
   p.addPostProcessing("MeanThermodynamicForces",
                       {{"OutputFileName", "avgStressPolycristal"}});
+#ifdef MGIS_FUNCTION_SUPPORT
+  p.getImplementation<true>().addPostProcessing(
+      std::make_unique<mfem_mgis::ExportAtIntegrationPoints<true>>(
+          p.getImplementation<true>(), "vonMisesStress",
+          p.getAssignedMaterialsIdentifiers(), 1,
+          [&p](mfem_mgis::Context &ctx,
+               mfem_mgis::PartialQuadratureFunction &f) {
+            const auto mid = f.getPartialQuadratureSpace().getId();
+            const auto &m = p.getBehaviourIntegrator(mid).getMaterial();
+            return mfem_mgis::computeVonMisesEquivalentStress(
+                ctx, f, m, mfem_mgis::Material::END_OF_TIME_STEP);
+          },
+          "vonMisesStressOutput"));
+//   p.getImplementation<true>().addPostProcessing(
+//       std::make_unique<mfem_mgis::ExportAtIntegrationPoints<true>>(
+//           p.getImplementation<true>(), "FirstEigenStress",
+//           p.getAssignedMaterialsIdentifiers(), 1,
+//           [&p](mfem_mgis::Context &ctx,
+//                mfem_mgis::PartialQuadratureFunction &f) {
+//             const auto mid = f.getPartialQuadratureSpace().getId();
+//             const auto &m = p.getBehaviourIntegrator(mid).getMaterial();
+//             return mfem_mgis::computeFirstEigenStress(
+//                 ctx, f, m, mfem_mgis::Material::END_OF_TIME_STEP);
+//           },
+//           "FirstEigenStressOutput"));
+#endif
   // p.addPostProcessing(
   // 		"ParaviewExportIntegrationPointResultsAtNodes",
   // 		{{"OutputFileName", msg + "IntegrationPointOutputPKI"},
