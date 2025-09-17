@@ -118,6 +118,8 @@ computeMacroscopicCauchyStress(
     if (itFP == 0) {
       problem.setSolverParameters(
           {{"VerbosityLevel", np.microscopic_equilibrium_verbosity_level},
+           {"MaximumNumberOfIterations",
+            np.microscopic_equilibrium_maximum_number_of_iterations},
            {"RelativeTolerance", np.microscopic_equilibrium_relative_tolerance},
            {"AbsoluteTolerance",
             np.microscopic_equilibrium_absolute_tolerance}});
@@ -127,6 +129,8 @@ computeMacroscopicCauchyStress(
             initial_residual * np.microscopic_equilibrium_relative_tolerance;
         problem.setSolverParameters(
             {{"VerbosityLevel", np.microscopic_equilibrium_verbosity_level},
+             {"MaximumNumberOfIterations",
+              np.microscopic_equilibrium_maximum_number_of_iterations},
              {"AbsoluteTolerance", atol}});
       }
     }

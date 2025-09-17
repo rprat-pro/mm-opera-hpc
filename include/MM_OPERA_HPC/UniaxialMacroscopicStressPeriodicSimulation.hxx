@@ -52,6 +52,8 @@ struct MM_OPERA_HPC_EXPORT UniaxialMacroscopicStressPeriodicSimulation {
   struct MM_OPERA_HPC_EXPORT NumericalParameters {
     const mfem_mgis::size_type microscopic_equilibrium_verbosity_level =
         mfem_mgis::size_type{1};
+    const mfem_mgis::size_type
+        microscopic_equilibrium_maximum_number_of_iterations{20};
     const mfem_mgis::real microscopic_equilibrium_relative_tolerance =
         mfem_mgis::real{1e-4};
     const mfem_mgis::real microscopic_equilibrium_absolute_tolerance =
