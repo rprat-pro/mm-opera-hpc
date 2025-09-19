@@ -6,11 +6,12 @@
  * \date   06/2023
  */
 
+#include <memory>
 #include <csignal>
 #include <cstdlib>
-#include <functional>
 #include <iostream>
-#include <memory>
+#include <functional>
+#include <string_view>
 
 #include "MFEMMGIS/AnalyticalTests.hxx"
 #include "MFEMMGIS/Config.hxx"
@@ -25,6 +26,7 @@
 #include "MFEMMGIS/Profiler.hxx"
 #include "MFEMMGIS/MechanicalPostProcessings.hxx"
 #include "MFEMMGIS/ParaviewExportIntegrationPointResultsAtNodes.hxx"
+#include "MFEMMGIS/PartialQuadratureFunctionsSet.hxx"
 #include "MM_OPERA_HPC/GrainOrientations.hxx"
 #include "MM_OPERA_HPC/MacroscropicElasticMaterialProperties.hxx"
 #include "MM_OPERA_HPC/UniaxialMacroscopicStressPeriodicSimulation.hxx"
@@ -43,6 +45,8 @@ struct TestParameters {
   const char *library = "src/libBehaviour.so";
   int order = 1;
   bool parallel = true;
+  bool export_von_Mises_stress = false;
+  bool export_first_eigen_stress = false;
   int refinement = 0;
   int post_processing = 1; // default value : disabled
   int verbosity_level = 0; // default value : lower level
@@ -58,6 +62,14 @@ static void common_parameters(mfem::OptionsParser &args, TestParameters &p) {
                  "Finite element order (polynomial degree).");
   args.AddOption(&p.refinement, "-r", "--refinement",
                  "refinement level of the mesh, default = 0");
+  args.AddOption(&p.export_von_Mises_stress, "",
+                 "--enable-export-von-Mises-stress", "",
+                 "--disable-export-von-Mises-stress",
+                 "export the von Mises stress", false);
+  args.AddOption(&p.export_first_eigen_stress, "",
+                 "--enable-export-first_eigen_stress", "",
+                 "--disable-export-first_eigen_stress",
+                 "export first eigen stress", false);
   args.AddOption(&p.post_processing, "-p", "--post-processing",
                  "run post processing step");
   args.AddOption(&p.verbosity_level, "-v", "--verbosity-level",
@@ -117,37 +129,48 @@ print_mesh_information(mfem_mgis::PeriodicNonLinearEvolutionProblem &problem) {
   Message("Info porblem: Number of finite element unknowns: ", unknowns);
 }
 
-static void
-add_post_processings(mfem_mgis::PeriodicNonLinearEvolutionProblem &p,
-                     std::string msg) {
+static void add_post_processings(
+    mfem_mgis::PeriodicNonLinearEvolutionProblem &p,
+    const TestParameters &params,
+    const std::string &msg) {
   p.addPostProcessing("ParaviewExportResults", {{"OutputFileName", msg}});
   p.addPostProcessing("MeanThermodynamicForces",
                       {{"OutputFileName", "avgStressPolycristal"}});
 #ifdef MGIS_FUNCTION_SUPPORT
-  p.getImplementation<true>().addPostProcessing(
-      std::make_unique<mfem_mgis::ExportAtIntegrationPoints<true>>(
-          p.getImplementation<true>(), "vonMisesStress",
-          p.getAssignedMaterialsIdentifiers(), 1,
-          [&p](mfem_mgis::Context &ctx,
-               mfem_mgis::PartialQuadratureFunction &f) {
-            const auto mid = f.getPartialQuadratureSpace().getId();
-            const auto &m = p.getBehaviourIntegrator(mid).getMaterial();
-            return mfem_mgis::computeVonMisesEquivalentStress(
-                ctx, f, m, mfem_mgis::Material::END_OF_TIME_STEP);
-          },
-          "vonMisesStressOutput"));
-//   p.getImplementation<true>().addPostProcessing(
-//       std::make_unique<mfem_mgis::ExportAtIntegrationPoints<true>>(
-//           p.getImplementation<true>(), "FirstEigenStress",
-//           p.getAssignedMaterialsIdentifiers(), 1,
-//           [&p](mfem_mgis::Context &ctx,
-//                mfem_mgis::PartialQuadratureFunction &f) {
-//             const auto mid = f.getPartialQuadratureSpace().getId();
-//             const auto &m = p.getBehaviourIntegrator(mid).getMaterial();
-//             return mfem_mgis::computeFirstEigenStress(
-//                 ctx, f, m, mfem_mgis::Material::END_OF_TIME_STEP);
-//           },
-//           "FirstEigenStressOutput"));
+  if (params.export_von_Mises_stress) {
+    p.getImplementation<true>().addPostProcessing(
+        std::make_unique<
+            mfem_mgis::
+                ParaviewExportIntegrationPointPostProcessingsResultsAtNodes<
+                    true>>(
+            p.getImplementation<true>(), "vonMisesStress",
+            p.getAssignedMaterialsIdentifiers(), 1,
+            [&p](mfem_mgis::Context &ctx,
+                 mfem_mgis::PartialQuadratureFunction &f) {
+              const auto mid = f.getPartialQuadratureSpace().getId();
+              const auto &m = p.getBehaviourIntegrator(mid).getMaterial();
+              return mfem_mgis::computeVonMisesEquivalentStress(
+                  ctx, f, m, mfem_mgis::Material::END_OF_TIME_STEP);
+            },
+            "vonMisesStressOutput"));
+  }
+  if (params.export_first_eigen_stress) {
+    p.getImplementation<true>().addPostProcessing(
+        std::make_unique<
+            mfem_mgis::
+                ParaviewExportIntegrationPointPostProcessingsResultsAtNodes<
+                    true>>(
+            p.getImplementation<true>(), "FirstEigenStress",
+            p.getAssignedMaterialsIdentifiers(), 1,
+            [&p](mfem_mgis::Context &ctx,
+                 mfem_mgis::PartialQuadratureFunction &f) {
+              const auto mid = f.getPartialQuadratureSpace().getId();
+              const auto &m = p.getBehaviourIntegrator(mid).getMaterial();
+              return mfem_mgis::computeFirstEigenStress(
+                  ctx, f, m, mfem_mgis::Material::END_OF_TIME_STEP);
+            },
+            "FirstEigenStressOutput"));
+  }
 #endif
   // p.addPostProcessing(
   // 		"ParaviewExportIntegrationPointResultsAtNodes",
@@ -157,7 +180,7 @@ add_post_processings(mfem_mgis::PeriodicNonLinearEvolutionProblem &p,
   // 		"ParaviewExportIntegrationPointResultsAtNodes",
   // 		{{"OutputFileName", msg + "IntegrationPointOutputDG"},
   // 		 {"Results", {"DeformationGradient"}}});
-} // end timer add_postprocessing_and_outputs
+}  // end timer add_postprocessing_and_outputs
 
 static void
 setup_properties(mfem_mgis::PeriodicNonLinearEvolutionProblem &problem,
@@ -316,7 +339,7 @@ int main(int argc, char *argv[]) {
 
   // add post processings
   if (use_post_processing)
-    add_post_processings(problem, "OutputFile-Uniaxial-polycristal");
+    add_post_processings(problem, p, "OutputFile-Uniaxial-polycristal");
 
   // main function here
   const auto te = p.duration;
