@@ -71,6 +71,8 @@ Options:
 	Vector file to use.
    -l <string>, --library <string>, current value: src/libBehaviour.so
 	Material library.
+   -b <string>, --behaviour <string>, current value: Mono_UO2_Cosh_Jaco3
+	Mechanical behaviour.
    -o <int>, --order <int>, current value: 1
 	Finite element order (polynomial degree).
    -r <int>, --refinement <int>, current value: 0
@@ -81,6 +83,11 @@ Options:
 	choose the duration (default = 200)
    -n <int>, --nstep <int>, current value: 600
 	choose the number of steps (default = 600)
+   --linear-solver <string>
+        linear solver to be used, default to HyprePCG
+   --linear-solver-preconditioner <string>
+        preconditioner of the linear solver to be used, defaults to HypreBoomerAMG.
+	none can be specified for not using a preconditioner
    --macroscopic-stress-output-file <string>, current value: uniaxial-polycrystal.res
         main output file containing the evolution of the diagonal components of the deformation
         gradient and the  diagonal components of the Cauchy stress

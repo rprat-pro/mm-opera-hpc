@@ -49,8 +49,10 @@ struct MeshParameters {
 struct NumericalParameters {
   //! \brief polynomial order of the finite element used
   int order = 1;
-  //! \brief polynomial order of the finite element used
-  bool parallel = true;
+  //! \brief name of the linear solver
+  const char *linear_solver = "HyprePCG";
+  //! \brief name of the preconditioner for the linear solver
+  const char *linear_solver_preconditioner = "HypreBoomerAMG";
   //! \brief default tolerance for the convergence of the linear solver
   mfem_mgis::real linear_solver_tolerance = mfem_mgis::real{1e-12};
 };
@@ -117,10 +119,10 @@ struct TestParameters : MeshParameters,
 // a few utility functions defined after the main functions
 
 static void parseCommandLineArguments(mfem::OptionsParser &, TestParameters &);
-static void add_post_processings(mfem_mgis::PeriodicNonLinearEvolutionProblem &,
-                                 const PostProcessingParameters &,
-                                 const std::string &);
-static void setup_materials(
+static void addPostProcessings(mfem_mgis::PeriodicNonLinearEvolutionProblem &,
+                               const PostProcessingParameters &,
+                               const std::string &);
+static void setupMaterials(
     mfem_mgis::PeriodicNonLinearEvolutionProblem &,
     mm_opera_hpc::MacroscropicElasticMaterialProperties &,
     const TestParameters &);
@@ -141,23 +143,22 @@ int main(int argc, char *argv[]) {
 
   // creating the finite element workspace
   auto fed = std::make_shared<mfem_mgis::FiniteElementDiscretization>(
-      mfem_mgis::Parameters{
-          {"MeshFileName", p.mesh_file},
-          {"FiniteElementFamily", "H1"},
-          {"FiniteElementOrder", p.order},
-          {"UnknownsSize", mfem_mgis::size_type{3}},
-          {"NumberOfUniformRefinements", p.parallel ? p.refinement : 0},
-          {"Parallel", p.parallel}});
+      mfem_mgis::Parameters{{"MeshFileName", p.mesh_file},
+                            {"FiniteElementFamily", "H1"},
+                            {"FiniteElementOrder", p.order},
+                            {"UnknownsSize", mfem_mgis::size_type{3}},
+                            {"NumberOfUniformRefinements", p.refinement},
+                            {"Parallel", true}});
   mfem_mgis::PeriodicNonLinearEvolutionProblem problem(fed);
   mm_opera_hpc::printMeshInformation(problem);
 
   // set problem
   mm_opera_hpc::MacroscropicElasticMaterialProperties mp;
-  setup_materials(problem, mp, p);
+  setupMaterials(problem, mp, p);
   setLinearSolver(problem, p);
   // add post processings
   if (p.post_processings) {
-    add_post_processings(problem, p, "OutputFile-Uniaxial-polycristal");
+    addPostProcessings(problem, p, "OutputFile-Uniaxial-polycristal");
   }
   // definition of the temporal sequences
   const auto te = p.duration;
@@ -202,6 +203,10 @@ static void parseCommandLineArguments(mfem::OptionsParser &args,
   args.AddOption(&p.mesh_file, "-m", "--mesh", "Mesh file to use.");
   args.AddOption(&p.vect_file, "-f", "--vect", "Vector file to use.");
   args.AddOption(&p.library, "-l", "--library", "Material library.");
+  args.AddOption(&p.behaviour, "-b", "--behaviour", "Mechanical behaviour.");
+  args.AddOption(&p.linear_solver, "", "--linear-solver", "linear solver to be used");
+  args.AddOption(&p.linear_solver_preconditioner, "",
+                 "--linear-solver-preconditioner", "preconditioner of the linear solver to be used");
   args.AddOption(&p.order, "-o", "--order",
                  "Finite element order (polynomial degree).");
   args.AddOption(&p.refinement, "-r", "--refinement",
@@ -240,7 +245,7 @@ static void parseCommandLineArguments(mfem::OptionsParser &args,
   if (mfem_mgis::getMPIrank() == 0) args.PrintOptions(std::cout);
 }
 
-static void setup_materials(
+static void setupMaterials(
     mfem_mgis::PeriodicNonLinearEvolutionProblem &problem,
     mm_opera_hpc::MacroscropicElasticMaterialProperties &mp,
     const TestParameters &p) {
@@ -310,7 +315,7 @@ static void setup_materials(
   const auto vectors = mm_opera_hpc::readVectorsFromFile(p.vect_file);
   if (vectors.size() != 2 * nMat) {
     throw std::invalid_argument(
-        "setup_materials : incorrect number of vectors in vector file");
+        "setupMaterials : incorrect number of vectors in vector file");
   }
 
   std::array<mfem_mgis::MaterialAxis3D, 2u> r;
@@ -339,25 +344,22 @@ static void setLinearSolver(mfem_mgis::PeriodicNonLinearEvolutionProblem &p,
   solverParameters.insert(
       mfem_mgis::Parameters{{"Tolerance", params.linear_solver_tolerance}});
 
-  // preconditionner hypreBoomerAMG
+  // preconditioner
   auto options =
       mfem_mgis::Parameters{{"VerbosityLevel", params.verbosity_level}};
-  // auto preconditionner = mfem_mgis::Parameters{{"Name","HypreDiagScale"},
+  // auto preconditioner = mfem_mgis::Parameters{{"Name","HypreDiagScale"},
   // {"Options",options}};
-  auto preconditionner =
-      mfem_mgis::Parameters{{"Name", "HypreBoomerAMG"}, {"Options", options}};
-  solverParameters.insert(
-      mfem_mgis::Parameters{{"Preconditioner", preconditionner}});
-  // solver HyprePCG
-  p.setLinearSolver("HyprePCG", solverParameters);
-  // p.setLinearSolver("MUMPSSolver", solverParameters);
-  // p.setLinearSolver("CGSolver", solverParameters);
+  if(std::string_view{params.linear_solver_preconditioner} != "none"){
+    auto preconditioner = mfem_mgis::Parameters{
+      {"Name", params.linear_solver_preconditioner}, {"Options", options}};
+    solverParameters.insert(mfem_mgis::Parameters{{"Preconditioner", preconditioner}});
+  }
+  p.setLinearSolver(params.linear_solver, solverParameters);
 }
 
-static void add_post_processings(
-    mfem_mgis::PeriodicNonLinearEvolutionProblem &p,
-    const PostProcessingParameters &params,
-    const std::string &msg) {
+static void addPostProcessings(mfem_mgis::PeriodicNonLinearEvolutionProblem &p,
+                               const PostProcessingParameters &params,
+                               const std::string &msg) {
   p.addPostProcessing("ParaviewExportResults", {{"OutputFileName", msg}});
   p.addPostProcessing("MeanThermodynamicForces",
                       {{"OutputFileName", "avgStressPolycristal"}});
