@@ -1,6 +1,6 @@
 /*!
  * \file   GrainOrientations.hxx
- * \brief    
+ * \brief
  * \author Thomas Helfer
  * \date   16/09/2025
  */
@@ -15,9 +15,9 @@
 
 namespace mm_opera_hpc {
 
-[[nodiscard]] MM_OPERA_HPC_EXPORT std::vector<std::array<mfem_mgis::real, 3u>>
-    readVectorsFromFile(std::string_view);
+  [[nodiscard]] MM_OPERA_HPC_EXPORT std::vector<std::array<mfem_mgis::real, 3u>>
+      readVectorsFromFile(std::string_view);
 
-} // end of namespace mm_opera_hpc
+}  // end of namespace mm_opera_hpc
 
 #endif /* LIB_MM_OPERA_HPC_GRAINORIENTATIONS_HXX */

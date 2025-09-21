@@ -28,46 +28,76 @@
 #include "MFEMMGIS/MechanicalPostProcessings.hxx"
 #include "MFEMMGIS/ParaviewExportIntegrationPointResultsAtNodes.hxx"
 #include "MFEMMGIS/PartialQuadratureFunctionsSet.hxx"
+#include "MM_OPERA_HPC/Utilities.hxx"
 #include "MM_OPERA_HPC/GrainOrientations.hxx"
 #include "MM_OPERA_HPC/MacroscropicElasticMaterialProperties.hxx"
 #include "MM_OPERA_HPC/UniaxialMacroscopicStressPeriodicSimulation.hxx"
 
-struct MeshParameters{
+/*!
+ * \brief parameters related to the mesh
+ */
+struct MeshParameters {
+  //! \brief default value for the mesh file
   const char *mesh_file = "mesh/5cristals.msh";
+  //! \brief number of uniform refinement of the mesh
   int refinement = 0;
 };
 
-struct NumericalParameters{
+/*!
+ * \brief parameters related to the numerical aspects of the simulation
+ */
+struct NumericalParameters {
+  //! \brief polynomial order of the finite element used
   int order = 1;
+  //! \brief polynomial order of the finite element used
   bool parallel = true;
+  //! \brief default tolerance for the convergence of the linear solver
   mfem_mgis::real linear_solver_tolerance = mfem_mgis::real{1e-12};
 };
 
+/*!
+ * \brief parameters describing the elastic material properties
+ */
 struct ElasticMaterialPropertiesParameters {
+  //! \brief Young's modulus of uranium dioxide
   mfem_mgis::real young_modulus = mfem_mgis::real{222.e9};
+  //! \brief Poisson's ratio of uranium dioxide
   mfem_mgis::real poisson_ratio = mfem_mgis::real{0.27};
+  //! \brief shear modulus of uranium dioxide
   mfem_mgis::real shear_modulus = mfem_mgis::real{54.e9};
 };
 
 struct MaterialParameters : ElasticMaterialPropertiesParameters {
-  const char *behaviour = "Mono_UO2_Cosh_Jaco3";
+  //! \brief default material library
   const char *library = "src/libBehaviour.so";
+  //! \brief default mechanical behaviour
+  const char *behaviour = "Mono_UO2_Cosh_Jaco3";
+  //! \brief default file name describing orientation vectors
   const char *vect_file = "mesh/vectors_5cristals.txt";
 };
 
 struct LoadingParameters {
+  //! \brief default value of the temperature
   mfem_mgis::real temperature = mfem_mgis::real{1600};
+  //! \brief default value of the imposed linear strain rate
   mfem_mgis::real linear_strain_rate = mfem_mgis::real{5e-4};
 };
 
 struct TimeDiscretizationParameters {
+  //! \brief total duration of the simulated test
   mfem_mgis::real duration = mfem_mgis::real{200};
+  //! \brief number of step describing the temporal sequences
   int nstep = 200;
 };
 
 struct PostProcessingParameters {
-  int post_processing = 1;  // default value : disabled
+  //! \brief boolean state if post-processings shall be executed
+  bool post_processings = true;
+  //! \brief boolean stating if the von Mises stress of the Cauchy stress is
+  //! exported to VTK
   bool export_von_Mises_stress = false;
+  //! \brief boolean stating if first eigen stress of the Cauchy stress is
+  //! exported to VTK
   bool export_first_eigen_stress = false;
 };
 
@@ -78,21 +108,24 @@ struct TestParameters : MeshParameters,
                         LoadingParameters,
                         TimeDiscretizationParameters,
                         PostProcessingParameters {
+  //! \brief default output file for macroscopic results
   const char *output_file = "uniaxial-polycrystal.res";
+  //! \brief default verbositiy level
   int verbosity_level = 0;  // default value : lower level
 };
 
+// a few utility functions defined after the main functions
+
 static void parseCommandLineArguments(mfem::OptionsParser &, TestParameters &);
-static void print_mesh_information(mfem_mgis::PeriodicNonLinearEvolutionProblem &);
 static void add_post_processings(mfem_mgis::PeriodicNonLinearEvolutionProblem &,
-				 const PostProcessingParameters &,
-				 const std::string &);
+                                 const PostProcessingParameters &,
+                                 const std::string &);
 static void setup_materials(
     mfem_mgis::PeriodicNonLinearEvolutionProblem &,
     mm_opera_hpc::MacroscropicElasticMaterialProperties &,
     const TestParameters &);
 static void setLinearSolver(mfem_mgis::PeriodicNonLinearEvolutionProblem &,
-                            const TestParameters&);
+                            const TestParameters &);
 
 int main(int argc, char *argv[]) {
   // mpi initialization here
@@ -116,17 +149,17 @@ int main(int argc, char *argv[]) {
           {"NumberOfUniformRefinements", p.parallel ? p.refinement : 0},
           {"Parallel", p.parallel}});
   mfem_mgis::PeriodicNonLinearEvolutionProblem problem(fed);
-  print_mesh_information(problem);
+  mm_opera_hpc::printMeshInformation(problem);
 
   // set problem
   mm_opera_hpc::MacroscropicElasticMaterialProperties mp;
   setup_materials(problem, mp, p);
   setLinearSolver(problem, p);
   // add post processings
-  if (p.post_processing == 1){
+  if (p.post_processings) {
     add_post_processings(problem, p, "OutputFile-Uniaxial-polycristal");
   }
-  // main function here
+  // definition of the temporal sequences
   const auto te = p.duration;
   const auto nsteps = p.nstep;
   const auto temporal_sequences = [&te, &nsteps] {
@@ -138,11 +171,11 @@ int main(int argc, char *argv[]) {
     }
     return times;
   }();
-  //
+  // evolution of the axial component of the deformation gradient
   const auto Fzz = [&p](const mfem_mgis::real ets) {
     return 1 + p.linear_strain_rate * ets;
   };
-  //
+  // main output file
   std::ofstream out(p.output_file);
   if (!out) {
     std::cerr << "can't open output file '" << p.output_file << "'\n";
@@ -152,7 +185,7 @@ int main(int argc, char *argv[]) {
   const auto np = mm_opera_hpc::UniaxialMacroscopicStressPeriodicSimulation::
       NumericalParameters{.macroscopic_elastic_material_properties = mp};
   mm_opera_hpc::UniaxialMacroscopicStressPeriodicSimulation s(
-      problem, Fzz, np, p.post_processing == 1);
+      problem, Fzz, np, p.post_processings);
   const auto success = s.run(out, temporal_sequences);
 
   // print and write timetable
@@ -160,7 +193,8 @@ int main(int argc, char *argv[]) {
   return success ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
-static void parseCommandLineArguments(mfem::OptionsParser &args, TestParameters &p) {
+static void parseCommandLineArguments(mfem::OptionsParser &args,
+                                      TestParameters &p) {
   args.AddOption(&p.output_file, "", "--macroscopic-stress-output-file",
                  "main output file containing the evolution of the diagonal "
                  "components of the deformation gradient and the  diagonal "
@@ -180,8 +214,9 @@ static void parseCommandLineArguments(mfem::OptionsParser &args, TestParameters 
                  "--enable-export-first_eigen_stress", "",
                  "--disable-export-first_eigen_stress",
                  "export first eigen stress", false);
-  args.AddOption(&p.post_processing, "-p", "--post-processing",
-                 "run post processing step");
+  args.AddOption(&p.post_processings, "", "--enable-post-processing", "",
+                 "--disable-post-processing", "run post processing steps",
+                 false);
   args.AddOption(&p.verbosity_level, "-v", "--verbosity-level",
                  "choose the verbosity level");
   args.AddOption(&p.duration, "-d", "--duration",
@@ -192,8 +227,7 @@ static void parseCommandLineArguments(mfem::OptionsParser &args, TestParameters 
   args.Parse();
 
   if (!args.Good()) {
-    if (mfem_mgis::getMPIrank() == 0)
-      args.PrintUsage(std::cout);
+    if (mfem_mgis::getMPIrank() == 0) args.PrintUsage(std::cout);
     mfem_mgis::finalize();
     exit(0);
   }
@@ -203,46 +237,13 @@ static void parseCommandLineArguments(mfem::OptionsParser &args, TestParameters 
     args.PrintUsage(std::cout);
     mfem_mgis::abort(EXIT_FAILURE);
   }
-  if (mfem_mgis::getMPIrank() == 0)
-    args.PrintOptions(std::cout);
+  if (mfem_mgis::getMPIrank() == 0) args.PrintOptions(std::cout);
 }
 
-static void
-print_mesh_information(mfem_mgis::PeriodicNonLinearEvolutionProblem &problem) {
-  CatchTimeSection("common::print_mesh_information");
-
-  using mfem_mgis::Profiler::Utils::Message;
-  using mfem_mgis::Profiler::Utils::sum;
-
-  auto &fespace = problem.getImplementation<true>().getFiniteElementSpace();
-  // getMesh
-  auto mesh = fespace.GetMesh();
-
-  // get the number of vertices
-  int64_t numbers_of_vertices_local = mesh->GetNV();
-  int64_t numbers_of_vertices = sum(numbers_of_vertices_local);
-
-  // get the number of elements
-  int64_t numbers_of_elements_local = mesh->GetNE();
-  int64_t numbers_of_elements = sum(numbers_of_elements_local);
-
-  // get the element size
-  const mfem_mgis::real h = mesh->GetElementSize(0);
-
-  // get n dofs
-  int64_t unknowns_local = fespace.GetTrueVSize();
-  int64_t unknowns = sum(unknowns_local);
-
-  Message("Info problem: number of vertices -> ", numbers_of_vertices);
-  Message("Info problem: number of elements -> ", numbers_of_elements);
-  Message("Info prolbem: element size -> ", h);
-  Message("Info porblem: Number of finite element unknowns: ", unknowns);
-}
-
-static void
-setup_materials(mfem_mgis::PeriodicNonLinearEvolutionProblem &problem,
-                 mm_opera_hpc::MacroscropicElasticMaterialProperties &mp,
-                 const TestParameters &p) {
+static void setup_materials(
+    mfem_mgis::PeriodicNonLinearEvolutionProblem &problem,
+    mm_opera_hpc::MacroscropicElasticMaterialProperties &mp,
+    const TestParameters &p) {
   using namespace mgis::behaviour;
   using real = mfem_mgis::real;
 
@@ -298,9 +299,9 @@ setup_materials(mfem_mgis::PeriodicNonLinearEvolutionProblem &problem,
 
   for (int i = 0; i < nMat; i++) {
     auto &mat = problem.getMaterial(i + 1);
-    set_properties(mat, young1, young2, young3,     // young modulus
-                   poisson12, poisson23, poisson13, // poisson ration
-                   shear12, shear23, shear13        // shear modulus
+    set_properties(mat, young1, young2, young3,      // young modulus
+                   poisson12, poisson23, poisson13,  // poisson ration
+                   shear12, shear23, shear13         // shear modulus
     );
     set_temperature(mat);
   }
@@ -327,9 +328,10 @@ static void setLinearSolver(mfem_mgis::PeriodicNonLinearEvolutionProblem &p,
                             const TestParameters &params) {
   CatchTimeSection("set_linear_solver");
   // pilote
-  constexpr int defaultMaxNumOfIt = 5000; // MaximumNumberOfIterations
+  constexpr int defaultMaxNumOfIt = 5000;  // MaximumNumberOfIterations
   auto solverParameters = mfem_mgis::Parameters{};
-  solverParameters.insert(mfem_mgis::Parameters{{"VerbosityLevel", params.verbosity_level}});
+  solverParameters.insert(
+      mfem_mgis::Parameters{{"VerbosityLevel", params.verbosity_level}});
   solverParameters.insert(
       mfem_mgis::Parameters{{"MaximumNumberOfIterations", defaultMaxNumOfIt}});
   // solverParameters.insert(mfem_mgis::Parameters{{"AbsoluteTolerance", Tol}});
@@ -338,7 +340,8 @@ static void setLinearSolver(mfem_mgis::PeriodicNonLinearEvolutionProblem &p,
       mfem_mgis::Parameters{{"Tolerance", params.linear_solver_tolerance}});
 
   // preconditionner hypreBoomerAMG
-  auto options = mfem_mgis::Parameters{{"VerbosityLevel", params.verbosity_level}};
+  auto options =
+      mfem_mgis::Parameters{{"VerbosityLevel", params.verbosity_level}};
   // auto preconditionner = mfem_mgis::Parameters{{"Name","HypreDiagScale"},
   // {"Options",options}};
   auto preconditionner =
