@@ -67,15 +67,16 @@ computeMacroscopicCauchyStress(
 } // end of computeMacroscopicCauchyStress
 
 [[nodiscard]] static bool simulateOverATimeStep(
+    std::ostream &out,
     mfem_mgis::PeriodicNonLinearEvolutionProblem &problem,
     UniaxialMacroscopicStressPeriodicSimulation::MacroscopicUnknowns
-        &macroscopic_unknowns, //
+        &macroscopic_unknowns,  //
     const std::function<mfem_mgis::real(mfem_mgis::real)>
         &imposed_axial_deformation_gradient_value,
     const UniaxialMacroscopicStressPeriodicSimulation::NumericalParameters
-        &np, //
+        &np,  //
     const bool post_processing,
-    const mfem_mgis::real bts, //
+    const mfem_mgis::real bts,  //
     const mfem_mgis::real ets) {
   using namespace mfem_mgis::Profiler::Utils;
   Message("Solving time step from ", bts, " to ", ets);
@@ -153,6 +154,9 @@ computeMacroscopicCauchyStress(
     itFP++;
   }
   //
+  out << ets << " "                                 //
+      << F[0] << " " << F[1] << " " << F[2] << " "  //
+      << S[0] << " " << S[1] << " " << S[2] << std::endl;
   Message("Solution at time", ets, ":", F[2], S[0], S[1], S[2]);
   //
   if (itFP >= maxitFP) {
@@ -181,6 +185,7 @@ computeMacroscopicCauchyStress(
 }
 
 [[nodiscard]] static bool simulateOverATemporalSequence(
+    std::ostream &out,
     mfem_mgis::PeriodicNonLinearEvolutionProblem &problem,
     UniaxialMacroscopicStressPeriodicSimulation::MacroscopicUnknowns
         &macroscopic_unknowns, //
@@ -199,9 +204,10 @@ computeMacroscopicCauchyStress(
   auto dt = ets - bts;
   while (nstep != 0) {
     const auto do_post_processing = post_processing && (nstep == 1);
-    const auto success = simulateOverATimeStep(
-        problem, macroscopic_unknowns, imposed_axial_deformation_gradient_value,
-        np, do_post_processing, t, t + dt);
+    const auto success =
+        simulateOverATimeStep(out, problem, macroscopic_unknowns,
+                              imposed_axial_deformation_gradient_value, np,
+                              do_post_processing, t, t + dt);
     if (success) {
       t += dt;
       --nstep;
@@ -241,10 +247,11 @@ UniaxialMacroscopicStressPeriodicSimulation::
 } // end of UniaxialMacroscopicStressPeriodicSimulation
 
 bool UniaxialMacroscopicStressPeriodicSimulation::run(
+    std::ostream &out,
     const std::vector<mfem_mgis::real> &temporal_sequences) noexcept {
   for (std::size_t i = 0; i + 1 != temporal_sequences.size(); i++) {
     if (!simulateOverATemporalSequence(
-            this->problem, this->macroscopic_unknowns,
+            out, this->problem, this->macroscopic_unknowns,
             this->imposed_axial_deformation_gradient_value,
             this->numerical_parameters, this->post_processing,
             temporal_sequences[i], temporal_sequences[i + 1])) {

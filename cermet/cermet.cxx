@@ -1,3 +1,4 @@
+#include <fstream>
 #include <cstdlib>
 #include <optional>
 #include <functional>
@@ -35,6 +36,7 @@ order: 1
 */
 
 struct TestParameters {
+  const char *output_file = "cermet.res";
   const char *mesh_file = "mesh/5grains.msh";
   //  const char *behaviourGrain = "MonoCristal_UO2";
   const char *behaviourGrain = "Mono_UO2_Cosh_Jaco3";
@@ -51,6 +53,10 @@ struct TestParameters {
 };
 
 static void fill_parameters(mfem::OptionsParser &args, TestParameters &p) {
+  args.AddOption(&p.output_file, "", "--macroscopic-stress-output-file",
+                 "main output file containing the evolution of the diagonal "
+                 "components of the deformation gradient and the  diagonal "
+                 "components of the Cauchy stress.");
   args.AddOption(&p.mesh_file, "-m", "--mesh", "Mesh file to use.");
   args.AddOption(&p.order, "-o", "--order",
                  "Finite element order (polynomial degree).");
@@ -268,11 +274,17 @@ int main(int argc, char **argv) {
     return times;
   }();
   //
+  std::ofstream out(p.output_file);
+  if (!out) {
+    std::cerr << "can't open output file '" << p.output_file << "'\n";
+  }
+  out.precision(14);
+  //
   const auto np = mm_opera_hpc::UniaxialMacroscopicStressPeriodicSimulation::
       NumericalParameters{.macroscopic_elastic_material_properties = mp};
   mm_opera_hpc::UniaxialMacroscopicStressPeriodicSimulation s(problem, Fzz, np,
                                                               post_processing);
-  const auto success = s.run(temporal_sequences);
+  const auto success = s.run(out, temporal_sequences);
   //
   mm_opera_hpc::print_memory_footprint("[End]");
   mfem_mgis::Profiler::timers::print_and_write_timers();

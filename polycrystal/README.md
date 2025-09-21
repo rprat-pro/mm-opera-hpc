@@ -76,13 +76,20 @@ Options:
    -r <int>, --refinement <int>, current value: 0
 	refinement level of the mesh, default = 0
    -p <int>, --post-processing <int>, current value: 1
-	run post processing step
+	execute post-processings
    -v <int>, --verbosity-level <int>, current value: 0
 	choose the verbosity level
    -d <double>, --duration <double>, current value: 200
 	choose the duration (default = 200)
    -n <int>, --nstep <int>, current value: 600
 	choose the number of steps (default = 600)
+   --enable-export-von-Mises-stress, 
+        export the von Mises stress
+   --enable-export-first_eigen_stress,
+        export first eigen stress
+   --macroscopic-stress-output-file <string>, current value: uniaxial-polycrystal.res
+        main output file containing the evolution of the diagonal components of the deformation
+        gradient and the  diagonal components of the Cauchy stress
 ```
 
 Note: To generate the grain orientation vectors, use the randomVectorGeneration tool provided in the distribution. This ensures a consistent and physically realistic initialization of crystallographic orientations.

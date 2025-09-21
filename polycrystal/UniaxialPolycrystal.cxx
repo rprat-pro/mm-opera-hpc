@@ -9,6 +9,7 @@
 #include <memory>
 #include <csignal>
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
 #include <functional>
 #include <string_view>
@@ -38,6 +39,7 @@
 
 // We need this class for test case sources
 struct TestParameters {
+  const char *output_file = "uniaxial-polycrystal.res";
   const char *mesh_file = "mesh/5cristals.msh";
   const char *vect_file = "mesh/vectors_5cristals.txt";
   //  const char *behaviour = "MonoCristal_UO2";
@@ -55,6 +57,10 @@ struct TestParameters {
 };
 
 static void common_parameters(mfem::OptionsParser &args, TestParameters &p) {
+  args.AddOption(&p.output_file, "", "--macroscopic-stress-output-file",
+                 "main output file containing the evolution of the diagonal "
+                 "components of the deformation gradient and the  diagonal "
+                 "components of the Cauchy stress.");
   args.AddOption(&p.mesh_file, "-m", "--mesh", "Mesh file to use.");
   args.AddOption(&p.vect_file, "-f", "--vect", "Vector file to use.");
   args.AddOption(&p.library, "-l", "--library", "Material library.");
@@ -359,11 +365,17 @@ int main(int argc, char *argv[]) {
     return 1 + def * ets;
   };
   //
+  std::ofstream out(p.output_file);
+  if (!out) {
+    std::cerr << "can't open output file '" << p.output_file << "'\n";
+  }
+  out.precision(14);
+  //
   const auto np = mm_opera_hpc::UniaxialMacroscopicStressPeriodicSimulation::
       NumericalParameters{.macroscopic_elastic_material_properties = mp};
   mm_opera_hpc::UniaxialMacroscopicStressPeriodicSimulation s(
       problem, Fzz, np, use_post_processing);
-  const auto success = s.run(temporal_sequences);
+  const auto success = s.run(out, temporal_sequences);
 
   // print and write timetable
   mfem_mgis::Profiler::timers::print_and_write_timers();

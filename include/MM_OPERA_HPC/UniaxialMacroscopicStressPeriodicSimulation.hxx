@@ -90,14 +90,18 @@ struct MM_OPERA_HPC_EXPORT UniaxialMacroscopicStressPeriodicSimulation {
       const NumericalParameters&, const bool) noexcept;
   /*!
    * \brief run the simulation over the given temporal sequences
-   * \param[in] temporal_sequences: list of times defining the temporal
-   * sequences.
+   * \param[in] out: output files for the macroscopic results (diagonal
+   * components of the deformation gradient and diagonal components of the
+   * Cauchy stress).
+   * \param[in] temporal_sequences: list of times defining the
+   * temporal sequences.
    * \pre the times must be sorted in ascending order
    * \return true on success, false otherwise
    */
-  [[nodiscard]] bool run(const std::vector<mfem_mgis::real> &) noexcept;
+  [[nodiscard]] bool run(std::ostream &,
+                         const std::vector<mfem_mgis::real> &) noexcept;
 
-private:
+ private:
   //! \brief underlying problem
   mfem_mgis::PeriodicNonLinearEvolutionProblem &problem;
   //
