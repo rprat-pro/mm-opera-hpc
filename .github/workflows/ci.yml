@@ -18,7 +18,7 @@ jobs:
       - name: Set up Spack
         uses: spack/setup-spack@v2
         with:
-          ref: develop     # Spack version (examples: develop, releases/v0.21)
+          ref: v1.0.1     # Spack version (examples: develop, releases/v0.21)
           buildcache: true  # Configure oci://ghcr.io/spack/github-actions-buildcache
           color: true       # Force color output (SPACK_COLOR=always)
           path: spack       # Where to clone Spack
@@ -32,7 +32,6 @@ jobs:
         run: |
           spack load mfem
           spack load mfem-mgis
-          export MFEMMGIS_DIR=`spack location -i mfem-mgis`/share/mfem-mgis/cmake/
           cmake -B ${{github.workspace}}/release 
       - name: Build OperaHpc Test Cases
         shell: spack-sh {0}
