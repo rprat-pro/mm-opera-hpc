@@ -182,7 +182,7 @@ int main(int argc, char *argv[]) {
     std::cerr << "can't open output file '" << p.output_file << "'\n";
   }
   out.precision(14);
-  //
+  // setting the simulation and running it
   const auto np = mm_opera_hpc::UniaxialMacroscopicStressPeriodicSimulation::
       NumericalParameters{.macroscopic_elastic_material_properties = mp};
   mm_opera_hpc::UniaxialMacroscopicStressPeriodicSimulation s(
