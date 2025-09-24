@@ -39,7 +39,7 @@ jobs:
           spack load tfel
           spack load mfem
           spack load mfem-mgis
-          cmake --build ${{github.workspace}}/release --config Release
+          cmake --build ${{github.workspace}}/release --config Release -DCMAKE_PREFIX_PATH=`spack location -i tfel`/share/tfel/cmake
       - name: Run examples
         working-directory: ${{github.workspace}}/release
         shell: spack-sh {0}
