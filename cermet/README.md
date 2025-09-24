@@ -75,8 +75,9 @@ Options:
 	choose the number of steps (default = 40)
    -f <string>, --file <string>, current value: vectors_5grains.txt
 	Vector file to use
-   -bcs <int>, --bcs_type <int>, current value: 0
-	Types of boundary conditions. For all BCs, a displacement of def = 5e-4 m/s is imposed. Type 0: zero strain in xx and yy. Type 1: imposed displacement of -0.3 * def in xx and yy.
+   --macroscopic-stress-output-file <string>, current value: cermet.res
+        main output file containing the evolution of the diagonal components of the deformation
+        gradient and the  diagonal components of the Cauchy stress
 ```
 
 ### Run it

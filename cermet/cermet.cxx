@@ -1,3 +1,4 @@
+#include <fstream>
 #include <cstdlib>
 #include <optional>
 #include <functional>
@@ -6,6 +7,7 @@
 #include "MFEMMGIS/ParaviewExportIntegrationPointResultsAtNodes.hxx"
 #include "MFEMMGIS/PeriodicNonLinearEvolutionProblem.hxx"
 #include "MFEMMGIS/Profiler.hxx"
+#include "MM_OPERA_HPC/Utilities.hxx"
 #include "MM_OPERA_HPC/GrainOrientations.hxx"
 #include "MM_OPERA_HPC/UniaxialMacroscopicStressPeriodicSimulation.hxx"
 
@@ -35,6 +37,7 @@ order: 1
 */
 
 struct TestParameters {
+  const char *output_file = "cermet.res";
   const char *mesh_file = "mesh/5grains.msh";
   //  const char *behaviourGrain = "MonoCristal_UO2";
   const char *behaviourGrain = "Mono_UO2_Cosh_Jaco3";
@@ -44,13 +47,18 @@ struct TestParameters {
   const char *vector_file = "vectors_5grains.txt";
   int order = 1;
   int refinement = 0;
-  int post_processing = 1; // default value : activated
-  int verbosity_level = 0; // default value : lower level
+  int post_processing = 1;  // default value : activated
+  int verbosity_level = 0;  // default value : lower level
   int nsteps = 500;
   double duration = 200.;
 };
 
-static void fill_parameters(mfem::OptionsParser &args, TestParameters &p) {
+static void parseCommandLineOptions(mfem::OptionsParser &args,
+                                    TestParameters &p) {
+  args.AddOption(&p.output_file, "", "--macroscopic-stress-output-file",
+                 "main output file containing the evolution of the diagonal "
+                 "components of the deformation gradient and the  diagonal "
+                 "components of the Cauchy stress.");
   args.AddOption(&p.mesh_file, "-m", "--mesh", "Mesh file to use.");
   args.AddOption(&p.order, "-o", "--order",
                  "Finite element order (polynomial degree).");
@@ -67,8 +75,7 @@ static void fill_parameters(mfem::OptionsParser &args, TestParameters &p) {
   args.AddOption(&p.vector_file, "-f", "--file", "Vector file to use");
   args.Parse();
   if (!args.Good()) {
-    if (mfem_mgis::getMPIrank() == 0)
-      args.PrintUsage(std::cout);
+    if (mfem_mgis::getMPIrank() == 0) args.PrintUsage(std::cout);
     mfem_mgis::finalize();
     exit(0);
   }
@@ -78,32 +85,13 @@ static void fill_parameters(mfem::OptionsParser &args, TestParameters &p) {
     args.PrintUsage(std::cout);
     mfem_mgis::abort(EXIT_FAILURE);
   }
-  if (mfem_mgis::getMPIrank() == 0)
-    args.PrintOptions(std::cout);
+  if (mfem_mgis::getMPIrank() == 0) args.PrintOptions(std::cout);
 }
 
-
-static void print_mesh_information(mfem_mgis::Mesh<true> &mesh) {
-  using mfem_mgis::Profiler::Utils::Message;
-  using mfem_mgis::Profiler::Utils::sum;
-
-  // get the number of vertices
-  int64_t numbers_of_vertices_local = mesh.GetNV();
-  int64_t numbers_of_vertices = sum(numbers_of_vertices_local);
-
-  // get the number of elements
-  int64_t numbers_of_elements_local = mesh.GetNE();
-  int64_t numbers_of_elements = sum(numbers_of_elements_local);
-
-  Message("INFO: number of vertices -> ", numbers_of_vertices);
-  Message("INFO: number of elements -> ", numbers_of_elements);
-}
-
-static void
-setup_material_properties(mfem_mgis::PeriodicNonLinearEvolutionProblem &problem,
-                          TestParameters &p,
-                          mm_opera_hpc::MacroscropicElasticMaterialProperties &mp) {
-
+static void setup_material_properties(
+    mfem_mgis::PeriodicNonLinearEvolutionProblem &problem,
+    TestParameters &p,
+    mm_opera_hpc::MacroscropicElasticMaterialProperties &mp) {
   // cubic symmetry elasticity
   const double young1 = 222.e9;
   const double young2 = young1;
@@ -115,7 +103,7 @@ setup_material_properties(mfem_mgis::PeriodicNonLinearEvolutionProblem &problem,
   const double shear23 = shear12;
   const double shear13 = shear12;
 
-  mp.update(young1, poisson12, shear12); // used in solve_null_strain
+  mp.update(young1, poisson12, shear12);  // used in solve_null_strain
 
   // ceramic
   auto set_temperature = [](auto &m) {
@@ -186,15 +174,15 @@ setup_material_properties(mfem_mgis::PeriodicNonLinearEvolutionProblem &problem,
 }
 
 int main(int argc, char **argv) {
-  using namespace mfem_mgis::Profiler::Utils; // Use Message
-                                              // options treatment
+  using namespace mfem_mgis::Profiler::Utils;  // Use Message
+                                               // options treatment
   mfem_mgis::initialize(argc, argv);
   mfem_mgis::Profiler::timers::init_timers();
 
   // get parameters
   TestParameters p;
   mfem::OptionsParser args(argc, argv);
-  fill_parameters(args, p);
+  parseCommandLineOptions(args, p);
   // definition of the nonlinear problem
   auto fed = std::make_shared<mfem_mgis::FiniteElementDiscretization>(
       mfem_mgis::Parameters{
@@ -202,14 +190,14 @@ int main(int argc, char **argv) {
           {"FiniteElementFamily", "H1"},
           {"FiniteElementOrder", p.order},
           {"UnknownsSize", 3},
-          {"NumberOfUniformRefinements", p.refinement}, // faster for testing
+          {"NumberOfUniformRefinements", p.refinement},  // faster for testing
           {"MeshReadMode", "FromScratch"},
           {"Parallel", true}});
   mfem_mgis::PeriodicNonLinearEvolutionProblem problem(fed);
 
   // get problem information
-  print_mesh_information(fed->getMesh<true>());
-  mm_opera_hpc::print_memory_footprint("[Building problem]");
+  mm_opera_hpc::printMeshInformation(problem);
+  mm_opera_hpc::printMemoryFootprint("[Building problem]");
 
   // choix du solver linéaire +
   int verbosity = p.verbosity_level;
@@ -268,13 +256,19 @@ int main(int argc, char **argv) {
     return times;
   }();
   //
+  std::ofstream out(p.output_file);
+  if (!out) {
+    std::cerr << "can't open output file '" << p.output_file << "'\n";
+  }
+  out.precision(14);
+  //
   const auto np = mm_opera_hpc::UniaxialMacroscopicStressPeriodicSimulation::
       NumericalParameters{.macroscopic_elastic_material_properties = mp};
   mm_opera_hpc::UniaxialMacroscopicStressPeriodicSimulation s(problem, Fzz, np,
                                                               post_processing);
-  const auto success = s.run(temporal_sequences);
+  const auto success = s.run(out, temporal_sequences);
   //
-  mm_opera_hpc::print_memory_footprint("[End]");
+  mm_opera_hpc::printMemoryFootprint("[End]");
   mfem_mgis::Profiler::timers::print_and_write_timers();
   return success ? EXIT_SUCCESS : EXIT_FAILURE;
 }

@@ -2,8 +2,7 @@
 
 #include <sys/resource.h>
 
-long get_memory_checkpoint()
-{
+long get_memory_checkpoint() {
   rusage obj;
   int who = 0;
   [[maybe_unused]] auto test = getrusage(who, &obj);
@@ -14,10 +13,8 @@ long get_memory_checkpoint()
   return res;
 };
 
-void print_memory_footprint(std::string msg)
-{
+void print_memory_footprint(std::string msg) {
   long mem = get_memory_checkpoint();
-  double m = double(mem) * 1e-6; // conversion kb to Gb
+  double m = double(mem) * 1e-6;  // conversion kb to Gb
   mfem_mgis::Profiler::Utils::Message(msg, " memory footprint: ", m, " GB");
 }
-

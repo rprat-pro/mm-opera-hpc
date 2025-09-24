@@ -71,18 +71,38 @@ Options:
 	Vector file to use.
    -l <string>, --library <string>, current value: src/libBehaviour.so
 	Material library.
+   -b <string>, --behaviour <string>, current value: Mono_UO2_Cosh_Jaco3
+	Mechanical behaviour.
    -o <int>, --order <int>, current value: 1
 	Finite element order (polynomial degree).
    -r <int>, --refinement <int>, current value: 0
 	refinement level of the mesh, default = 0
-   -p <int>, --post-processing <int>, current value: 1
-	run post processing step
    -v <int>, --verbosity-level <int>, current value: 0
 	choose the verbosity level
    -d <double>, --duration <double>, current value: 200
 	choose the duration (default = 200)
    -n <int>, --nstep <int>, current value: 600
 	choose the number of steps (default = 600)
+   --linear-solver <string>
+        linear solver to be used, default to HyprePCG
+   --linear-solver-preconditioner <string>
+        preconditioner of the linear solver to be used, defaults to HypreBoomerAMG.
+	none can be specified for not using a preconditioner
+   --macroscopic-stress-output-file <string>, current value: uniaxial-polycrystal.res
+        main output file containing the evolution of the diagonal components of the deformation
+        gradient and the  diagonal components of the Cauchy stress
+   --enable-post-processings,
+	execute post-processings (default option)
+   --enable-export-von-Mises-stress, 
+        export the von Mises stress
+   --enable-export-first_eigen_stress,
+        export first eigen stress
+   --disable-post-processings,
+	don't execute post-processings
+   --disable-export-von-Mises-stress, 
+        don't export the von Mises stress (default option)
+   --disable-export-first_eigen_stress,
+        don't export first eigen stress (default option)
 ```
 
 Note: To generate the grain orientation vectors, use the randomVectorGeneration tool provided in the distribution. This ensures a consistent and physically realistic initialization of crystallographic orientations.

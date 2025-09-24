@@ -1,6 +1,6 @@
 /*!
  * \file   Config.hxx
- * \brief    
+ * \brief
  * \author Thomas Helfer
  * \date   16/09/2025
  */
@@ -25,6 +25,5 @@
 #else  /* defined _WIN32 || defined _WIN64 || defined __CYGWIN__ */
 #define MM_OPERA_HPC_EXPORT MGIS_VISIBILITY_EXPORT
 #endif /* */
-
 
 #endif /* LIB_MM_OPERA_HPC_CONFIG_HXX */
