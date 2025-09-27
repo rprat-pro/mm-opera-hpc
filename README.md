@@ -2,10 +2,10 @@
 
 This directory groups together the various test cases implemented as part of the OperaHPC project.
 
-## Installation using Spack
+## Installation using Spack [recommended]
 
 ```
-git clone https://github.com/spack/spack.git
+git clone --depth=2 --branch=v1.0.1 https://github.com/spack/spack.git
 export SPACK_ROOT=$PWD/spack
 source ${SPACK_ROOT}/share/spack/setup-env.sh
 ```
@@ -20,7 +20,7 @@ spack repo add $PWD/spack-repo-mfem-mgis
 Secondly, install mfem-mgis
 
 ```
-spack install mfem-mgis@1.0.1
+spack install mfem-mgis@1.0.3
 ```
 
 Thirdly, load mfem-mgis
@@ -29,16 +29,18 @@ Thirdly, load mfem-mgis
 spack load mfem-mgis
 ```
 
-Finally, build your examples:
+Create a build directory, configure the project with CMake, build it, and install.
 
 ```
 git clone https://github.com/rprat-pro/mm-opera-hpc.git
 cd mm-opera-hpc/
 mkdir build && cd build
-cmake ..
+cmake .. -DCMAKE_PREFIX_PATH=`spack location -i tfel`/share/tfel/cmake -DCMAKE_INSTALL_PREFIX=../install
 make -j 4
+ctest
 ```
 
+For more details on installing mfem-mgis, particularly for installing mfem-mgis without spack (cmake, not recommended) or without the internet, please visit: https://thelfer.github.io/mfem-mgis/installation_guide/installation_guide.html
 
 ## Bubble Case 
 
