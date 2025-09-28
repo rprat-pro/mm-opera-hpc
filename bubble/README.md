@@ -1,6 +1,6 @@
-# Bubble case
+# Simulation of pressurized bubbles
 
-![Bubble Case](../img/bubble/bubble.png)
+![Bubbles Case](../img/bubble/bubbles.png)
 
 ## Short Description
 
@@ -15,7 +15,10 @@ The geometry for the testcase is contained in the file `.geo` stored in the `mes
 ```bash
 gmsh -3 single_sphere.geo
 ```
+
 NB: if the bubble center, radius, or the surface label are modified, the corresponding data stored in `single_bubble.txt` must also be changed.
+
+![Bubble Case](doc/bubble.png)
 
 ### Parameters
 
@@ -48,15 +51,14 @@ $$
 
 where $p_{in}$ is the internal pressure, $R_b$ the bubble radius, and reminding that the expression is holding for $r>R_b$.
 
-The comparison obtained running the test-case considering the FE mesh available `bubble/mesh/single_sphere.msh` and the analytical solution is showed below, and can be generated thanks to the script available in the `verification/bubble` folder.
-
-![Bubble Case](/img/bubble/comparison_analytical_mmm.png)
-
-
-## Verification against the analytical solution
 
 The script available in `verification/bubble` can be used to compare the analytical solution to the MMM one, by just placing the script in the post-processing folder and executing it 
 
 ```bash
 python3 mmm_vs_analytical.py 
 ```
+The comparison obtained running the test-case considering the FE mesh available `bubble/mesh/single_sphere.msh` and the analytical solution is showed below.
+
+![Bubble Case](/img/bubble/comparison_analytical_mmm.png)
+
+
