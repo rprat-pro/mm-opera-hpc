@@ -54,23 +54,21 @@ More details in bubble/ReadMe.md
 
 ## Polycrystal Case
 
-![Bubble Case](../img/polycrystal/polycrystal.png)
 
 This test case illustrates the simulation of a Representative Volume Element (`RVE`) of a polycrystal made of uranium dioxide (`UO₂`). The objective is to study the mechanical response of the material under an uniaxial loading.
 
 In addition to the mechanical analysis, this example demonstrates how to set up a fixed-point algorithm to handle the nonlinearities associated with crystalline plasticity at the grain scale.
 
-- Boundary conditions: periodic boundary conditions are applied on the RVE faces. The loading is imposed in one direction, ensuring compatibility and equilibrium across periodic faces.
-- Constitutive law: UO₂ crystalline plasticity law[^2].
-- Finite element order: 1 (linear interpolation).
-- Finite element space: H1.
-- Simulation duration: 200 s.
-- Number of time steps: 600.
+![Polycristal Case](../img/polycrystal/polycrystal.png)
 
 More details in polycrystal/README.md
 
 ## Cermet Case
 
-Next PR: add short description and picture
+![Cermet Case](../img/cermet/cermet.png)
+
+This example illustrates the simulation of a UO₂ polycrystalline microstructure with viscoplastic behaviour and metallic interfaces at the grain boundaries (CERMET).
+
+In addition to the mechanical analysis, this example demonstrates how to set up a fixed-point algorithm to handle the nonlinearities associated with crystalline plasticity at the grain scale.
 
 More details in cermet/README.md
