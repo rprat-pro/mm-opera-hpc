@@ -51,7 +51,7 @@ The default example is the rupture of a spherical, pressurized inclusion (e.g., 
 
 The criterium to determine the rupture or not is based on a simple geometrical assumption, i.e., if a certain distance $d_min$ is found between the position of the center of the sphere and the location of the maximum principal stress caused by the pressure exerted by the bubble on the surrounding matrix.
 
-More details in bubble/ReadMe.md
+More details in bubble/README.md
 
 ## Polycrystal Case
 
