@@ -148,3 +148,8 @@ mpirun -n 12 ./cermet --duration 200 --nstep 400 -r 1 --mesh yourmesh.msh
 ```
 
 ## Results
+
+
+cermet.res
+
+Time | FXX | FYY | FZZ | SXX | SYY | SZZ
