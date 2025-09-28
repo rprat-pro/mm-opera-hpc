@@ -149,7 +149,55 @@ mpirun -n 12 ./cermet --duration 200 --nstep 400 -r 1 --mesh yourmesh.msh
 
 ## Results
 
+By default, the simulation generates the file cermet.res when running:
 
-cermet.res
+```
+mpirun -n 12 ./cermet
+```
 
-Time | FXX | FYY | FZZ | SXX | SYY | SZZ
+To validate the results, the Cauchy stress component in the z-direction (σₖₖ = zz) can be compared with reference values obtained from Cast3M.
+
+### Plot and Compare
+
+To visualize and compare the results, run the following Python script:
+
+```
+python3 plot_cermet_results.py
+```
+
+This script generates a figure named: `plot_cermet.png`
+
+
+![](doc/plot_cermet.png)
+
+### Check the Values
+
+To verify the simulation results, run the following Python script:
+
+```
+python3 check_cermet_restults.py
+```
+
+The expected output is: `Check PASS`.
+
+An example of the detailed output:
+
+```
+      Time     MFEM/MGIS      CAST3M  RelDiff_% Status
+0      0.4  2.837174e+07  29462000.0   3.842755     OK
+1      0.8  4.101172e+07  41798000.0   1.917200     OK
+2      1.2  4.674008e+07  47113000.0   0.797856     OK
+3      1.6  5.042402e+07  50687000.0   0.521535     OK
+4      2.0  5.321536e+07  53452000.0   0.444677     OK
+..     ...           ...         ...        ...    ...
+495  198.4  8.775101e+07  87802000.0   0.058103     OK
+496  198.8  8.775917e+07  87724000.0  -0.040076     OK
+497  199.2  8.776730e+07  87804000.0   0.041820     OK
+498  199.6  8.777539e+07  87814000.0   0.043988     OK
+499  200.0  8.778345e+07  87737000.0  -0.052917     OK
+
+[500 rows x 5 columns]
+Check PASS.
+```
+
+This table shows the comparison between the simulated Cauchy stress values and the reference Cast3M results, along with the relative difference and a status check.

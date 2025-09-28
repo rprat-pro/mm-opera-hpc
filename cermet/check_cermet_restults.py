@@ -44,8 +44,8 @@ output = merged[[merged.columns[0], col_res, col_csv, 'RelDiff_%', 'Status']]
 output = merged[[merged.columns[0], col_res, col_csv, 'RelDiff_%', 'Status']]
 
 # Affichage et sauvegarde
-print(output)
 output.columns = ['Time', 'MFEM/MGIS', 'CAST3M', 'RelDiff_%', 'Status']
+print(output)
 output.to_csv("comparison_results.csv", index=False)
 
 # Check if the 'Status' column contains any "MISMATCH"

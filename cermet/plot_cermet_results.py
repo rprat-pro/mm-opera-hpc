@@ -19,7 +19,7 @@ plt.plot(x_csv, y_csv, color="orange", label="Cast3m", linestyle="-")
 plt.plot(x_res, y_res, color="blue", linestyle='-', label="MFEM/MGIS")
 
 plt.xlabel("Time (s)")
-plt.ylabel("Szz")
+plt.ylabel("Cauchy Stress (zz)")
 plt.title("Cermet test case with 5 crystals")
 plt.legend()
 plt.grid(True)
