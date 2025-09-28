@@ -54,7 +54,7 @@ More details in bubble/ReadMe.md
 
 ## Polycrystal Case
 
-![Bubble Case](../img/polycrystal/polycrystal.png)
+![Polycristal Case](img/polycrystal/polycrystal.png)
 
 This test case illustrates the simulation of a Representative Volume Element (`RVE`) of a polycrystal made of uranium dioxide (`UO₂`). The objective is to study the mechanical response of the material under an uniaxial loading.
 
