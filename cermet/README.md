@@ -116,25 +116,35 @@ Usage: ./cermet [options] ...
 
 ### Run it
 
-Basic test (time 0.5s, 1 timestep, mesh= 5grains.mesh, and 0 level of uniform refinement)
+You can run the simulation in parallel using MPI.
+Below are two examples:
+
+#### Basic Test
+
+Runs a short simulation with:
+
+- Duration = 0.5 s
+- 1 timestep
+- Mesh = 5grains.msh
+- Refinement level = 0
+
 
 ```
 mpirun -n 12 ./cermet --duration 0.5 --nstep 1
 ```
 
-Full test (time 200s, 400 timesteps, 1 level of uniform refinement, and your own mesh)
+#### Full Test
+
+Runs a longer simulation with:
+
+- Duration = 200 s
+- 400 timesteps
+- Refinement level = 1
+- Custom mesh (yourmesh.msh)
+
 
 ```
 mpirun -n 12 ./cermet --duration 200 --nstep 400 -r 1 --mesh yourmesh.msh
 ```
 
 ## Results
-
-Current results (07/09/25) need to be check.
-
-### 5 Grains
-
-
-![Boundary conditions of type 0](doc/cermet-bcs-type-0.png)
-
-![Boundary conditions of type 1](doc/cermet-bcs-type-1.png)
