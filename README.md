@@ -35,6 +35,7 @@ Create a build directory, configure the project with CMake, build it, and instal
 git clone https://github.com/rprat-pro/mm-opera-hpc.git
 cd mm-opera-hpc/
 mkdir build && cd build
+spack load tfel
 cmake .. -DCMAKE_PREFIX_PATH=`spack location -i tfel`/share/tfel/cmake -DCMAKE_INSTALL_PREFIX=../install
 make -j 4
 ctest
