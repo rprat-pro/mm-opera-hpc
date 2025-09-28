@@ -44,7 +44,7 @@ For more details on installing mfem-mgis, particularly for installing mfem-mgis 
 
 ## Bubble Case 
 
-![Bubble Case](/img/bubble/bubble.png)
+![Bubble Case](/img/bubble/bubbles.png)
 
 The default example is the rupture of a spherical, pressurized inclusion (e.g., a gas bubble) in an elastic infinite medium.
 
