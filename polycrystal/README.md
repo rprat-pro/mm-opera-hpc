@@ -15,14 +15,14 @@ In addition to the mechanical analysis, this example demonstrates how to set up 
 
 ## Mesh generation
 
-Mesh example: `5cristals.py`
+Mesh example: `5crystals.py`
 
 Please load `MEROPE_DIR` before.
 
 ```
 source ${MEROPE_DIR}/Env_Merope.sh
-python3 mesh/5cristals.py # generate 5grains.geo
-gmsh -3 5cristals.geo # generate 5grains.msh
+python3 mesh/5crystals.py # generate 5grains.geo
+gmsh -3 5crystals.geo # generate 5grains.msh
 ```
 
 The geometry of the RVE is generated using the Mérope [^1] toolkit. For this example, a polycrystal with 5 grains is built.
@@ -31,13 +31,13 @@ Make sure to load the `MEROPE` environment before running the mesh generation sc
 
 ```
 source ${MEROPE_DIR}/Env_Merope.sh
-python3 mesh/5cristals.py   # generates 5cristals.geo
-gmsh -3 5cristals.geo       # generates 5cristals.msh
+python3 mesh/5crystals.py   # generates 5crystals.geo
+gmsh -3 5crystals.geo       # generates 5crystals.msh
 ```
 
 ### Mesh generation options
 
-The following parameters are set in the `5cristals.py` script:
+The following parameters are set in the `5crystals.py` script:
 
 ```
 L = [1, 1, 1]        # Dimensions of the RVE box
@@ -50,24 +50,24 @@ MeshSize = 0.05      # Target mesh size
 
 The resulting polycrystal is composed of 5 grains.
 
-### Mesh Polycristal composed of 5 cristals
+### Mesh Polycrystal composed of 5 crystals
 
-![Polycristal input mesh](doc/5cristalsGmsh.png)
+![Polycrystal input mesh](doc/5crystalsGmsh.png)
 
 
 ## Simulation options
 
 
-The main executable for this test case is uniaxial-polycristal. Its command-line options are:
+The main executable for this test case is uniaxial-polycrystal. Its command-line options are:
 
 ```
-Usage: ./uniaxial-polycristal [options] ...
+Usage: ./uniaxial-polycrystal [options] ...
 Options:
    -h, --help
 	Print this help message and exit.
-   -m <string>, --mesh <string>, current value: mesh/5cristals.msh
+   -m <string>, --mesh <string>, current value: mesh/5crystals.msh
 	Mesh file to use.
-   -f <string>, --vect <string>, current value: mesh/vectors_5cristals.txt
+   -f <string>, --vect <string>, current value: mesh/vectors_5crystals.txt
 	Vector file to use.
    -l <string>, --library <string>, current value: src/libBehaviour.so
 	Material library.
@@ -107,7 +107,7 @@ Options:
 
 Note: To generate the grain orientation vectors, use the randomVectorGeneration tool provided in the distribution. This ensures a consistent and physically realistic initialization of crystallographic orientations.
 
-![RVE of Polycristal of UO2 with 5 cristals](doc/5cristals.png)
+![RVE of Polycrystal of UO2 with 5 crystals](doc/5crystals.png)
 
 ## Results && Post processings
 
