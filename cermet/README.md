@@ -1,5 +1,7 @@
 # Cermet simulation
 
+![Cermet Case](../img/cermet/cermet.png)
+
 ## Short description
 
 This simulation consists of applying a tensile load on a cermet RVE. The cermet
