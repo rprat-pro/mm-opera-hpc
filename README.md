@@ -35,6 +35,7 @@ Create a build directory, configure the project with CMake, build it, and instal
 git clone https://github.com/rprat-pro/mm-opera-hpc.git
 cd mm-opera-hpc/
 mkdir build && cd build
+spack load tfel
 cmake .. -DCMAKE_PREFIX_PATH=`spack location -i tfel`/share/tfel/cmake -DCMAKE_INSTALL_PREFIX=../install
 make -j 4
 ctest
@@ -54,18 +55,17 @@ More details in bubble/ReadMe.md
 
 ## Polycrystal Case
 
-
 This test case illustrates the simulation of a Representative Volume Element (`RVE`) of a polycrystal made of uranium dioxide (`UO₂`). The objective is to study the mechanical response of the material under an uniaxial loading.
 
 In addition to the mechanical analysis, this example demonstrates how to set up a fixed-point algorithm to handle the nonlinearities associated with crystalline plasticity at the grain scale.
 
-![Polycristal Case](../img/polycrystal/polycrystal.png)
+![Polycristal Case](img/polycrystal/polycrystal.png)
 
 More details in polycrystal/README.md
 
 ## Cermet Case
 
-![Cermet Case](../img/cermet/cermet.png)
+![Cermet Case](img/cermet/cermet.png)
 
 This example illustrates the simulation of a UO₂ polycrystalline microstructure with viscoplastic behaviour and metallic interfaces at the grain boundaries (CERMET).
 
