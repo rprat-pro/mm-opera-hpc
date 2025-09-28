@@ -18,7 +18,7 @@ Parameters:
 	- Young Modulus = 222.e9
 	- Poisson ratio = 0.27
 	- Shear Modulus = 54.e9 
-- [Crystal] Constitutive law: Norton.
+- [Metalic Interface] Constitutive law: Norton.
 	- Young Modulus = 276e+09
 	- Poisson ratio = 0.3
 	- A             = 2.5e+11
