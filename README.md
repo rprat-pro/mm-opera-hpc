@@ -45,19 +45,19 @@ For more details on installing mfem-mgis, particularly for installing mfem-mgis 
 
 ## Bubble Case 
 
-![Bubble Case](/img/bubble/bubbles.png)
-
 The default example is the rupture of a spherical, pressurized inclusion (e.g., a gas bubble) in an elastic infinite medium.
 
 The criterium to determine the rupture or not is based on a simple geometrical assumption, i.e., if a certain distance $d_min$ is found between the position of the center of the sphere and the location of the maximum principal stress caused by the pressure exerted by the bubble on the surrounding matrix.
+
+![Bubble Case](/img/bubble/bubbles.png)
 
 More details in bubble/ReadMe.md
 
 ## Polycrystal Case
 
-This test case illustrates the simulation of a Representative Volume Element (`RVE`) of a polycrystal made of uranium dioxide (`UO₂`). The objective is to study the mechanical response of the material under an uniaxial loading.
+This test case illustrates the simulation of a Representative Volume Element (`RVE`) of a polycrystal made of uranium dioxide (`UO₂`). The objective is to study the mechanical response of the material under a macroscopic uniaxial loading.
 
-In addition to the mechanical analysis, this example demonstrates how to set up a fixed-point algorithm to handle the nonlinearities associated with crystalline plasticity at the grain scale.
+In addition to the mechanical analysis, this example demonstrates how to set up a fixed-point algorithm to converge toward a macroscopic uniaxial tensile state.
 
 ![Polycristal Case](img/polycrystal/polycrystal.png)
 
@@ -65,10 +65,10 @@ More details in polycrystal/README.md
 
 ## Cermet Case
 
-![Cermet Case](img/cermet/cermet.png)
-
 This example illustrates the simulation of a UO₂ polycrystalline microstructure with viscoplastic behaviour and metallic interfaces at the grain boundaries (CERMET).
 
-In addition to the mechanical analysis, this example demonstrates how to set up a fixed-point algorithm to handle the nonlinearities associated with crystalline plasticity at the grain scale.
+In addition to the mechanical analysis, this example demonstrates how to set up a fixed-point algorithm to converge toward a macroscopic uniaxial tensile state.
+
+![Cermet Case](img/cermet/cermet.png)
 
 More details in cermet/README.md
