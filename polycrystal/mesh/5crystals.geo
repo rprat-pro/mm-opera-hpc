@@ -477,4 +477,4 @@ Mesh.ElementOrder =1;
 Mesh 2;
 Mesh 3;
 Mesh.MshFileVersion = 2.2;
-Save "5cristals.med";
+Save "5crystals.med";
