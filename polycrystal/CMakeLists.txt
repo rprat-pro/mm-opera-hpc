@@ -6,7 +6,7 @@ file(COPY
   ${PROJECT_SOURCE_DIR}/law/Mono_UO2_CosH_Jaco3.mfront
   DESTINATION ${PROJECT_BINARY_DIR})
 
-file(COPY law mesh DESTINATION ${PROJECT_BINARY_DIR})
+file(COPY law mesh results plot_polycrystal_results.py check_polycrystal_restults.py DESTINATION ${PROJECT_BINARY_DIR})
   
   # Use mfront to generate libBehaviour.so
 add_custom_command(

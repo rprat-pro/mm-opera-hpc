@@ -1,5 +1,5 @@
 # Create mesh for https://github.com/rprat-pro/mm-opera-hpc 
-# Test case polycristal
+# Test case polycrystal
 # Build a .geo file to be meshed by gmsh
 
 import sac_de_billes
@@ -28,6 +28,6 @@ meshGenerator = merope.mesh.MeshGenerator()
 meshGenerator.setMeshOrder(MeshOrder)
 meshGenerator.setMeshSize(MeshSize)
 meshGenerator.setMultiInclusions(mi)
-meshGenerator.set_nameOutput(["5cristals.med"])
+meshGenerator.set_nameOutput(["5crystals.med"])
 meshGenerator.setAdimMergeDistance(1e-7)
-meshGenerator.write("5cristals.geo", merope.mesh.MeshMethod.OpenCascade)
+meshGenerator.write("5crystals.geo", merope.mesh.MeshMethod.OpenCascade)

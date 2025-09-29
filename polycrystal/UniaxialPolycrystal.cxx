@@ -38,7 +38,7 @@
  */
 struct MeshParameters {
   //! \brief default value for the mesh file
-  const char *mesh_file = "mesh/5cristals.msh";
+  const char *mesh_file = "mesh/5crystals.msh";
   //! \brief number of uniform refinement of the mesh
   int refinement = 0;
 };
@@ -75,7 +75,7 @@ struct MaterialParameters : ElasticMaterialPropertiesParameters {
   //! \brief default mechanical behaviour
   const char *behaviour = "Mono_UO2_Cosh_Jaco3";
   //! \brief default file name describing orientation vectors
-  const char *vect_file = "mesh/vectors_5cristals.txt";
+  const char *vect_file = "mesh/vectors_5crystals.txt";
 };
 
 struct LoadingParameters {
@@ -158,7 +158,7 @@ int main(int argc, char *argv[]) {
   setLinearSolver(problem, p);
   // add post processings
   if (p.post_processings) {
-    addPostProcessings(problem, p, "OutputFile-Uniaxial-polycristal");
+    addPostProcessings(problem, p, "OutputFile-Uniaxial-polycrystal");
   }
   // definition of the temporal sequences
   const auto te = p.duration;
@@ -362,7 +362,7 @@ static void addPostProcessings(mfem_mgis::PeriodicNonLinearEvolutionProblem &p,
                                const std::string &msg) {
   p.addPostProcessing("ParaviewExportResults", {{"OutputFileName", msg}});
   p.addPostProcessing("MeanThermodynamicForces",
-                      {{"OutputFileName", "avgStressPolycristal"}});
+                      {{"OutputFileName", "avgStressPolycrystal"}});
 #ifdef MGIS_FUNCTION_SUPPORT
   if (params.export_von_Mises_stress) {
     p.getImplementation<true>().addPostProcessing(
