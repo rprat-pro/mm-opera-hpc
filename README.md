@@ -57,7 +57,7 @@ More details in bubble/ReadMe.md
 
 This test case illustrates the simulation of a Representative Volume Element (`RVE`) of a polycrystal made of uranium dioxide (`UO₂`). The objective is to study the mechanical response of the material under a macroscopic uniaxial loading.
 
-In addition to the mechanical analysis, this example demonstrates how to set up a fixed-point algorithm to handle the nonlinearities associated with crystalline plasticity at the grain scale.
+In addition to the mechanical analysis, this example demonstrates how to set up a fixed-point algorithm to converge toward a macroscopic uniaxial tensile state.
 
 ![Polycristal Case](img/polycrystal/polycrystal.png)
 
