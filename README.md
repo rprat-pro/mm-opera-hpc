@@ -51,7 +51,7 @@ The criterium to determine the rupture or not is based on a simple geometrical a
 
 ![Bubble Case](/img/bubble/bubbles.png)
 
-More details in bubble/ReadMe.md
+More details in bubble/README.md
 
 ## Polycrystal Case
 

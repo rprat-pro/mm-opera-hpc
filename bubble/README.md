@@ -1,6 +1,6 @@
-# Bubble case
+# Simulation of pressurized bubbles
 
-![Bubble Case](../img/bubble/bubble.png)
+![Bubbles Case](../img/bubble/bubbles.png)
 
 ## Short Description
 
@@ -15,30 +15,31 @@ The geometry for the testcase is contained in the file `.geo` stored in the `mes
 ```bash
 gmsh -3 single_sphere.geo
 ```
+
 NB: if the bubble center, radius, or the surface label are modified, the corresponding data stored in `single_bubble.txt` must also be changed.
+
+![Bubble Case](doc/bubble.png)
 
 ### Parameters
 
+Command-line Usage
+
 ```
 Usage: ./test-bubble [options] ...
-Options:
-   -h, --help
-	Print this help message and exit.
-   -m <string>, --mesh <string>, current value: mesh/single_sphere.msh
-	Mesh file to use.
-   -l <string>, --library <string>, current value: src/libBehaviour.so
-	Material library.
-   -f <string>, --bubble-file <string>, current value: mesh/single_bubble.txt
-	File containing the bubbles.
-   -o <int>, --order <int>, current value: 1
-	Finite element order (polynomial degree).
-   -r <int>, --refinement <int>, current value: 0
-	refinement level of the mesh, default = 0
-   -p <int>, --post-processing <int>, current value: 1
-	run post processing step
-   -v <int>, --verbosity-level <int>, current value: 0
-	choose the verbosity level
 ```
+
+
+| Option                                | Type   | Default                  | Description                                 |
+| ------------------------------------- | ------ | ------------------------ | ------------------------------------------- |
+| `-h, --help`                          | —      | —                        | Print the help message and exit.            |
+| `-m <string>, --mesh <string>`        | string | `mesh/single_sphere.msh` | Mesh file to use.                           |
+| `-l <string>, --library <string>`     | string | `src/libBehaviour.so`    | Material behaviour library.                 |
+| `-f <string>, --bubble-file <string>` | string | `mesh/single_bubble.txt` | File containing the bubble definitions.     |
+| `-o <int>, --order <int>`             | int    | `1`                      | Finite element order (polynomial degree).   |
+| `-r <int>, --refinement <int>`        | int    | `0`                      | Refinement level of the mesh (default = 0). |
+| `-p <int>, --post-processing <int>`   | int    | `1`                      | Run the post-processing step.               |
+| `-v <int>, --verbosity-level <int>`   | int    | `0`                      | Verbosity level of the output.              |
+
 
 ## Verification against the analytical solution
 
@@ -50,15 +51,14 @@ $$
 
 where $p_{in}$ is the internal pressure, $R_b$ the bubble radius, and reminding that the expression is holding for $r>R_b$.
 
-The comparison obtained running the test-case considering the FE mesh available `bubble/mesh/single_sphere.msh` and the analytical solution is showed below, and can be generated thanks to the script available in the `verification/bubble` folder.
-
-![Bubble Case](/img/bubble/comparison_analytical_mmm.png)
-
-
-## Verification against the analytical solution
 
 The script available in `verification/bubble` can be used to compare the analytical solution to the MMM one, by just placing the script in the post-processing folder and executing it 
 
 ```bash
 python3 mmm_vs_analytical.py 
 ```
+The comparison obtained running the test-case considering the FE mesh available `bubble/mesh/single_sphere.msh` and the analytical solution is showed below.
+
+![Bubble Case](/img/bubble/comparison_analytical_mmm.png)
+
+
