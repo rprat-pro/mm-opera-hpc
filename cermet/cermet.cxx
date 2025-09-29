@@ -21,18 +21,25 @@ polycrystals (material ID 1)
 
 Definition:
 
-- contact law
-
-MonoCristal_UO2 for all materials
-
-- Parameters:
-
-material: [grain, metal]
-
-- FEM
-
-element: H1
-order: 1
+- [Crystal] Behavior law: MonoCristal_UO2
+-- Parameters:
+--- Young Modulus = 222.e9
+--- Poisson ratio = 0.27
+--- Shear Modulus = 54.e9 
+- [Interface] Behavior law: Norton 
+-- Parameters (@see law/NortonCr.mfront):
+--- Young Modulus = 276e+09
+--- Poisson ratio = 0.3
+--- A             = 2.5e+11
+--- n1            = 4.75
+--- Q             = 306.27e+03
+--- D0            = 1.55e-5
+--- b             = 2.5e-10
+- FEM Parameters
+-- Element: H1
+-- Order: 1
+- T_final: 200s
+- Number of timesteps: 500
 
 */
 
