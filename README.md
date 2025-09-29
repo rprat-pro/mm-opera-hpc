@@ -67,7 +67,7 @@ More details in polycrystal/README.md
 
 This example illustrates the simulation of a UO₂ polycrystalline microstructure with viscoplastic behaviour and metallic interfaces at the grain boundaries (CERMET).
 
-In addition to the mechanical analysis, this example demonstrates how to set up a fixed-point algorithm to handle the nonlinearities associated with crystalline plasticity at the grain scale.
+In addition to the mechanical analysis, this example demonstrates how to set up a fixed-point algorithm to converge toward a macroscopic uniaxial tensile state.
 
 ![Cermet Case](img/cermet/cermet.png)
 
