@@ -4,27 +4,24 @@
 #include "MFEMMGIS/NonLinearEvolutionProblem.hxx"
 #include <MFEMMGIS/Profiler.hxx>
 
-
-  template<typename Implementation>
-void print_mesh_information(Implementation& impl)
-{
-
-  using mfem_mgis::Profiler::Utils::sum;
+template <typename Implementation>
+void print_mesh_information(Implementation& impl) {
   using mfem_mgis::Profiler::Utils::Message;
+  using mfem_mgis::Profiler::Utils::sum;
   Message("INFO: print_mesh_information");
 
-  //getMesh
+  // getMesh
   auto mesh = impl.getFiniteElementSpace().GetMesh();
 
-  //get the number of vertices
+  // get the number of vertices
   int64_t numbers_of_vertices_local = mesh->GetNV();
-  int64_t  numbers_of_vertices = sum(numbers_of_vertices_local);
+  int64_t numbers_of_vertices = sum(numbers_of_vertices_local);
 
-  //get the number of elements
+  // get the number of elements
   int64_t numbers_of_elements_local = mesh->GetNE();
   int64_t numbers_of_elements = sum(numbers_of_elements_local);
 
-  //get the element size
+  // get the element size
   double h = mesh->GetElementSize(0);
 
   // get n dofs
@@ -35,7 +32,5 @@ void print_mesh_information(Implementation& impl)
   Message("INFO: number of vertices -> ", numbers_of_vertices);
   Message("INFO: number of elements -> ", numbers_of_elements);
   Message("INFO: element size -> ", h);
-  Message("INFO: Number of finite element unknowns: " , unknowns);
+  Message("INFO: Number of finite element unknowns: ", unknowns);
 }
-
-

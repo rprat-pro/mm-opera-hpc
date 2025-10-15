@@ -25,29 +25,29 @@
 #include <fstream>
 #include <tuple>
 
-
 namespace opera_hpc {
 
-struct Bubble : BubbleDescription {
-  bool broken = false;
-};
+  struct Bubble : BubbleDescription {
+    bool broken = false;
+  };
 
-bool areAllBroken(const std::vector<Bubble> &bubbles) {
-  for (const auto &b : bubbles) {
-    if (!b.broken) {
-      return false;
+  bool areAllBroken(const std::vector<Bubble> &bubbles) {
+    for (const auto &b : bubbles) {
+      if (!b.broken) {
+        return false;
+      }
     }
+    return true;
   }
-  return true;
-}
-} // end of namespace opera_hpc
+}  // end of namespace opera_hpc
 
 struct BubbleInfoRecord {
   mfem_mgis::size_type boundary_id;
   mfem_mgis::real location[3];
   mfem_mgis::real stress_value;
 
-  BubbleInfoRecord(mfem_mgis::size_type bid, mfem_mgis::real s_val,
+  BubbleInfoRecord(mfem_mgis::size_type bid,
+                   mfem_mgis::real s_val,
                    const std::array<mfem_mgis::real, 3u> &loc)
       : boundary_id(bid), stress_value(s_val) {
     location[0] = loc[0];
@@ -72,8 +72,8 @@ struct TestParameters {
   int parallel_mesh = 0;
   int order = 1;
   int refinement = 0;
-  int post_processing = 1; // default value : activated
-  int verbosity_level = 0; // default value : lower level
+  int post_processing = 1;  // default value : activated
+  int verbosity_level = 0;  // default value : lower level
   mfem_mgis::real scale_factor_vp = 0.9;
 };
 
@@ -100,8 +100,7 @@ void fill_parameters(mfem::OptionsParser &args, TestParameters &p) {
   args.Parse();
 
   if (!args.Good()) {
-    if (mfem_mgis::getMPIrank() == 0)
-      args.PrintUsage(std::cout);
+    if (mfem_mgis::getMPIrank() == 0) args.PrintUsage(std::cout);
     mfem_mgis::finalize();
     exit(0);
   }
@@ -111,8 +110,7 @@ void fill_parameters(mfem::OptionsParser &args, TestParameters &p) {
     args.PrintUsage(std::cout);
     mfem_mgis::abort(EXIT_FAILURE);
   }
-  if (mfem_mgis::getMPIrank() == 0)
-    args.PrintOptions(std::cout);
+  if (mfem_mgis::getMPIrank() == 0) args.PrintOptions(std::cout);
 }
 
 void write_message(std::ofstream &file_to_write, const auto &...args) {
@@ -121,13 +119,13 @@ void write_message(std::ofstream &file_to_write, const auto &...args) {
 
 void write_bubble_infos(
     std::ofstream &file_to_write,
-    const std::vector<std::tuple<mfem_mgis::size_type, mfem_mgis::real,
+    const std::vector<std::tuple<mfem_mgis::size_type,
+                                 mfem_mgis::real,
                                  std::array<mfem_mgis::real, 3u>>>
         &bubble_infos) {
   for (auto &entry : bubble_infos) {
     file_to_write << std::get<0>(entry) << ",";
-    for (auto &el : std::get<2>(entry))
-      file_to_write << el << ",";
+    for (auto &el : std::get<2>(entry)) file_to_write << el << ",";
     file_to_write << std::get<1>(entry) << "\n";
   }
 }
@@ -179,7 +177,7 @@ static void calculateAverageHydroPressure(
 }
 
 int main(int argc, char **argv) {
-  using namespace mfem_mgis::Profiler::Utils; // Use Message
+  using namespace mfem_mgis::Profiler::Utils;  // Use Message
   // options treatment
   mfem_mgis::initialize(argc, argv);
   mfem_mgis::Profiler::timers::init_timers();
@@ -191,7 +189,7 @@ int main(int argc, char **argv) {
 
   if (!output_file_locations.is_open()) {
     std::cerr << "Failed to open the file: " << bubbles_selected << std::endl;
-    return EXIT_FAILURE; // Exit the program with an error code
+    return EXIT_FAILURE;  // Exit the program with an error code
   }
 
   // get parameters
@@ -225,7 +223,7 @@ int main(int argc, char **argv) {
           {"FiniteElementFamily", "H1"},
           {"FiniteElementOrder", p.order},
           {"UnknownsSize", 3},
-          {"NumberOfUniformRefinements", p.refinement}, // faster for testing
+          {"NumberOfUniformRefinements", p.refinement},  // faster for testing
           //{"NumberOfUniformRefinements", parameters.parallel ? 1 : 0},
           {"Parallel", true}});
   // definition of the nonlinear problem
