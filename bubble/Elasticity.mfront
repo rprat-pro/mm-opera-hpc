@@ -8,6 +8,8 @@
 young.setGlossaryName("YoungModulus");
 @MaterialProperty real nu;
 nu.setGlossaryName("PoissonRatio");
+@AuxiliaryStateVariable stress hy_pr;
+hy_pr.setGlossaryName("HydrostaticPressure");
 
 // Lame Coefficients
 @LocalVariable stress lambda, mu;
@@ -29,4 +31,8 @@ nu.setGlossaryName("PoissonRatio");
     static_cast<void>(smt); // remove unused variable warning
     Dt = lambda * Stensor4::IxI() + 2 * mu * Stensor4::Id();
   }
+}
+
+@UpdateAuxiliaryStateVariables{
+ hy_pr = trace(sig) / 3;
 }
