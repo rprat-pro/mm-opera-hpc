@@ -43,7 +43,7 @@ Usage: ./test-bubble [options] ...
 
 ## Verification against the analytical solution
 
-The problem of a pressurized spherical inclusion in an infinite elastic medium has a closed-form solution for the expressions of the stresses as a function of the distance from the sphere center. 
+The problem of a pressurized spherical inclusion in an infinite elastic medium has a closed-form solution for the expressions of the stresses as a function of the distance from the sphere center:
 
 $$
 \sigma_{\theta\theta}(r) = \dfrac{p_{in}*R_b^3}{2r^3}
