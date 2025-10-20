@@ -141,9 +141,8 @@ Runs a longer simulation with:
 
 - Duration = 200 s
 - 400 timesteps
-- Refinement level = 1
 - Custom mesh (yourmesh.msh)
-
+- Refinement level = 1
 
 ```
 mpirun -n 12 ./cermet --duration 200 --nstep 400 -r 1 --mesh yourmesh.msh
