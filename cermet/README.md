@@ -37,7 +37,7 @@ Parameters:
 This section explains how to generate a sample mesh with `Merope`.
 
 
-Before running the script, make sure that the environment variable `MEROPE_DIR` is properly loaded:
+Before running the script, make sure that the environment variable `MEROPE_DIR` is properly loaded.
 
 Then, you can generate the mesh in two steps:
 
