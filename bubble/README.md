@@ -10,7 +10,7 @@ The criterium to determine the rupture or not is based on a simple geometrical a
 
 ## Modify the geometry for the single bubble case and mesh it
 
-The geometry for the testcase is contained in the file `.geo` stored in the `mesh` folder. One can modify it and use it as an input for `gmsh` to generate the computational mesh for the case by 
+The geometry for the test case is contained in the file `.geo` stored in the `mesh` folder. One can modify it and use it as an input for `gmsh` to generate the computational mesh for the case by 
 
 ```bash
 gmsh -3 single_sphere.geo
