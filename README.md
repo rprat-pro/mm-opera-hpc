@@ -17,13 +17,13 @@ git clone https://github.com/rprat-pro/spack-repo-mfem-mgis.git
 spack repo add $PWD/spack-repo-mfem-mgis
 ```
 
-Secondly, install mfem-mgis
+Secondly, install mfem-mgis.
 
 ```
 spack install mfem-mgis@1.0.3
 ```
 
-Thirdly, load mfem-mgis
+Thirdly, load mfem-mgis.
 
 ```
 spack load mfem-mgis
