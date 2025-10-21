@@ -2,10 +2,10 @@
  * \file   main.cxx
  * \brief  Main program for bubble fracture simulation in porous materials
  * \date   29/09/2024
- * 
- * This program simulates the mechanical behavior of a material containing bubbles
- * under pressure. It identifies which bubbles are likely to break based on the
- * principal stress field around them.
+ *
+ * This program simulates the mechanical behavior of a material containing
+ * bubbles under pressure. It identifies which bubbles are likely to break based
+ * on the principal stress field around them.
  */
 
 #include <cstdlib>
@@ -29,8 +29,7 @@
 #include "OperaHPC/BubbleDescription.hxx"
 #include "OperaHPC/Utilities.hxx"
 
-
-namespace mfem_mgis{
+namespace mfem_mgis {
   template <unsigned short N>
   static bool computeHydrostaticPressure_implementation(
       Context& ctx,
@@ -48,31 +47,28 @@ namespace mfem_mgis{
     return true;
   }  // end of computeHydrostaticPressure_implementation
 
-  static bool computeHydrostaticPressure(
-      Context& ctx,
-      PartialQuadratureFunction& hyp,
-      const Material& m,
-      const Material::StateSelection s) {
+  static bool computeHydrostaticPressure(Context& ctx,
+                                         PartialQuadratureFunction& hyp,
+                                         const Material& m,
+                                         const Material::StateSelection s) {
     if ((m.b.hypothesis == Hypothesis::PLANESTRESS) ||
         (m.b.hypothesis == Hypothesis::PLANESTRAIN)) {
-      return computeHydrostaticPressure_implementation<2>(
-          ctx, hyp, m, s);
+      return computeHydrostaticPressure_implementation<2>(ctx, hyp, m, s);
     } else if (m.b.hypothesis == Hypothesis::TRIDIMENSIONAL) {
-      return computeHydrostaticPressure_implementation<3>(
-          ctx, hyp, m, s);
+      return computeHydrostaticPressure_implementation<3>(ctx, hyp, m, s);
     }
     return ctx.registerErrorMessage(
         "computeHydrostaticPressure: unsupported modelling hypothesis");
   }  // end of computeHydrostaticPressure
 
-}
-
+}  // namespace mfem_mgis
 
 namespace opera_hpc {
 
   /**
-   * \brief Represents a bubble in the material with its state (broken or intact)
-   * 
+   * \brief Represents a bubble in the material with its state (broken or
+   * intact)
+   *
    * Extends BubbleDescription to add a boolean flag indicating whether
    * the bubble has broken during the simulation
    */
@@ -82,7 +78,7 @@ namespace opera_hpc {
 
   /**
    * \brief Check if all bubbles in the system have broken
-   * 
+   *
    * \param bubbles Vector of all bubbles to check
    * \return true if all bubbles are broken, false otherwise
    */
@@ -98,7 +94,7 @@ namespace opera_hpc {
 
 /**
  * \brief Record storing bubble information for output
- * 
+ *
  * Contains the boundary ID, location, and maximum stress value
  * found near a bubble during the analysis
  */
@@ -109,7 +105,7 @@ struct BubbleInfoRecord {
 
   /**
    * \brief Constructor
-   * 
+   *
    * \param bid Boundary identifier
    * \param loc 3D location array
    * \param s_val Stress value at that location
@@ -126,7 +122,7 @@ struct BubbleInfoRecord {
 
 /**
  * \brief Execute post-processing operations on the problem
- * 
+ *
  * \tparam Problem Type of the mechanical problem
  * \param p The problem instance
  * \param start Start time for post-processing
@@ -139,27 +135,29 @@ void post_process(Problem& p, double start, double end) {
 
 /**
  * \brief Structure holding all simulation parameters
- * 
+ *
  * Contains default values for mesh files, material properties,
  * numerical parameters, and output options
  */
 struct TestParameters {
-  const char* mesh_file = "mesh/single_sphere.msh";        ///< Path to mesh file
-  const char* behaviour = "Elasticity";                    ///< Material behavior law
-  const char* library = "src/libBehaviour.so";             ///< Material library path
-  const char* bubble_file = "mesh/single_bubble.txt";      ///< Bubble definitions file
-  const char* testcase_name = "TestCaseBubble";            ///< Name for output files
-  int parallel_mesh = 0;                                   ///< Flag for parallel mesh format
-  int order = 2;                                           ///< Finite element order
-  int refinement = 0;                                      ///< Mesh refinement level
-  int post_processing = 1;                                 ///< Enable post-processing (1=yes)
-  int verbosity_level = 0;                                 ///< Output verbosity level
-  mfem_mgis::real scale_factor_vp = 0.9;                   ///< Scale factor for principal stress threshold
+  const char* mesh_file = "mesh/single_sphere.msh";  ///< Path to mesh file
+  const char* behaviour = "Elasticity";              ///< Material behavior law
+  const char* library = "src/libBehaviour.so";       ///< Material library path
+  const char* bubble_file =
+      "mesh/single_bubble.txt";                  ///< Bubble definitions file
+  const char* testcase_name = "TestCaseBubble";  ///< Name for output files
+  int parallel_mesh = 0;    ///< Flag for parallel mesh format
+  int order = 2;            ///< Finite element order
+  int refinement = 0;       ///< Mesh refinement level
+  int post_processing = 1;  ///< Enable post-processing (1=yes)
+  int verbosity_level = 0;  ///< Output verbosity level
+  mfem_mgis::real scale_factor_vp =
+      0.9;  ///< Scale factor for principal stress threshold
 };
 
 /**
  * \brief Parse command-line arguments and fill parameter structure
- * 
+ *
  * \param args Command-line argument parser
  * \param p Parameter structure to fill
  */
@@ -202,10 +200,10 @@ void fill_parameters(mfem::OptionsParser& args, TestParameters& p) {
 
 /**
  * \brief Write comma-separated values to a file stream
- * 
+ *
  * Variadic template function to write any number of arguments
  * separated by commas, ending with a newline
- * 
+ *
  * \param file_to_write Output file stream
  * \param args Variadic arguments to write
  */
@@ -215,7 +213,7 @@ void write_message(std::ofstream& file_to_write, const auto&... args) {
 
 /**
  * \brief Write bubble information records to a CSV file
- * 
+ *
  * \param file_to_write Output file stream
  * \param bubble_infos Vector of bubble information records to write
  */
@@ -230,10 +228,10 @@ void write_bubble_infos(std::ofstream& file_to_write,
 
 /**
  * \brief Calculate the average hydrostatic stress over a material domain
- * 
+ *
  * Integrates the hydrostatic pressure field over all elements and
  * computes the volume-averaged value using MPI reduction if needed
- * 
+ *
  * \tparam parallel Whether running in parallel mode
  * \param os Output stream for results
  * \param prob The nonlinear evolution problem
@@ -248,12 +246,12 @@ static void calculateAverageHydrostaticStress(
   const auto& fed = s.getFiniteElementDiscretization();
   const auto& fespace = fed.getFiniteElementSpace<parallel>();
   const auto m = s.getId();
-  
+
   // Storage for local contributions
   std::vector<mfem_mgis::real> integrals;
   std::vector<mfem_mgis::real> volumes;
   mfem_mgis::real integr, vol;
-  
+
   // Loop over all elements in the mesh
   for (mfem_mgis::size_type i = 0; i != fespace.GetNE(); ++i) {
     // Skip elements not in this material
@@ -265,7 +263,7 @@ static void calculateAverageHydrostaticStress(
     const auto& ir = s.getIntegrationRule(fe, tr);
     integr = 0.;
     vol = 0.;
-    
+
     // Integrate over quadrature points
     for (mfem_mgis::size_type g = 0; g != ir.GetNPoints(); ++g) {
       mfem::Vector p;
@@ -288,16 +286,16 @@ static void calculateAverageHydrostaticStress(
   MPI_Reduce(integrals.data(), &integral, 1, MPI_DOUBLE, MPI_SUM, 0,
              MPI_COMM_WORLD);
   MPI_Reduce(volumes.data(), &v, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-  
+
   // Write results on rank 0
   if (mfem_mgis::getMPIrank() == 0) {
     os << v << "," << integral << "," << integral / v << "\n";
   }
-} // end of calculateAverageHydrostaticStress
+}  // end of calculateAverageHydrostaticStress
 
 /**
  * \brief Main program
- * 
+ *
  * Workflow:
  * 1. Initialize stuff and parse command-line arguments
  * 2. Load mesh and bubble definitions
@@ -311,7 +309,7 @@ static void calculateAverageHydrostaticStress(
 
 int main(int argc, char** argv) {
   using namespace mfem_mgis::Profiler::Utils;
-  
+
   // Initialize MPI and profiling
   mfem_mgis::initialize(argc, argv);
   mfem_mgis::Profiler::timers::init_timers();
@@ -327,9 +325,10 @@ int main(int argc, char** argv) {
     std::cerr << "Failed to open the file: " << bubbles_selected << std::endl;
     return EXIT_FAILURE;
   }
-  
+
   if (!outfile_sighydr.is_open()) {
-    std::cerr << "Failed to open the file: " << hydrostatic_stress_f << std::endl;
+    std::cerr << "Failed to open the file: " << hydrostatic_stress_f
+              << std::endl;
     return EXIT_FAILURE;
   }
 
@@ -343,8 +342,9 @@ int main(int argc, char** argv) {
   // Physical parameters
   constexpr mfem_mgis::real pref = 1.0;  ///< Reference pressure in bubbles
   constexpr mfem_mgis::size_type maximumNumberSteps = 1000;  ///< Max time steps
-  constexpr mfem_mgis::real dmin = 0.650;  ///< Distance threshold to associate stress with bubble
-  
+  constexpr mfem_mgis::real dmin =
+      0.650;  ///< Distance threshold to associate stress with bubble
+
   // Load bubble descriptions from file
   auto bubbles = [p] {
     auto r = std::vector<opera_hpc::Bubble>{};
@@ -378,7 +378,7 @@ int main(int argc, char** argv) {
   std::vector<mfem_mgis::real> e(6, mfem_mgis::real{0});
   problem.setMacroscopicGradientsEvolution(
       [e](const mfem_mgis::real) { return e; });
-  
+
   // Apply pressure boundary conditions on each bubble
   for (const auto& b : bubbles) {
     problem.addBoundaryCondition(
@@ -395,7 +395,7 @@ int main(int argc, char** argv) {
   int post_processing = p.post_processing;
   mfem_mgis::Parameters solverParameters;
   solverParameters.insert(mfem_mgis::Parameters{{"VerbosityLevel", verbosity}});
-  
+
   // Use diagonal scaling preconditioner
   auto preconditioner = mfem_mgis::Parameters{{"Name", "HypreDiagScale"}};
   solverParameters.insert(mfem_mgis::Parameters{
@@ -411,18 +411,20 @@ int main(int argc, char** argv) {
   // Add elastic material behavior
   problem.addBehaviourIntegrator("Mechanics", 1, p.library, p.behaviour);
   auto& m = problem.getMaterial(1);
-  
+
   // Set material properties (elastic constants and temperature)
   for (auto& s : {&m.s0, &m.s1}) {
-    mgis::behaviour::setMaterialProperty(*s, "YoungModulus", 150e-3);  // Young's modulus
-    mgis::behaviour::setMaterialProperty(*s, "PoissonRatio", 0.3);     // Poisson's ratio
-    mgis::behaviour::setExternalStateVariable(*s, "Temperature", 293.15);  // Room temperature
+    mgis::behaviour::setMaterialProperty(*s, "YoungModulus",
+                                         150e-3);  // Young's modulus
+    mgis::behaviour::setMaterialProperty(*s, "PoissonRatio",
+                                         0.3);  // Poisson's ratio
+    mgis::behaviour::setExternalStateVariable(*s, "Temperature",
+                                              293.15);  // Room temperature
   }
 
   // Configure post-processing output
   if (post_processing) {
-    auto results =
-        std::vector<mfem_mgis::Parameter>{"Stress"};
+    auto results = std::vector<mfem_mgis::Parameter>{"Stress"};
     problem.addPostProcessing(
         "ParaviewExportIntegrationPointResultsAtNodes",
         {{"OutputFileName", p.testcase_name}, {"Results", results}});
@@ -432,7 +434,7 @@ int main(int argc, char** argv) {
   // eig for the first eigenstress
   auto eig = mfem_mgis::PartialQuadratureFunction{
       m.getPartialQuadratureSpacePointer(), 1};
-  // hyp for the hydrostatic stress 
+  // hyp for the hydrostatic stress
   auto hyp = mfem_mgis::PartialQuadratureFunction{
       m.getPartialQuadratureSpacePointer(), 1};
 
@@ -449,7 +451,7 @@ int main(int argc, char** argv) {
 
   // Define stress threshold (90% of maximum principal stress by default)
   const auto max_vp_scaled = p.scale_factor_vp * r.value;
-  
+
   // Get all locations where stress exceeds threshold
   const auto all_locations_and_stresses_above_threshold =
       opera_hpc::getPointsandStressAboveStressThreshold(problem.getMaterial(1),
@@ -461,12 +463,12 @@ int main(int argc, char** argv) {
     Message("Treating bubble #", b.boundary_identifier);
     mfem_mgis::real tmp_stress = 0.;
     std::array<mfem_mgis::real, 3u> tmp_loc{0., 0., 0.};
-    
+
     // Check all high-stress locations
     for (auto& location_and_stress :
          all_locations_and_stresses_above_threshold) {
       const auto d = opera_hpc::distance(b, location_and_stress.location);
-      
+
       // If location is close enough and stress is higher than current max
       if ((d < dmin) && (tmp_stress < location_and_stress.value)) {
         tmp_stress = location_and_stress.value;
@@ -507,13 +509,13 @@ int main(int argc, char** argv) {
     mfem_mgis::computeHydrostaticPressure(ctx, hyp, m, end);
 
     // calculate the average hydrostatic stress on the rev
-    calculateAverageHydrostaticStress<true>(outfile_sighydr,
-                                        problem.getImplementation<true>(), hyp);
-    
+    calculateAverageHydrostaticStress<true>(
+        outfile_sighydr, problem.getImplementation<true>(), hyp);
+
     mfem_mgis::ParaviewExportIntegrationPointResultsAtNodesImplementation<true>
         export_stress(problem.getImplementation<true>(),
-                      {{.name = "FirstEigenStress", .functions = {eig}}, 
-                       {.name = "HydrostaticPressure", .functions = {hyp}}}, 
+                      {{.name = "FirstEigenStress", .functions = {eig}},
+                       {.name = "HydrostaticPressure", .functions = {hyp}}},
                       std::string(p.testcase_name) + "-pp");
 
     export_stress.execute(problem.getImplementation<true>(), 0 + double(nstep),

@@ -30,7 +30,7 @@ namespace opera_hpc {
    * \struct FirstPrincipalStressValueAndLocation
    * \brief A simple structure to store a stress value and its
    * 3D spatial location.
-   */ 
+   */
   struct FirstPrincipalStressValueAndLocation {
     mfem_mgis::real value;
     std::array<mfem_mgis::real, 3u> location;
@@ -44,7 +44,7 @@ namespace opera_hpc {
    * (which might not be the first principal stress) and its location,
    * while reusing the same data layout.
    */
-  struct StressValueAndLocation : FirstPrincipalStressValueAndLocation{};
+  struct StressValueAndLocation : FirstPrincipalStressValueAndLocation {};
 
   /*!
    * \brief Finds the maximum first principal stress value and its location
@@ -56,18 +56,18 @@ namespace opera_hpc {
 
   FirstPrincipalStressValueAndLocation findFirstPrincipalStressValueAndLocation(
       const mfem_mgis::Material &);
-  
+
   /*!
-  * \brief Retrieves the locations of all points within the material
-  * where the first principal stress exceeds a given threshold.
-  * \param[in] m The material object to query.
-  * \param[in] threshold The stress threshold value.
-  * \return A vector of 3D coordinates [x, y, z] for all points
-  * exceeding the threshold.
-  */
+   * \brief Retrieves the locations of all points within the material
+   * where the first principal stress exceeds a given threshold.
+   * \param[in] m The material object to query.
+   * \param[in] threshold The stress threshold value.
+   * \return A vector of 3D coordinates [x, y, z] for all points
+   * exceeding the threshold.
+   */
   std::vector<std::array<mfem_mgis::real, 3u>> getPointsAboveStressThreshold(
       const mfem_mgis::Material &, const mfem_mgis::real);
-/*!
+  /*!
    * \brief Retrieves both the stress value and location for all points
    * within the material where the first principal stress exceeds
    * a given threshold.
@@ -77,9 +77,8 @@ namespace opera_hpc {
    * containing the stress value and coordinates for a point
    * exceeding the threshold.
    */
-  std::vector<StressValueAndLocation>
-  getPointsandStressAboveStressThreshold(const mfem_mgis::Material &m,
-                                         const mfem_mgis::real v);
+  std::vector<StressValueAndLocation> getPointsandStressAboveStressThreshold(
+      const mfem_mgis::Material &m, const mfem_mgis::real v);
 
 }  // end of namespace opera_hpc
 

@@ -3,7 +3,7 @@
  * \brief  Utility functions for stress analysis in finite element simulations
  * \author Thomas Helfer
  * \date   29/09/2024
- * 
+ *
  * This file provides utilities to extract and analyze stress fields from
  * finite element simulations.
  */
@@ -23,44 +23,46 @@
 namespace opera_hpc {
 
   /**
-   * \brief Find the maximum first principal stress and its location in the domain
-   * 
-   * This function computes the eigenvalues of the stress tensor at every integration
-   * point in the mesh, identifies the maximum first principal stress,
-   * and returns both its value and spatial location.
-   * 
-   * In parallel mode, results from all MPI processes are gathered and the global
-   * maximum is determined.
-   * 
+   * \brief Find the maximum first principal stress and its location in the
+   * domain
+   *
+   * This function computes the eigenvalues of the stress tensor at every
+   * integration point in the mesh, identifies the maximum first principal
+   * stress, and returns both its value and spatial location.
+   *
+   * In parallel mode, results from all MPI processes are gathered and the
+   * global maximum is determined.
+   *
    * \tparam parallel Whether running in parallel (MPI) mode
    * \param m Material containing stress field data
-   * \return Structure containing the maximum principal stress value and its 3D location
+   * \return Structure containing the maximum principal stress value and its 3D
+   * location
    */
   template <bool parallel>
   static FirstPrincipalStressValueAndLocation
   findFirstPrincipalStressValueAndLocationImplementation(
       const mfem_mgis::Material &m) {
     CatchTimeSection("OperaHPC::FindFirstPrincipal");
-    
+
     // Stress tensor has 6 components
     constexpr mfem_mgis::size_type stress_size = 6;
-    
+
     // Get finite element space information
     const auto &s = m.getPartialQuadratureSpace();
     const auto &fed = s.getFiniteElementDiscretization();
     const auto &fespace = fed.getFiniteElementSpace<parallel>();
-    
+
     // Material identifier for filtering elements
     const auto mid = s.getId();
-    
+
     // Pointer to stress values at end of time step
     const auto *stress_values = m.s1.thermodynamic_forces.data();
-    
+
     // Initialize with very small value to find maximum
     auto max_stress = -std::numeric_limits<mfem_mgis::real>::max();
     std::array<mfem_mgis::real, 3u> max_stress_location;
     mfem::Vector tmp;
-    
+
     // Loop over all elements in the mesh
     {
       CatchTimeSection("FindFirstPrincipal::LoopOverElem");
@@ -69,33 +71,34 @@ namespace opera_hpc {
         if (fespace.GetAttribute(i) != mid) {
           continue;
         }
-        
+
         const auto &fe = *(fespace.GetFE(i));
         auto &tr = *(fespace.GetElementTransformation(i));
         const auto &ir = s.getIntegrationRule(fe, tr);
-        
+
         // Offset in the global stress array for this element
         const auto eo = s.getOffset(i);
-        
+
         // Loop over integration (quadrature) points within the element
         for (mfem_mgis::size_type g = 0; g != ir.GetNPoints(); ++g) {
           // Get stress tensor at this integration point
           const auto *const stress = stress_values + (eo + g) * stress_size;
-          
-          // Create stress tensor object in the tensorial algebra library tfel::math
+
+          // Create stress tensor object in the tensorial algebra library
+          // tfel::math
           auto sig = tfel::math::stensor<3u, mfem_mgis::real>{stress};
-          
+
           // Compute eigenvalues
           const auto sig_vp = sig.computeEigenValues<
               tfel::math::stensor_common::FSESJACOBIEIGENSOLVER>();
-          
+
           // Find maximum eigenvalue (first principal stress)
           const auto mvp = *(tfel::fsalgo::max_element<3>::exe(sig_vp.begin()));
-          
+
           // Update global maximum if this value is larger
           if (mvp > max_stress) {
             max_stress = mvp;
-            
+
             // Get spatial location of this integration point
             const auto &ip = ir.IntPoint(g);
             tr.SetIntPoint(&ip);
@@ -105,47 +108,48 @@ namespace opera_hpc {
         }
       }
     }
-    
+
     // In parallel mode, gather results from all processes
     if constexpr (parallel) {
       CatchTimeSection("FindFirstPrincipal::GatherResults");
-      
+
       int nprocs;
       MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-      
+
       // Collect all maximum stresses and locations from all processes
       auto all_max_stresses = std::vector<double>(nprocs);
       auto all_locations = std::vector<double>(3 * nprocs);
-      
+
       MPI_Allgather(&max_stress, 1, MPI_DOUBLE, all_max_stresses.data(), 1,
                     MPI_DOUBLE, MPI_COMM_WORLD);
       MPI_Allgather(max_stress_location.data(), 3, MPI_DOUBLE,
                     all_locations.data(), 3, MPI_DOUBLE, MPI_COMM_WORLD);
-      
+
       // Find the process with the global maximum
       const auto i =
           std::max_element(all_max_stresses.begin(), all_max_stresses.end()) -
           all_max_stresses.begin();
-      
+
       // Extract the global maximum stress and its location
       max_stress = all_max_stresses[i];
       std::copy(all_locations.begin() + 3 * i,
                 all_locations.begin() + 3 * (i + 1),
                 max_stress_location.begin());
     }
-    
+
     return {.value = max_stress, .location = max_stress_location};
   }  // end of findFirstPrincipalStressValueAndLocationImplementation
 
   /**
    * \brief Get all spatial locations where principal stress exceeds a threshold
-   * 
+   *
    * Scans all integration points in the mesh and collects the 3D coordinates
    * of points where the first principal stress exceeds the specified threshold.
    * This is useful for identifying regions of high stress concentration.
-   * 
-   * In parallel mode, locations from all processes are gathered into a single list.
-   * 
+   *
+   * In parallel mode, locations from all processes are gathered into a single
+   * list.
+   *
    * \tparam parallel Whether running in parallel (MPI) mode
    * \param m Material containing stress field data
    * \param threshold Stress value threshold for filtering points
@@ -156,19 +160,19 @@ namespace opera_hpc {
   getPointsAboveStressThresholdImplementation(const mfem_mgis::Material &m,
                                               const mfem_mgis::real threshold) {
     CatchTimeSection("OperaHPC::GetPointsAbove");
-    
+
     constexpr mfem_mgis::size_type stress_size = 6;
     const auto &s = m.getPartialQuadratureSpace();
     const auto &fed = s.getFiniteElementDiscretization();
     const auto &fespace = fed.getFiniteElementSpace<parallel>();
-    
+
     const auto mid = s.getId();
     const auto *stress_values = m.s1.thermodynamic_forces.data();
-    
+
     // Local collection of locations exceeding threshold
     std::vector<std::array<mfem_mgis::real, 3u>> local_locations;
     mfem::Vector tmp;
-    
+
     // Loop over elements and integration points
     {
       CatchTimeSection("GetPointsAbove::LoopOverElem");
@@ -176,21 +180,21 @@ namespace opera_hpc {
         if (fespace.GetAttribute(i) != mid) {
           continue;
         }
-        
+
         const auto &fe = *(fespace.GetFE(i));
         auto &tr = *(fespace.GetElementTransformation(i));
         const auto &ir = s.getIntegrationRule(fe, tr);
         const auto eo = s.getOffset(i);
-        
+
         for (mfem_mgis::size_type g = 0; g != ir.GetNPoints(); ++g) {
           const auto *const stress = stress_values + (eo + g) * stress_size;
           auto sig = tfel::math::stensor<3u, mfem_mgis::real>{stress};
-          
+
           // Compute principal stresses
           const auto sig_vp = sig.computeEigenValues<
               tfel::math::stensor_common::FSESJACOBIEIGENSOLVER>();
           const auto mvp = *(tfel::fsalgo::max_element<3>::exe(sig_vp.begin()));
-          
+
           // If stress exceeds threshold, store location
           if (mvp > threshold) {
             const auto &ip = ir.IntPoint(g);
@@ -201,14 +205,14 @@ namespace opera_hpc {
         }
       }
     }
-    
+
     // Gather results from all MPI processes
     if constexpr (parallel) {
       CatchTimeSection("GetPointsAbove::GatherResults");
-      
+
       int nprocs;
       MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-      
+
       // Flatten local locations into a single array (x1,y1,z1,x2,y2,z2,...)
       const auto lsize = static_cast<int>(local_locations.size());
       std::vector<double> local_locations_tmp;
@@ -218,11 +222,11 @@ namespace opera_hpc {
         local_locations_tmp[3 * idx + 1] = local_locations[idx][1];
         local_locations_tmp[3 * idx + 2] = local_locations[idx][2];
       }
-      
+
       // Calculate total number of locations across all processes
       int gsize;
       MPI_Allreduce(&lsize, &gsize, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-      
+
       // Prepare arrays for variable-length gather operation
       std::vector<double> all_locations_tmp(3 * gsize);
       std::vector<int> counts_recv(nprocs);
@@ -247,7 +251,7 @@ namespace opera_hpc {
       MPI_Allgatherv(local_locations_tmp.data(), 3 * lsize, MPI_DOUBLE,
                      all_locations_tmp.data(), counts_recv.data(),
                      displacements.data(), MPI_DOUBLE, MPI_COMM_WORLD);
-      
+
       // Reconstruct array of 3D locations
       std::vector<std::array<mfem_mgis::real, 3u>> all_locations;
       all_locations.resize(gsize);
@@ -284,11 +288,12 @@ namespace opera_hpc {
   }  // end of getPointsAboveStressThresholdImplementation
 
   /**
-   * \brief Get locations AND stress values where principal stress exceeds a threshold
-   * 
-   * Similar to getPointsAboveStressThreshold, but also returns the actual stress
-   * value at each location.
-   * 
+   * \brief Get locations AND stress values where principal stress exceeds a
+   * threshold
+   *
+   * Similar to getPointsAboveStressThreshold, but also returns the actual
+   * stress value at each location.
+   *
    * \tparam parallel Whether running in parallel (MPI) mode
    * \param m Material containing stress field data
    * \param threshold Stress value threshold for filtering points
@@ -302,34 +307,34 @@ namespace opera_hpc {
     const auto &s = m.getPartialQuadratureSpace();
     const auto &fed = s.getFiniteElementDiscretization();
     const auto &fespace = fed.getFiniteElementSpace<parallel>();
-    
+
     const auto mid = s.getId();
     const auto *stress_values = m.s1.thermodynamic_forces.data();
-    
+
     // Collect both stress values and locations
     std::vector<StressValueAndLocation> collected_points_with_svp;
     mfem::Vector tmp;
-    
+
     // Loop over elements and integration points
     for (mfem_mgis::size_type i = 0; i != fespace.GetNE(); ++i) {
       if (fespace.GetAttribute(i) != mid) {
         continue;
       }
-      
+
       const auto &fe = *(fespace.GetFE(i));
       auto &tr = *(fespace.GetElementTransformation(i));
       const auto &ir = s.getIntegrationRule(fe, tr);
       const auto eo = s.getOffset(i);
-      
+
       for (mfem_mgis::size_type g = 0; g != ir.GetNPoints(); ++g) {
         const auto *const stress = stress_values + (eo + g) * stress_size;
         auto sig = tfel::math::stensor<3u, mfem_mgis::real>{stress};
-        
+
         // Compute principal stresses
         const auto sig_vp = sig.computeEigenValues<
             tfel::math::stensor_common::FSESJACOBIEIGENSOLVER>();
         const auto mvp = *(tfel::fsalgo::max_element<3>::exe(sig_vp.begin()));
-        
+
         // Store both stress value and location if above threshold
         if (mvp > threshold) {
           const auto &ip = ir.IntPoint(g);
@@ -346,14 +351,14 @@ namespace opera_hpc {
     if constexpr (parallel) {
       int nprocs;
       MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-      
+
       const auto lsize = static_cast<int>(collected_points_with_svp.size());
-      
+
       // Each item has 4 values: stress_value, x, y, z
       const int values_per_item = 4;
       std::vector<mfem_mgis::real> local_items_tmp;
       local_items_tmp.resize(lsize * values_per_item);
-      
+
       // Flatten data: [stress1, x1, y1, z1, stress2, x2, y2, z2, ...]
       for (int idx = 0; idx != lsize; ++idx) {
         local_items_tmp[values_per_item * idx] =
@@ -394,7 +399,8 @@ namespace opera_hpc {
       }
 
       // Gather all flattened data from all processes
-      std::vector<mfem_mgis::real> all_items_flat(gsize_items * values_per_item);
+      std::vector<mfem_mgis::real> all_items_flat(gsize_items *
+                                                  values_per_item);
       if (gsize_items > 0 || lsize > 0) {
         MPI_Allgatherv(local_items_tmp.data(), lsize * values_per_item,
                        MPI_DOUBLE, all_items_flat.data(),
@@ -408,8 +414,8 @@ namespace opera_hpc {
         locations_and_svp_values[idx].value =
             all_items_flat[idx * values_per_item + 0];
         locations_and_svp_values[idx].location = {
-            all_items_flat[idx * values_per_item + 1],  // x
-            all_items_flat[idx * values_per_item + 2],  // y
+            all_items_flat[idx * values_per_item + 1],   // x
+            all_items_flat[idx * values_per_item + 2],   // y
             all_items_flat[idx * values_per_item + 3]};  // z
       }
       return locations_and_svp_values;
@@ -420,10 +426,10 @@ namespace opera_hpc {
 
   /**
    * \brief Public interface to find maximum principal stress and location
-   * 
+   *
    * Detects whether computation is parallel or serial
    * and calls the appropriate implementation.
-   * 
+   *
    * \param m Material containing stress field data
    * \return Maximum principal stress value and its 3D location
    */
@@ -443,7 +449,7 @@ namespace opera_hpc {
 
   /**
    * \brief Public interface to get locations above stress threshold
-   * 
+   *
    * \param m Material containing stress field data
    * \param v Stress threshold value
    * \return Vector of 3D locations where stress exceeds threshold
@@ -464,14 +470,13 @@ namespace opera_hpc {
 
   /**
    * \brief Public interface to get locations and stress values above threshold
-   * 
+   *
    * \param m Material containing stress field data
    * \param v Stress threshold value
    * \return Vector of structures containing stress values and 3D locations
    */
-  std::vector<StressValueAndLocation>
-  getPointsandStressAboveStressThreshold(const mfem_mgis::Material &m,
-                                         const mfem_mgis::real v) {
+  std::vector<StressValueAndLocation> getPointsandStressAboveStressThreshold(
+      const mfem_mgis::Material &m, const mfem_mgis::real v) {
     const auto &s = m.getPartialQuadratureSpace();
     const auto &fed = s.getFiniteElementDiscretization();
     if (fed.describesAParallelComputation()) {
