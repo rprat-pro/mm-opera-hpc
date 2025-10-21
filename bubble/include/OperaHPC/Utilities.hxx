@@ -44,7 +44,6 @@ namespace opera_hpc {
    * (which might not be the first principal stress) and its location,
    * while reusing the same data layout.
    */
-  
   struct StressValueAndLocation : FirstPrincipalStressValueAndLocation{};
 
   /*!

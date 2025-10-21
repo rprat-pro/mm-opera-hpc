@@ -8,26 +8,65 @@
  * principal stress field around them.
  */
 
-#include "MFEMMGIS/Profiler.hxx"
-#include "Common/Memory.hxx"
-#include "Common/Print.hxx"
+#include <cstdlib>
+#include <fstream>
+#include <tuple>
 
-#include "MGIS/Context.hxx"
+#include "MGIS/Function/Mechanics.hxx"
 
 #include "MFEMMGIS/Config.hxx"
-#include "MFEMMGIS/MechanicalPostProcessings.hxx"
 #include "MFEMMGIS/Material.hxx"
+#include "MFEMMGIS/MechanicalPostProcessings.hxx"
 #include "MFEMMGIS/ParaviewExportIntegrationPointResultsAtNodes.hxx"
 #include "MFEMMGIS/PartialQuadratureFunction.hxx"
 #include "MFEMMGIS/PartialQuadratureSpace.hxx"
 #include "MFEMMGIS/PeriodicNonLinearEvolutionProblem.hxx"
+#include "MFEMMGIS/Profiler.hxx"
 #include "MFEMMGIS/UniformImposedPressureBoundaryCondition.hxx"
+
+#include "Common/Memory.hxx"
+#include "Common/Print.hxx"
 #include "OperaHPC/BubbleDescription.hxx"
 #include "OperaHPC/Utilities.hxx"
 
-#include <cstdlib>
-#include <fstream>
-#include <tuple>
+
+namespace mfem_mgis{
+  template <unsigned short N>
+  static bool computeHydrostaticPressure_implementation(
+      Context& ctx,
+      PartialQuadratureFunction& hyp,
+      const Material& m,
+      const Material::StateSelection s) {
+    using namespace mgis::function;
+    const auto sig = getThermodynamicForce(m, "Stress", s);
+    const auto ok = sig | as_stensor<N> | hydrostatic_stress | hyp;
+    if (!ok) {
+      return ctx.registerErrorMessage(
+          "computeHydrostaticPressure: computation of the hydrostatic "
+          "stress failed");
+    }
+    return true;
+  }  // end of computeHydrostaticPressure_implementation
+
+  static bool computeHydrostaticPressure(
+      Context& ctx,
+      PartialQuadratureFunction& hyp,
+      const Material& m,
+      const Material::StateSelection s) {
+    if ((m.b.hypothesis == Hypothesis::PLANESTRESS) ||
+        (m.b.hypothesis == Hypothesis::PLANESTRAIN)) {
+      return computeHydrostaticPressure_implementation<2>(
+          ctx, hyp, m, s);
+    } else if (m.b.hypothesis == Hypothesis::TRIDIMENSIONAL) {
+      return computeHydrostaticPressure_implementation<3>(
+          ctx, hyp, m, s);
+    }
+    return ctx.registerErrorMessage(
+        "computeHydrostaticPressure: unsupported modelling hypothesis");
+  }  // end of computeHydrostaticPressure
+
+}
+
 
 namespace opera_hpc {
 
@@ -75,9 +114,9 @@ struct BubbleInfoRecord {
    * \param loc 3D location array
    * \param s_val Stress value at that location
    */
-  BubbleInfoRecord(mfem_mgis::size_type bid,
+  BubbleInfoRecord(const mfem_mgis::size_type bid,
                    const std::array<mfem_mgis::real, 3u>& loc,
-                   mfem_mgis::real s_val)
+                   const mfem_mgis::real s_val)
       : boundary_id(bid), stress_value(s_val) {
     location[0] = loc[0];
     location[1] = loc[1];
@@ -95,7 +134,6 @@ struct BubbleInfoRecord {
  */
 template <typename Problem>
 void post_process(Problem& p, double start, double end) {
-  CatchTimeSection("common::post_processing_step");
   p.executePostProcessings(start, end);
 }
 
@@ -112,7 +150,7 @@ struct TestParameters {
   const char* bubble_file = "mesh/single_bubble.txt";      ///< Bubble definitions file
   const char* testcase_name = "TestCaseBubble";            ///< Name for output files
   int parallel_mesh = 0;                                   ///< Flag for parallel mesh format
-  int order = 1;                                           ///< Finite element order
+  int order = 2;                                           ///< Finite element order
   int refinement = 0;                                      ///< Mesh refinement level
   int post_processing = 1;                                 ///< Enable post-processing (1=yes)
   int verbosity_level = 0;                                 ///< Output verbosity level
@@ -191,7 +229,7 @@ void write_bubble_infos(std::ofstream& file_to_write,
 }
 
 /**
- * \brief Calculate the average hydrostatic pressure over a material domain
+ * \brief Calculate the average hydrostatic stress over a material domain
  * 
  * Integrates the hydrostatic pressure field over all elements and
  * computes the volume-averaged value using MPI reduction if needed
@@ -202,9 +240,9 @@ void write_bubble_infos(std::ofstream& file_to_write,
  * \param f Quadrature function containing the pressure field
  */
 template <bool parallel>
-static void calculateAverageHydroPressure(
+static void calculateAverageHydrostaticStress(
     std::ostream& os,
-    mfem_mgis::NonLinearEvolutionProblemImplementation<parallel>& prob,
+    const mfem_mgis::NonLinearEvolutionProblemImplementation<parallel>& prob,
     const mfem_mgis::ImmutablePartialQuadratureFunctionView& f) {
   const auto& s = f.getPartialQuadratureSpace();
   const auto& fed = s.getFiniteElementDiscretization();
@@ -255,7 +293,7 @@ static void calculateAverageHydroPressure(
   if (mfem_mgis::getMPIrank() == 0) {
     os << v << "," << integral << "," << integral / v << "\n";
   }
-}
+} // end of calculateAverageHydrostaticStress
 
 /**
  * \brief Main program
@@ -277,14 +315,21 @@ int main(int argc, char** argv) {
   // Initialize MPI and profiling
   mfem_mgis::initialize(argc, argv);
   mfem_mgis::Profiler::timers::init_timers();
-  auto ctx = mgis::Context();
+  auto ctx = mfem_mgis::Context();
 
   // Open output file for bubble stress results
   std::string bubbles_selected = "bubbles_and_stresses_selected.txt";
+  std::string hydrostatic_stress_f = "sig_hydro.txt";
+  std::ofstream outfile_sighydr(hydrostatic_stress_f);
   std::ofstream output_file_locations(bubbles_selected);
 
   if (!output_file_locations.is_open()) {
     std::cerr << "Failed to open the file: " << bubbles_selected << std::endl;
+    return EXIT_FAILURE;
+  }
+  
+  if (!outfile_sighydr.is_open()) {
+    std::cerr << "Failed to open the file: " << hydrostatic_stress_f << std::endl;
     return EXIT_FAILURE;
   }
 
@@ -377,14 +422,18 @@ int main(int argc, char** argv) {
   // Configure post-processing output
   if (post_processing) {
     auto results =
-        std::vector<mfem_mgis::Parameter>{"Stress", "HydrostaticPressure"};
+        std::vector<mfem_mgis::Parameter>{"Stress"};
     problem.addPostProcessing(
         "ParaviewExportIntegrationPointResultsAtNodes",
         {{"OutputFileName", p.testcase_name}, {"Results", results}});
   }
 
-  // Storage for internal variables
-  auto vim = mfem_mgis::PartialQuadratureFunction{
+  // Partial Quadrature functions for post-processing needs
+  // eig for the first eigenstress
+  auto eig = mfem_mgis::PartialQuadratureFunction{
+      m.getPartialQuadratureSpacePointer(), 1};
+  // hyp for the hydrostatic stress 
+  auto hyp = mfem_mgis::PartialQuadratureFunction{
       m.getPartialQuadratureSpacePointer(), 1};
 
   mfem_mgis::size_type nstep{1};
@@ -442,38 +491,37 @@ int main(int argc, char** argv) {
   }
 
   write_bubble_infos(output_file_locations, bubbles_information);
-  
-  // Open file for hydrostatic stress output
-  std::ofstream outfile("sig_hydro.txt");
 
   if (mfem_mgis::getMPIrank() == 0)
-    write_message(outfile, "Volume", "Integral", "Average");
+    write_message(outfile_sighydr, "Volume", "Integral", "Average");
 
   if (post_processing) {
+    CatchTimeSection("common::post_processing_step");
     // Execute standard post-processing (Paraview export)
     post_process(problem, 0 + double(nstep), 1 + double(nstep));
 
-    // Compute and export principal stress field
+    // Compute and export principal stress and hydrostatic stress
+    // field
     auto end = mfem_mgis::Material::END_OF_TIME_STEP;
-    mfem_mgis::computeFirstEigenStress(ctx, vim, m, end);
+    mfem_mgis::computeFirstEigenStress(ctx, eig, m, end);
+    mfem_mgis::computeHydrostaticPressure(ctx, hyp, m, end);
+
+    // calculate the average hydrostatic stress on the rev
+    calculateAverageHydrostaticStress<true>(outfile_sighydr,
+                                        problem.getImplementation<true>(), hyp);
+    
     mfem_mgis::ParaviewExportIntegrationPointResultsAtNodesImplementation<true>
         export_stress(problem.getImplementation<true>(),
-                      {{.name = "Stress", .functions = {vim}}}, 
-                      std::string(p.testcase_name) + "-eig");
-    
+                      {{.name = "FirstEigenStress", .functions = {eig}}, 
+                       {.name = "HydrostaticPressure", .functions = {hyp}}}, 
+                      std::string(p.testcase_name) + "-pp");
+
     export_stress.execute(problem.getImplementation<true>(), 0 + double(nstep),
                           1 + double(nstep));
-
-    // Extract and compute average hydrostatic pressure
-    auto pr = getInternalStateVariable(
-        static_cast<const mfem_mgis::Material&>(m), "HydrostaticPressure");
-
-    calculateAverageHydroPressure<true>(outfile,
-                                        problem.getImplementation<true>(), pr);
   }
 
-  // Clean up, close and win
-  outfile.close();
+  // Clean up, close, and win
+  outfile_sighydr.close();
   output_file_locations.close();
   print_memory_footprint("[End]");
   mfem_mgis::Profiler::timers::print_and_write_timers();
