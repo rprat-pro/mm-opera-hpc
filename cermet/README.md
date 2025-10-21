@@ -18,7 +18,7 @@ Parameters:
 	- Young Modulus = 222.e9
 	- Poisson ratio = 0.27
 	- Shear Modulus = 54.e9 
-- [Metalic Interface] Constitutive law: Norton.
+- [Metallic Interface] Constitutive law: Norton.
 	- Young Modulus = 276e+09
 	- Poisson ratio = 0.3
 	- A             = 2.5e+11
@@ -37,7 +37,7 @@ Parameters:
 This section explains how to generate a sample mesh with `Merope`.
 
 
-Before running the script, make sure that the environment variable `MEROPE_DIR` is properly loaded:
+Before running the script, make sure that the environment variable `MEROPE_DIR` is properly loaded.
 
 Then, you can generate the mesh in two steps:
 
@@ -141,9 +141,8 @@ Runs a longer simulation with:
 
 - Duration = 200 s
 - 400 timesteps
-- Refinement level = 1
 - Custom mesh (yourmesh.msh)
-
+- Refinement level = 1
 
 ```
 mpirun -n 12 ./cermet --duration 200 --nstep 400 -r 1 --mesh yourmesh.msh
