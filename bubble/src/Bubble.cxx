@@ -247,10 +247,8 @@ static void calculateAverageHydrostaticStress(
   const auto& fespace = fed.getFiniteElementSpace<parallel>();
   const auto m = s.getId();
 
-  // Storage for local contributions
-  std::vector<mfem_mgis::real> integrals;
-  std::vector<mfem_mgis::real> volumes;
-  mfem_mgis::real integr, vol;
+  mfem_mgis::real integral = 0.;
+  mfem_mgis::real volume = 0.;
 
   // Loop over all elements in the mesh
   for (mfem_mgis::size_type i = 0; i != fespace.GetNE(); ++i) {
@@ -261,35 +259,31 @@ static void calculateAverageHydrostaticStress(
     const auto& fe = *(fespace.GetFE(i));
     auto& tr = *(fespace.GetElementTransformation(i));
     const auto& ir = s.getIntegrationRule(fe, tr);
-    integr = 0.;
-    vol = 0.;
 
     // Integrate over quadrature points
     for (mfem_mgis::size_type g = 0; g != ir.GetNPoints(); ++g) {
-      mfem::Vector p;
       const auto& ip = ir.IntPoint(g);
       tr.SetIntPoint(&ip);
       const auto w =
           prob.getBehaviourIntegrator(m).getIntegrationPointWeight(tr, ip);
-      tr.Transform(tr.GetIntPoint(), p);
 
-      integr += f.getIntegrationPointValue(i, g) * w;
-      vol += w;
+      integral += f.getIntegrationPointValue(i, g) * w;
+      volume += w;
     }
-    integrals.push_back(integr);
-    volumes.push_back(vol);
   }
 
   // MPI reduction to get global integral and volume
-  mfem_mgis::real v = 0.;
-  mfem_mgis::real integral = 0.;
-  MPI_Reduce(integrals.data(), &integral, 1, MPI_DOUBLE, MPI_SUM, 0,
+  mfem_mgis::real global_volume = 0.;
+  mfem_mgis::real global_integral = 0.;
+  MPI_Reduce(&integral, &global_integral, 1, MPI_DOUBLE, MPI_SUM, 0,
              MPI_COMM_WORLD);
-  MPI_Reduce(volumes.data(), &v, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Reduce(&volume, &global_volume, 1, MPI_DOUBLE, MPI_SUM, 0,
+             MPI_COMM_WORLD);
 
   // Write results on rank 0
   if (mfem_mgis::getMPIrank() == 0) {
-    os << v << "," << integral << "," << integral / v << "\n";
+    os << global_volume << "," << global_integral << ","
+       << global_integral / global_volume << "\n";
   }
 }  // end of calculateAverageHydrostaticStress
 
@@ -500,7 +494,7 @@ int main(int argc, char** argv) {
   if (post_processing) {
     CatchTimeSection("common::post_processing_step");
     // Execute standard post-processing (Paraview export)
-    post_process(problem, 0 + double(nstep), 1 + double(nstep));
+    post_process(problem, 0 , 1);
 
     // Compute and export principal stress and hydrostatic stress
     // field
@@ -518,8 +512,8 @@ int main(int argc, char** argv) {
                        {.name = "HydrostaticPressure", .functions = {hyp}}},
                       std::string(p.testcase_name) + "-pp");
 
-    export_stress.execute(problem.getImplementation<true>(), 0 + double(nstep),
-                          1 + double(nstep));
+    export_stress.execute(problem.getImplementation<true>(), 0,
+                          1);
   }
 
   // Clean up, close, and win
