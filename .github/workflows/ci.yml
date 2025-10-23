@@ -32,14 +32,14 @@ jobs:
         run: |
           spack load mfem
           spack load mfem-mgis
-          cmake -B ${{github.workspace}}/release 
+          cmake -B ${{github.workspace}}/release -DCMAKE_PREFIX_PATH=`spack location -i tfel`/share/tfel/cmake
       - name: Build OperaHpc Test Cases
         shell: spack-sh {0}
         run: |
           spack load tfel
           spack load mfem
           spack load mfem-mgis
-          cmake --build ${{github.workspace}}/release --config Release
+          cmake --build ${{github.workspace}}/release --config Release 
       - name: Run examples
         working-directory: ${{github.workspace}}/release
         shell: spack-sh {0}
