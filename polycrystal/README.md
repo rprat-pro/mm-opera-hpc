@@ -2,25 +2,44 @@
 
 ## Problem definition
 
-This test case illustrates the simulation of a Representative Volume Element (`RVE`) of a polycrystal made of uranium dioxide (`UO₂`). The objective is to study the mechanical response of the material under an uniaxial loading.
+This test case illustrates the simulation of a Representative Volume
+Element (`RVE`) of a polycrystal made of uranium dioxide (`UO₂`). The
+objective is to study the mechanical response of the material under an
+uniaxial loading (see the description of the boundary conditions below).
 
-In addition to the mechanical analysis, this example demonstrates how to set up a fixed-point algorithm to handle the nonlinearities associated with crystalline plasticity at the grain scale.
+In addition to the mechanical analysis, this example demonstrates how to
+set up a fixed-point algorithm to handle the nonlinearities associated
+with crystalline plasticity at the grain scale.
 
-- Boundary conditions: periodic boundary conditions are applied on the RVE faces. The loading is imposed in one direction, ensuring compatibility and equilibrium across periodic faces.
+- Boundary conditions: periodic boundary conditions are applied on the
+  RVE faces. The loading is imposed in one direction, ensuring
+  compatibility and equilibrium across periodic faces. More precisely,
+  the axial component Fzz of the macroscopic deformation gradient is
+  imposed. The off-diagonal components of the macrocroscopic deformation
+  gradient are set to zero. The components Fxx and Fzz are unknowns
+  which are determined by imposing that the components Sxx and Syy of
+  the Cauchy stress are null. The main result of the simulation is the
+  evolution of the axial component Szz of the Cauchy stress as a
+  function of Fxx.
 - Constitutive law: UO₂ crystalline plasticity law[^2].
 - Finite element order: 1 (linear interpolation).
 - Finite element space: H1.
 - Simulation duration: 200 s.
 - Number of time steps: 600.
-- [Crystal] Constitutive law: UO₂ crystalline plasticity law[^2].
-	- Young Modulus = 222.e9
+- [Crystal] Constitutive law: UO₂ crystalline plasticity law[^2]. In the
+  case of Uranium dioxide, the crystal symmetry is cubic. The elasticity
+  properties of the material is used by the behaviour and by the fixed
+  point algorithm used to converge toward an uniaxial tensile test:
+	- Young Modulus = 222.e9 Pa
 	- Poisson ratio = 0.27
-	- Shear Modulus = 54.e9 
+	- Shear Modulus = 54.e9  Pa
 
 ## Mesh generation
+
 This section explains how to generate a sample mesh with Merope.
 
-Before running the script, make sure that the environment variable `MEROPE_DIR` is properly loaded:
+Before running the script, make sure that the environment variable
+`MEROPE_DIR` is properly loaded:
 
 Then, you can generate the mesh in two steps:
 
@@ -31,11 +50,15 @@ python3 mesh/5crystals.py # generate 5crystals.geo
 gmsh -3 5crystals.geo # generate 5crystals.msh
 ```
 
-You will obtain a 3D mesh (5crystals.msh) of a polycrystalline sample with 5 grains.
+You will obtain a 3D mesh (5crystals.msh) of a polycrystalline sample
+with 5 grains.
 
-The geometry of the RVE is generated using the Mérope [^1] toolkit. For this example, a cermet with 5 crystals is built with a metalic interface.
+The geometry of the RVE is generated using the Mérope [^1] toolkit. For
+this example, a cermet with 5 crystals is built with a metalic
+interface.
 
-Make sure to load the `MEROPE` environment before running the mesh generation script:
+Make sure to load the `MEROPE` environment before running the mesh
+generation script:
 
 ```
 source ${MEROPE_DIR}/Env_Merope.sh
@@ -66,7 +89,8 @@ The resulting polycrystal is composed of 5 grains.
 ## Simulation options
 
 
-The main executable for this test case is uniaxial-polycrystal. Its command-line options are:
+The main executable for this test case is uniaxial-polycrystal. Its
+command-line options are:
 
 ```
 Usage: ./uniaxial-polycrystal --help 
