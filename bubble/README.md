@@ -6,11 +6,11 @@
 
 The default example is the rupture of a spherical, pressurized inclusion (e.g., a gas bubble) in an elastic infinite medium.
 
-The criterium to determine the rupture or not is based on a simple geometrical assumption, i.e., if a certain distance $d_min$ is found between the position of the center of the sphere and the location of the maximum principal stress caused by the pressure exerted by the bubble on the surrounding matrix.
+The criterium to determine the rupture or not is based on a simple geometrical assumption, i.e., if a certain distance $d_{min}$ is found between the position of the center of the sphere and the location of the maximum principal stress caused by the pressure exerted by the bubble on the surrounding matrix.
 
 ## Modify the geometry for the single bubble case and mesh it
 
-The geometry for the testcase is contained in the file `.geo` stored in the `mesh` folder. One can modify it and use it as an input for `gmsh` to generate the computational mesh for the case by 
+The geometry for the test case is contained in the file `.geo` stored in the `mesh` folder. One can modify it and use it as an input for `gmsh` to generate the computational mesh for the case by 
 
 ```bash
 gmsh -3 single_sphere.geo
@@ -43,7 +43,7 @@ Usage: ./test-bubble [options] ...
 
 ## Verification against the analytical solution
 
-The problem of a pressurized spherical inclusion in an infinite, elastic medium has a closed solution for the expressions of the stresses as a function of the distance from the sphere center. 
+The problem of a pressurized spherical inclusion in an infinite elastic medium has a closed-form solution for the expressions of the stresses as a function of the distance from the sphere center:
 
 $$
 \sigma_{\theta\theta}(r) = \dfrac{p_{in}*R_b^3}{2r^3}

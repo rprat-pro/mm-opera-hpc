@@ -31,6 +31,9 @@ Parameters:
 	- Shear Modulus = 54.e9  Pa
 - [Metalic Interface] Constitutive law: Norton.
 	- Young Modulus = 276e+09 Pa
+	- Shear Modulus = 54.e9 
+- [Metallic Interface] Constitutive law: Norton.
+	- Young Modulus = 276e+09
 	- Poisson ratio = 0.3
 	- A             = 2.5e+11 [a. u.]
 	- n1            = 4.75
@@ -152,9 +155,8 @@ Runs a longer simulation with:
 
 - Duration = 200 s
 - 400 timesteps
-- Refinement level = 1
 - Custom mesh (yourmesh.msh)
-
+- Refinement level = 1
 
 ```
 mpirun -n 12 ./cermet --duration 200 --nstep 400 -r 1 --mesh yourmesh.msh

@@ -4,7 +4,7 @@ import os
 from matplotlib import pyplot as plt
 
 cur_path = os.getcwd()
-file_pvd = os.path.join(cur_path, 'TestCaseOneBubble.pvd')
+file_pvd = os.path.join(cur_path, 'TestCaseBubble/TestCaseBubble.pvd')
 bubble_radius = 400e-9
 rev_side_length = 10e-6
 bubble_center = (bubble_radius, 0., 0.)
