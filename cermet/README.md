@@ -7,25 +7,39 @@
 This simulation consists of applying a tensile load on a cermet RVE. The cermet
 is a polycrystal where each grain has a material ID (from 2 to Nmat – 1) and a
 different orientation. A metallic interface is present between the different
-polycrystals (material ID 1)
+grains (material ID 1)
 
-In addition to the mechanical analysis, this example demonstrates how to set up a fixed-point algorithm to handle the nonlinearities associated with crystalline plasticity at the grain scale.
+In addition to the mechanical analysis, this example demonstrates how to
+set up a fixed-point algorithm to handle the nonlinearities associated
+with crystalline plasticity at the grain scale.
 
 Parameters:
 
-- Boundary conditions: periodic boundary conditions are applied on the RVE faces. The loading is imposed in one direction, ensuring compatibility and equilibrium across periodic faces.
+- Boundary conditions: periodic boundary conditions are applied on the
+  RVE faces. The loading is imposed in one direction, ensuring
+  compatibility and equilibrium across periodic faces. More precisely,
+  the axial component Fzz of the macroscopic deformation gradient is
+  imposed. The off-diagonal components of the macrocroscopic deformation
+  gradient are set to zero. The components Fxx and Fzz are unknowns
+  which are determined by imposing that the components Sxx and Syy of
+  the Cauchy stress are null. The main result of the simulation is the
+  evolution of the axial component Szz of the Cauchy stress as a
+  function of Fxx
 - [Crystal] Constitutive law: UO₂ crystalline plasticity law[^2].
-	- Young Modulus = 222.e9
+	- Young Modulus = 222.e9 Pa
 	- Poisson ratio = 0.27
+	- Shear Modulus = 54.e9  Pa
+- [Metalic Interface] Constitutive law: Norton.
+	- Young Modulus = 276e+09 Pa
 	- Shear Modulus = 54.e9 
 - [Metallic Interface] Constitutive law: Norton.
 	- Young Modulus = 276e+09
 	- Poisson ratio = 0.3
-	- A             = 2.5e+11
+	- A             = 2.5e+11 [a. u.]
 	- n1            = 4.75
-	- Q             = 306.27e+03
-	- D0            = 1.55e-5
-	- b             = 2.5e-10
+	- Q             = 306.27e+03 [a. u.]
+	- D0            = 1.55e-5 [a. u.]
+	- b             = 2.5e-10 [a. u.]
 - Finite element order: 1 (linear interpolation).
 - Finite element space: H1.
 - Simulation duration: 200 s.
@@ -36,8 +50,8 @@ Parameters:
 
 This section explains how to generate a sample mesh with `Merope`.
 
-
-Before running the script, make sure that the environment variable `MEROPE_DIR` is properly loaded.
+Before running the script, make sure that the environment variable
+`MEROPE_DIR` is properly loaded:
 
 Then, you can generate the mesh in two steps:
 
