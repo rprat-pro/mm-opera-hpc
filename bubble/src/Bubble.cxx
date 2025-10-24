@@ -65,7 +65,7 @@ struct TestParameters {
   const char *bubble_file = "mesh/single_bubble.txt";
   const char *testcase_name = "TestCaseBubble";
   int parallel_mesh = 0;
-  int order = 1;
+  int order = 2;
   int refinement = 0;
   int post_processing = 1;  // default value : activated
   int verbosity_level = 0;  // default value : lower level
