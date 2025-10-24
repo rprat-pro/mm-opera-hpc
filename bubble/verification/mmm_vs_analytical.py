@@ -9,7 +9,7 @@ bubble_radius = 400e-9
 rev_side_length = 10e-6
 bubble_center = (bubble_radius, 0., 0.)
 end_point_rev = (rev_side_length/2, 0., 0.)
-bubble_pressure = 1e6
+bubble_pressure = 1 # 1e6
 
 data_mmm = pv.read(file_pvd)
 data_simulation = data_mmm[0]  # first timestep
@@ -36,3 +36,23 @@ plt.legend()
 plt.grid(True)
 plt.savefig('comparison.png')
 plt.close()
+
+
+### Comparison
+
+tolerance = 100 #%
+
+# Calcul de l'écart relatif en %
+RelDiff = np.abs((stress_tt - analytical_hoop_stress) / analytical_hoop_stress * 100)
+
+# Définition du statut
+Status = np.where( RelDiff <= tolerance, 'OK', 'MISMATCH')
+
+
+# Check if the 'Status' column contains any "MISMATCH"
+if (Status == 'MISMATCH').any():
+    print("There is at least one MISMATCH in the data!")
+    print(RelDiff)
+    print(Status)
+else:
+    print("Check PASS.")
