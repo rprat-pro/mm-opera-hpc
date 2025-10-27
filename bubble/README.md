@@ -17,6 +17,7 @@ gmsh -3 single_sphere.geo
 ```
 
 NB: if the bubble center, radius, or the surface label are modified, the corresponding data stored in `single_bubble.txt` must also be changed.
+NB: `single_bubble_ci.txt` is used for GitHub continuous integration.
 
 ![Bubble Case](doc/bubble.png)
 
