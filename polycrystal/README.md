@@ -54,8 +54,7 @@ You will obtain a 3D mesh (5crystals.msh) of a polycrystalline sample
 with 5 grains.
 
 The geometry of the RVE is generated using the Mérope [^1] toolkit. For
-this example, a cermet with 5 crystals is built with a metalic
-interface.
+this example, a polycristal with 5 monocrystals.
 
 Make sure to load the `MEROPE` environment before running the mesh
 generation script:

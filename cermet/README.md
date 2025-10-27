@@ -72,7 +72,11 @@ Below are two examples:
 
 #### Small Example
 
-This configuration generates a small test case with 5 grains.
+This setup generates a small polycrystalline mesh with (gmsh version `11.1`):
+
+- 5 grains
+- 12,992 nodes
+- 88,687 elements
 
 ```
 L = [1, 1, 1]
