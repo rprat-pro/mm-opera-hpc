@@ -174,7 +174,7 @@ By default, the simulation generates the file cermet.res when running:
 mpirun -n 12 ./cermet
 ```
 
-To validate the results, the Cauchy stress component in the z-direction (σₖₖ = zz) can be compared with reference values obtained from Cast3M.
+To validate the results, the Cauchy stress component in the z-direction ($\overline{\sigma}_{zz}$) can be compared with reference values obtained from Cast3M.
 
 ### Plot and Compare
 
