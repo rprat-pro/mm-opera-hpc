@@ -1,1 +1,6 @@
-2 0 0 0 400e-9
+# The values in this file need to be 
+# the label of the bubble surface as defined in the geometry
+# the x y z coordinates of the bubble center
+# the corresponding radius. NB there needs to be 1 line/bubble
+# in the geometry.
+2 0 0 0 0.400

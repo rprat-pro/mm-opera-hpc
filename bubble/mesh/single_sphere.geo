@@ -1,7 +1,7 @@
-size_rev=10e-6; // the size of the REV
+size_rev=10; // the size of the REV
 mesh_size= size_rev*0.5e-1; 
 scaling_mesh_bubble = 0.5e-1;
-radius_bubble = 400e-9;
+radius_bubble = 0.400;
 
 //+
 Point(1) = {0, 0, 0, mesh_size*scaling_mesh_bubble};

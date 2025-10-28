@@ -30,11 +30,11 @@ The simulation considers an empty (i.e., not meshed) cavity, on whose surface we
  - E = 150 N µm<sup>2</sup>
  - $$\nu = 0.3$$
 
-The elastic modulus is rescaled to coherently describe the geometry in micrometers, rather than in S.I. units. This choice is done to facilitate the creation of more complex geometries when using `Mérope`, given the characteristic lengthscale of the considered inclusions.
+The elastic modulus is rescaled to coherently describe the geometry in micrometers, rather than in S.I. units. This choice is done to facilitate the creation of more complex geometries when using `Mérope`, given the characteristic length scale of the considered inclusions.
 
 The geometry is meshed using quadratic elements, to better describe the spherical inclusions contained in the representative elementary volume (REV). Despite `MFEM` allows sub-, super-, and isoparametric analyses, we recommend to stick at least to the isoparametric choice (i.e., not subparametric) for the polynomial shape functions.
 
-The boundary conditions for the problem are periodical, and we consider a null macroscopic displacement gradient, which in turns generate a uniform compressive hydrostatic pressure on the REV.
+The boundary conditions for the problem are periodical, and we consider a null macroscopic displacement gradient, which in turns generates a uniform compressive hydrostatic pressure on the REV.
 
 ### Parameters
 
@@ -59,7 +59,7 @@ Usage: ./test-bubble [options] ...
 
 ## Verification against the analytical solution
 
-The problem of a pressurized spherical inclusion in an infinite elastic medium has a closed-form solution for the expressions of the stresses as a function of the distance from the sphere center:
+The problem of a pressurized spherical inclusion in an infinite elastic medium has a closed-form solution for the expressions of the hoop stress as a function of the distance from the sphere center:
 
 $$
 \sigma_{\theta\theta}(r) = \dfrac{p_{in}*R_b^3}{2r^3}
@@ -67,14 +67,17 @@ $$
 
 where $p_{in}$ is the internal pressure, $R_b$ the bubble radius, and reminding that the expression is holding for $r>R_b$.
 
+The command to execute the testcase for the verification is
 
-The script available in `verification/bubble` can be used to compare the analytical solution to the MMM one, by just placing the script in the post-processing folder and executing it 
+```bash
+mpirun -n 6 ./test-bubble
+```
+
+The script available in `verification/bubble` can be used to compare the analytical solution to the MMM one:
 
 ```bash
 python3 mmm_vs_analytical.py 
 ```
-The comparison obtained running the test-case considering the FE mesh available `bubble/mesh/single_sphere.msh` and the analytical solution is showed below.
+The comparison between the computational results and and the analytical solution is showed below.
 
-![Bubble Case](/img/bubble/comparison_analytical_mmm.png)
-
-
+![Bubble Case](../img/bubble/comparison_analytical_mmm.png)

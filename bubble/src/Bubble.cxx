@@ -407,6 +407,13 @@ int main(int argc, char** argv) {
   auto& m = problem.getMaterial(1);
 
   // Set material properties (elastic constants and temperature)
+  // The sphere is not meshed, thus no material properties need to be 
+  // considered for it. We set the elastic constants for the material
+  // which are representative for UO2.
+  // NB we are considering an isotropic purely elastic behaviour, 
+  // imposing only the two elastic moduli. Please note that since
+  // we are scaling everything to µm, we consider the Elastic 
+  // modulus in N/µm² to have a consistent displacement field.
   for (auto& s : {&m.s0, &m.s1}) {
     mgis::behaviour::setMaterialProperty(*s, "YoungModulus",
                                          150e-3);  // Young's modulus
@@ -443,7 +450,7 @@ int main(int argc, char** argv) {
 
   std::vector<BubbleInfoRecord> bubbles_information;
 
-  // Define stress threshold (90% of maximum principal stress by default)
+  // Define stress threshold
   const auto max_vp_scaled = p.scale_factor_vp * r.value;
 
   // Get all locations where stress exceeds threshold
@@ -458,7 +465,7 @@ int main(int argc, char** argv) {
     mfem_mgis::real tmp_stress = 0.;
     std::array<mfem_mgis::real, 3u> tmp_loc{0., 0., 0.};
 
-    // Check all high-stress locations
+    // Check all locations
     for (auto& location_and_stress :
          all_locations_and_stresses_above_threshold) {
       const auto d = opera_hpc::distance(b, location_and_stress.location);
