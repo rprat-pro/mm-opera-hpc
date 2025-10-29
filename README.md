@@ -4,7 +4,7 @@ This directory groups together the various test cases implemented as part of the
 
 ## Installation using Spack [recommended]
 
-```
+```bash
 git clone --depth=2 --branch=v1.0.1 https://github.com/spack/spack.git
 export SPACK_ROOT=$PWD/spack
 source ${SPACK_ROOT}/share/spack/setup-env.sh
@@ -12,26 +12,26 @@ source ${SPACK_ROOT}/share/spack/setup-env.sh
 
 Firstly, get the mfem-mgis spack repository.
 
-```
+```bash
 git clone https://github.com/rprat-pro/spack-repo-mfem-mgis.git
 spack repo add $PWD/spack-repo-mfem-mgis
 ```
 
 Secondly, install mfem-mgis.
 
-```
+```bash
 spack install mfem-mgis@1.0.3
 ```
 
 Thirdly, load mfem-mgis.
 
-```
+```bash
 spack load mfem-mgis
 ```
 
 Create a build directory, configure the project with CMake, build it, and install.
 
-```
+```bash
 git clone https://github.com/rprat-pro/mm-opera-hpc.git
 cd mm-opera-hpc/
 mkdir build && cd build
@@ -45,13 +45,13 @@ For more details on installing mfem-mgis, particularly for installing mfem-mgis 
 
 ## Bubble Case 
 
-The default example is the rupture of a spherical, pressurized inclusion (e.g., a gas bubble) in an elastic infinite medium.
+The default example is constituted by a single spherical porosity in a quasi-infinite medium.
 
-The criterium to determine the rupture or not is based on a simple geometrical assumption, i.e., if a certain distance $d_{min}$ is found between the position of the center of the sphere and the location of the maximum principal stress caused by the pressure exerted by the bubble on the surrounding matrix.
+The criterium to determine the rupture or not is based on a simple geometrical assumption, i.e., if a certain distance $\delta$ is found between the position of the centre of the sphere and the location of the maximum principal stress caused by the pressure exerted by the bubble on the surrounding matrix, where the principal stress exceeds the rupture strength of the material.
 
 ![Bubble Case](/img/bubble/bubbles.png)
 
-More details in bubble/README.md
+More details in [bubble/README.md](./bubble/README.md)
 
 ## Polycrystal Case
 
@@ -61,7 +61,7 @@ In addition to the mechanical analysis, this example demonstrates how to set up 
 
 ![Polycristal Case](img/polycrystal/polycrystal.png)
 
-More details in polycrystal/README.md
+More details in [polycrystal/README.md](./polycrystal/README.md)
 
 ## Cermet Case
 
@@ -71,4 +71,4 @@ In addition to the mechanical analysis, this example demonstrates how to set up 
 
 ![Cermet Case](img/cermet/cermet.png)
 
-More details in cermet/README.md
+More details in [cermet/README.md](./cermet/README.md)
