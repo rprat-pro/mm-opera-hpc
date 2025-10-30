@@ -2,47 +2,28 @@
 
 ## Problem definition
 
-This test case illustrates the simulation of a Representative Volume
-Element (`RVE`) of a polycrystal made of uranium dioxide (`UO₂`). The
-objective is to study the mechanical response of the material under an
-uniaxial loading (see the description of the boundary conditions below).
+This test case illustrates the simulation of a Representative Volume Element (RVE) of a polycrystal made of uranium dioxide (UO₂). The objective is to study the mechanical response of the material under a uniaxial loading (see the description of the boundary conditions below). In addition to the mechanical analysis, this example implements a fixed-point algorithm enabling the simulation of a uniaxial compression/tensile test with periodic boundary conditions.	
 
-In addition to the mechanical analysis, this example demonstrates how to
-set up a fixed-point algorithm to handle the nonlinearities associated
-with crystalline plasticity at the grain scale.
-
-- Boundary conditions: periodic boundary conditions are applied on the
-  RVE faces. The loading is imposed in one direction, ensuring
-  compatibility and equilibrium across periodic faces. More precisely,
-  the axial component Fzz of the macroscopic deformation gradient is
-  imposed. The off-diagonal components of the macrocroscopic deformation
-  gradient are set to zero. The components Fxx and Fzz are unknowns
-  which are determined by imposing that the components Sxx and Syy of
-  the Cauchy stress are null. The main result of the simulation is the
-  evolution of the axial component Szz of the Cauchy stress as a
-  function of Fxx.
-- Constitutive law: UO₂ crystalline plasticity law[^2].
-- Finite element order: 1 (linear interpolation).
-- Finite element space: H1.
-- Simulation duration: 200 s.
-- Number of time steps: 600.
-- [Crystal] Constitutive law: UO₂ crystalline plasticity law[^2]. In the
-  case of Uranium dioxide, the crystal symmetry is cubic. The elasticity
-  properties of the material is used by the behaviour and by the fixed
-  point algorithm used to converge toward an uniaxial tensile test:
+- **Boundary conditions:** periodic boundary conditions are applied on the RVE faces. The loading is imposed in one direction, ensuring compatibility and equilibrium across periodic faces. More precisely, the axial component Fzz of the macroscopic deformation gradient is imposed. The off-diagonal components of the macroscopic deformation gradient are set to zero. The components Fxx and Fzz are the unknowns, they are determined via the fixed-point algorithm imposing null values for the components Sxx and Syy of the macroscopic Cauchy stress tensor. The main result used for verification is a stress-strain curve with the evolution of the axial component Szz of the Cauchy stress as a function of Fxx.
+- **Finite element order:** 1 (linear interpolation).
+- **Finite element space:** H1.
+- **Simulation duration:** 200 s.
+- **Number of time steps:** 600.
+- **[Crystal] Constitutive law:** The UO₂ crystal plasticity law used in the example is detailed in the reference [^2], the corresponding Mfront file is on the MMM Github. In the case of Uranium dioxide, the crystal symmetry is cubic and the corresponding orthotropic elastic properties used in the crystal plasticity law are:
 	- Young Modulus = 222.e9 Pa
 	- Poisson ratio = 0.27
-	- Shear Modulus = 54.e9  Pa
+	- Shear Modulus = 54.e9 Pa
+
+The orthotropic basis of each grain is given as input data of the material parameter of the crystal plasticity law. This orthotropic basis is pre computed with the Euler angles of the grain. The fixed-point algorithm used the homogenized elastic properties of the polycrystal in order to predict the displacement gradient needed to converge toward a uniaxial tensile test. These macroscopic properties are derived from the single crystal elastic constant given above with the mean values of the Voigt and Reuss bounds for an isotropic polycrystal (see `MacroscropicElasticMaterialProperties.cxx` on the repository).
 
 ## Mesh generation
 
-This section explains how to generate a sample mesh with Merope.
+This section explains how to generate a sample mesh with Merope [^1] toolkit.
 
 Before running the script, make sure that the environment variable
 `MEROPE_DIR` is properly loaded:
 
 Then, you can generate the mesh in two steps:
-
 
 ```
 source ${MEROPE_DIR}/Env_Merope.sh
@@ -51,13 +32,7 @@ gmsh -3 5crystals.geo # generate 5crystals.msh
 ```
 
 You will obtain a 3D mesh (5crystals.msh) of a polycrystalline sample
-with 5 grains.
-
-The geometry of the RVE is generated using the Mérope [^1] toolkit. For
-this example, a polycristal with 5 monocrystals.
-
-Make sure to load the `MEROPE` environment before running the mesh
-generation script:
+with 5 grains. Make sure to load the `MEROPE` environment before running the mesh generation script:
 
 ```
 source ${MEROPE_DIR}/Env_Merope.sh
@@ -145,8 +120,7 @@ To visualize and compare the results, run the following Python script:
 python3 plot_polycrystal_results.py
 ```
 
-This script generates a figure named: `plot_polycrystal.png`
-
+This script generates a figure named `plot_polycrystal.png` as given in the Figure 6. In this figure we can observe that there is a good agreement between Cast3M and MFEM-MGIS results. Although Cast3M is our reference, the stress-strain curve shows an unexpected non-smooth evolution. These oscillations are associated to the time step discretization which was specified in the MFEM-MGIS simulation. For a larger number of time steps the Cast3M curve is smoother as the MMM results presented in Figure 6. A first analysis of this issue led us to conclude that the implicit formulation of the Cast3M code, based on a quasi-Newton algorithm using the elastic stiffness and line search type convergence acceleration, is not fully stable. The main output of this work is that the implicit formulation of MFEM-MGIS (full newton algorithm using the tangent stiffness) is very performant, thanks to the quadratic convergence and parallelization, and provides a high-quality solution. For the verification process, the number of time steps has been significantly increased in order to avoid as much as possible the oscillation of the Cast3M solution.      
 
 ![](doc/plot_polycrystal.png)
 
