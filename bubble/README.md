@@ -59,7 +59,7 @@ N.B. bis: `single_bubble_ci.txt` is used for GitHub continuous integration.
 
 The simulation considers an empty (i.e., not meshed) cavity, on whose surface we impose an arbitrary uniform pressure (unitary by default). The medium is described by a purely elastic constitutive relationship, characterized by two elastic constants 
 
- - E = 150$\cdot 10^{-3}$ N µm<sup>-2</sup>
+ - E = 150.10<sup>-3</sup> N µm<sup>-2</sup>
  - $$\nu = 0.3$$
 
 The elastic modulus is rescaled to coherently describe the geometry in micrometers, rather than in S.I. units. This choice is done to facilitate the creation of more complex geometries when using `Mérope`, given the characteristic length scale of the considered inclusions.
