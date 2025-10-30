@@ -2,49 +2,31 @@
 
 ![Cermet Case](../img/cermet/cermet.png)
 
-## Short description
+## Description
 
-This simulation consists of applying a tensile load on a cermet RVE. The cermet
-is a polycrystal where each grain has a material ID (from 2 to Nmat – 1) and a
-different orientation. A metallic interface is present between the different
-grains (material ID 1)
+This case is similar to the `UO2` polycrystal with the addition of a metallic interface at the grain boundary. In the Gmsh mesh each grain has a material ID (from 2 to (N_grain - 1)), as well as its orientation needed for the orthotropic basis. The metallic interface has the material ID equal to 1, and is considered to be made of an isotropic elasto-viscoplastic material. In addition to the mechanical analysis, this example implements a fixed-point algorithm enabling the simulation of a uniaxial compression/tensile test with periodic boundary conditions.
 
-In addition to the mechanical analysis, this example demonstrates how to
-set up a fixed-point algorithm to handle the nonlinearities associated
-with crystalline plasticity at the grain scale.
-
-Parameters:
-
-- Boundary conditions: periodic boundary conditions are applied on the
-  RVE faces. The loading is imposed in one direction, ensuring
-  compatibility and equilibrium across periodic faces. More precisely,
-  the axial component Fzz of the macroscopic deformation gradient is
-  imposed. The off-diagonal components of the macrocroscopic deformation
-  gradient are set to zero. The components Fxx and Fzz are unknowns
-  which are determined by imposing that the components Sxx and Syy of
-  the Cauchy stress are null. The main result of the simulation is the
-  evolution of the axial component Szz of the Cauchy stress as a
-  function of Fxx
-- [Crystal] Constitutive law: UO₂ crystalline plasticity law[^2].
+*Parameters:*
+- **Boundary conditions:** periodic boundary conditions are applied on the RVE faces. The loading is imposed in one direction, ensuring compatibility and equilibrium across periodic faces. More precisely, the axial component Fzz of the macroscopic deformation gradient is imposed. The off-diagonal components of the macrocroscopic deformation gradient are set to zero. The components Fxx and Fzz are the unknowns, they are determined via the fixed-point algorithm imposing null values for the components Sxx and Syy of the macroscopic Cauchy stress tensor. The main result used for verification is a stress-strain curve with the evolution of the axial component Szz of the Cauchy stress as a function of Fxx.
+- **[Crystal] Constitutive law:** The UO₂ crystal plasticity law used in the example is detailed in the reference [^1], the corresponding Mfront file is on the MMM Github. In the case of Uranium dioxide, the crystal symmetry is cubic and the corresponding orthotropic elastic properties used in the crystal plasticity law are:
 	- Young Modulus = 222.e9 Pa
 	- Poisson ratio = 0.27
-	- Shear Modulus = 54.e9  Pa
-- [Metalic Interface] Constitutive law: Norton.
+	- Shear Modulus = 54.e9 Pa
+- **[Metalic Interface] Constitutive law:** The Norton creep law used for the interface is derived from the elasto-viscoplastic properties of chromium coating used in eATF claddings as proposed in the reference [], the corresponding Mfront file is on the MMM Github. 
+- **Elastic properties:**
 	- Young Modulus = 276e+09 Pa
-	- Shear Modulus = 54.e9 
-- [Metallic Interface] Constitutive law: Norton.
-	- Young Modulus = 276e+09
-	- Poisson ratio = 0.3
-	- A             = 2.5e+11 [a. u.]
-	- n1            = 4.75
-	- Q             = 306.27e+03 [a. u.]
-	- D0            = 1.55e-5 [a. u.]
-	- b             = 2.5e-10 [a. u.]
-- Finite element order: 1 (linear interpolation).
-- Finite element space: H1.
-- Simulation duration: 200 s.
-- Number of time steps: 500.
-- Linear solver: HyprePCG (solver) /  (precond)
+	- Shear Modulus = 54.e9
+- **Norton creep law:**
+	- </head> <body> <p>$$\dot{\varepsilon}_{eq} = \frac{A D_0 \exp\!\left(-\frac{Q}{R T}\right)}{b^2}\left( \frac{\sigma_{eq}}{C} \right)^n$$</p></body></html>
+	- A = 2.5e+11 [a. u.]
+	- n1 = 4.75
+	- Q = 306.27e+03 [a. u.]D0 = 1.55e-5 [a. u.]
+	- b = 2.5e-10 [a. u.]
+- **Finite element order:** 1 (linear interpolation).
+- **Finite element space:** H1.
+- **Simulation duration:** 200 s.
+- **Number of time steps:** 500.
+- **Linear solver:** HyprePCG (solver) /(precond)
 
 ## Mesh generation
 
@@ -184,7 +166,7 @@ To visualize and compare the results, run the following Python script:
 python3 plot_cermet_results.py
 ```
 
-This script generates a figure named: `plot_cermet.png`
+This script generates a figure named: plot_cermet.png as given in the Figure. In this figure we can observe that there is a good agreement between Cast3M and MFEM-MGIS results. As observed for the polycrystal test case there are also some oscillations for the Cast3M solution which is of poorer quality compare to the MFEM-MGIS results. The main output of this work is that the implicit formulation of MFEM-MGIS (full newton algorithm using the tangent stiffness) is very performant, thanks to the quadratic convergence and parallelization, and provides a high-quality solution. For the verification process, the number of time steps has been significantly increased in order to avoid as much as possible the oscillation of the Cast3M solution.
 
 
 ![](doc/plot_cermet.png)
@@ -220,3 +202,7 @@ Check PASS.
 ```
 
 This table shows the comparison between the simulated Cauchy stress values and the reference Cast3M results, along with the relative difference and a status check.
+
+## References
+
+[^1]: PORTELETTE, Luc, AMODEO, Jonathan, MADEC, Ronan, et al. Crystal viscoplastic modeling of UO2 single crystal. Journal of Nuclear Materials, 2018, vol. 510, p. 635-643.
