@@ -53,7 +53,7 @@ More details in [bubble/README.md](./bubble/README.md)
 
 ## Polycrystal Case
 
-This test case illustrates the simulation of a Representative Volume Element (RVE) of a polycrystal made of uranium dioxide (`UO₂`). The objective is to study the mechanical viscoplastic response of the material under a macroscopic uniaxial loading. In addition to the mechanical analysis, this example implements a fixed-point algorithm to converge toward a macroscopic uniaxial tensile state. The example given in the repository of this test case corresponds to a simplification with only 5 grains in order to enable an easy comparison with a reference solution given by the Cast3M code. 
+This test case illustrates the simulation of a Representative Volume Element (RVE) of a polycrystal made of uranium dioxide (`UO₂`). The objective is to study the mechanical viscoplastic response of the material under a macroscopic uniaxial loading. The example given in the repository of this test case corresponds to a simplification with a polycrystal composed of 5 crystals in order to enable an easy comparison with a reference solution given by the Cast3M code. 
 
 ![Polycristal Case](img/polycrystal/polycrystal.png)
 
@@ -61,7 +61,7 @@ More details in [polycrystal/README.md](./polycrystal/README.md)
 
 ## Cermet Case
 
-This example illustrates the simulation of a UO₂ polycrystalline microstructure with metallic interfaces at the grain boundaries (CERMET). The objective is to study the mechanical viscoplastic response of the material, including the strain localization in the metallic interface, under a macroscopic uniaxial loading. In addition to the mechanical analysis, this example implements a fixed-point algorithm to converge toward a macroscopic uniaxial tensile state. The example given in the repository of this test case corresponds to a simplification with only 5 grains in order to enable an easy comparison with a reference solution given by the Cast3M code.
+This example illustrates the simulation of a UO₂ polycrystalline microstructure with metallic interfaces at the grain boundaries (CERMET). The objective is to study the mechanical viscoplastic response of the material, including the strain localization in the metallic interface, under a macroscopic uniaxial loading. The example given in the repository of this test case corresponds to a simplification with only 5 grains in order to enable an easy comparison with a reference solution given by the Cast3M code.
 
 ![Cermet Case](img/cermet/cermet.png)
 
