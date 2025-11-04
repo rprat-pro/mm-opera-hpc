@@ -45,9 +45,7 @@ For more details on installing mfem-mgis, particularly for installing mfem-mgis 
 
 ## Bubble Case 
 
-The default example is constituted by a single spherical porosity in a quasi-infinite medium.
-
-The criterium to determine the rupture or not is based on a simple geometrical assumption, i.e., if a certain distance $\delta$ is found between the position of the centre of the sphere and the location of the maximum principal stress caused by the pressure exerted by the bubble on the surrounding matrix, where the principal stress exceeds the rupture strength of the material.
+The applicative study case is the elastic computation of the stress field induced by an internal pressure prescribed in spherical porosities (e.g., a fission gas bubble for fuel) distributed randomly in a periodic RVE. The boundary conditions are null macroscopic displacement gradient corresponding to a macroscopic strain equal to zero. The periodic surface of the RVE is defined according a Voronoi tessellation principle in order to avoid truncated porosities and ensure a high quality of the periodic solution near the boundary. In the general case the null periodic displacement boundary condition prevents the volume expansion with a non-zero macroscopic hydrostatic stress. 
 
 ![Bubble Case](/img/bubble/bubbles.png)
 
