@@ -4,7 +4,7 @@
 
 ## Problem description
 
-The default example is one spherical porosity in a quasi-infinite medium. The boundary conditions foer the problem are periodical, and we consider a null macroscopic displacement gradient. 
+The default example is one spherical porosity in a quasi-infinite medium. The boundary conditions for the problem are periodical, and we consider a null macroscopic displacement gradient. 
 
 In the general case, the null periodic displacement boundary condition prevents the volume expansion with a non-zero macroscopic hydrostatic stress. The latter can be derived from the periodic elastic stress field by
 
