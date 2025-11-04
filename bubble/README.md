@@ -1,6 +1,6 @@
 # Simulation of pressurized bubbles
 
-![Bubbles Case](../img/bubble/bubbles.png)
+![Bubble Case](doc/bubble.png)
 
 ## Problem description
 
