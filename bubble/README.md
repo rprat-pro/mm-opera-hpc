@@ -18,7 +18,7 @@ $$
 \overline{\overline{σ}}\left(p_{in}-p_{hyd}, 0\right) = \overline{\overline{σ}}\left(p_{in},p_{hyd}\right)+ p_{hyd} \overline{\overline{I}}  
 $$
 
-with $$\overline{\overline{I}}$$ being the identiy tensor.
+with $$\overline{\overline{I}}$$ being the identity tensor.
 
 ### Link to transient fission gas release
 
