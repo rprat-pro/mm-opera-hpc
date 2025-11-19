@@ -41,16 +41,21 @@ Usage: ./test-bubble [options] ...
 ```
 
 
-| Option                                | Type   | Default                  | Description                                 |
-| ------------------------------------- | ------ | ------------------------ | ------------------------------------------- |
-| `-h, --help`                          | —      | —                        | Print the help message and exit.            |
-| `-m <string>, --mesh <string>`        | string | `mesh/single_sphere.msh` | Mesh file to use.                           |
-| `-l <string>, --library <string>`     | string | `src/libBehaviour.so`    | Material behaviour library.                 |
-| `-f <string>, --bubble-file <string>` | string | `mesh/single_bubble.txt` | File containing the bubble definitions.     |
-| `-o <int>, --order <int>`             | int    | `2`                      | Finite element order (polynomial degree).   |
-| `-r <int>, --refinement <int>`        | int    | `0`                      | Refinement level of the mesh (default = 0). |
-| `-p <int>, --post-processing <int>`   | int    | `1`                      | Run the post-processing step.               |
-| `-v <int>, --verbosity-level <int>`   | int    | `0`                      | Verbosity level of the output.              |
+| Option                                    | Type   | Default                  | Description                                 |
+| ----------------------------------------- | ------ | ------------------------ | ------------------------------------------- |
+| `-h, --help`                              | —      | —                        | Print the help message and exit.            |
+| `-m <string>, --mesh <string>`            | string | `mesh/single_sphere.msh` | Mesh file to use.                           |
+| `-pm <int>, --parallel-mesh <int>`        | int    | `0`                      | Read a parallel mesh or not.                |
+| `-l <string>, --library <string>`         | string | `src/libBehaviour.so`    | Material behaviour library.                 |
+| `-f <string>, --bubble-file <string>`     | string | `mesh/single_bubble.txt` | File containing the bubble definitions.     |
+| `-o <int>, --order <int>`                 | int    | `2`                      | Finite element order (polynomial degree).   |
+| `-r <int>, --refinement <int>`            | int    | `0`                      | Refinement level of the mesh.               |
+| `-p <int>, --post-processing <int>`       | int    | `1`                      | Run the post-processing step.               |
+| `-v <int>, --verbosity-level <int>`       | int    | `0`                      | Verbosity level of the output.              |
+| `-sf <double>, --scale-factor-vp <double>`| double | `0.9`                    | Scaling factor for the principal stress.    |
+| `-n <string>, --name-case <string>`       | string | `TestCaseBubble`         | Name of the testcase.                       |
+| `-dm <double>, --dmin <double>`           | double | `0.950`                  | Distance to evaluate bubble rupture.        |
+| `-pr <double>, --pref <double>`           | double | `1`                      | Internal bubble pressure in Pa.             |
 
 The command to execute the test-case is
 

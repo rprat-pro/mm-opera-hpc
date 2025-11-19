@@ -8,6 +8,7 @@
  * on the principal stress field around them.
  */
 
+
 #include <cstdlib>
 #include <fstream>
 #include <tuple>
@@ -28,6 +29,8 @@
 #include "Common/Print.hxx"
 #include "OperaHPC/BubbleDescription.hxx"
 #include "OperaHPC/Utilities.hxx"
+
+#include "mfem/general/forall.hpp"
 
 namespace mfem_mgis {
   template <unsigned short N>
@@ -134,12 +137,25 @@ void post_process(Problem& p, double start, double end) {
 }
 
 /**
+ * \brief Physical parameters for bubble fracture simulation
+ *
+ * Contains the key physical parameters that control the mechanical
+ * behavior of bubbles and the stress analysis criteria used to
+ * determine bubble fracture.
+ */
+struct PhysicalParameters {
+  mfem_mgis::real bubble_pressure = 1.0;  ///< Reference pressure inside bubbles
+  mfem_mgis::real d_min =
+      0.950;  ///< Distance threshold for associating stress with bubbles
+};
+
+/**
  * \brief Structure holding all simulation parameters
  *
  * Contains default values for mesh files, material properties,
  * numerical parameters, and output options
  */
-struct TestParameters {
+struct TestParameters : PhysicalParameters {
   const char* mesh_file = "mesh/single_sphere.msh";  ///< Path to mesh file
   const char* behaviour = "Elasticity";              ///< Material behavior law
   const char* library = "src/libBehaviour.so";       ///< Material library path
@@ -180,6 +196,10 @@ void fill_parameters(mfem::OptionsParser& args, TestParameters& p) {
                  "Scaling factor for the principal stress");
   args.AddOption(&p.testcase_name, "-n", "--name-case",
                  "Name of the testcase.");
+  args.AddOption(&p.d_min, "-dm", "--dmin",
+                 "Distance to evaluate bubble rupture, in µm, default = 0.950.");
+  args.AddOption(&p.bubble_pressure, "-pr", "--pref",
+                 "Internal bubble pressure, in Pa, default = 1");
 
   args.Parse();
 
@@ -334,10 +354,7 @@ int main(int argc, char** argv) {
   print_memory_footprint("[Start]");
 
   // Physical parameters
-  constexpr mfem_mgis::real pref = 1.0;  ///< Reference pressure in bubbles
-  constexpr mfem_mgis::size_type maximumNumberSteps = 1000;  ///< Max time steps
-  constexpr mfem_mgis::real dmin =
-      0.650;  ///< Distance threshold to associate stress with bubble
+  mfem_mgis::real dmin = p.d_min;
 
   // Load bubble descriptions from file
   auto bubbles = [p] {
@@ -378,7 +395,8 @@ int main(int argc, char** argv) {
     problem.addBoundaryCondition(
         std::make_unique<mfem_mgis::UniformImposedPressureBoundaryCondition>(
             problem.getFiniteElementDiscretizationPointer(),
-            b.boundary_identifier, [&b](const mfem_mgis::real) {
+            b.boundary_identifier,
+            [&b, pref = p.bubble_pressure](const mfem_mgis::real) {
               // If bubble is broken, pressure = 0; otherwise pressure = pref
               return b.broken ? 0 : pref;
             }));
@@ -407,12 +425,12 @@ int main(int argc, char** argv) {
   auto& m = problem.getMaterial(1);
 
   // Set material properties (elastic constants and temperature)
-  // The sphere is not meshed, thus no material properties need to be 
+  // The sphere is not meshed, thus no material properties need to be
   // considered for it. We set the elastic constants for the material
   // which are representative for UO2.
-  // NB we are considering an isotropic purely elastic behaviour, 
+  // NB we are considering an isotropic purely elastic behaviour,
   // imposing only the two elastic moduli. Please note that since
-  // we are scaling everything to µm, we consider the Elastic 
+  // we are scaling everything to µm, we consider the Elastic
   // modulus in N/µm² to have a consistent displacement field.
   for (auto& s : {&m.s0, &m.s1}) {
     mgis::behaviour::setMaterialProperty(*s, "YoungModulus",
@@ -454,46 +472,124 @@ int main(int argc, char** argv) {
   const auto max_vp_scaled = p.scale_factor_vp * r.value;
 
   // Get all locations where stress exceeds threshold
-  const auto all_locations_and_stresses_above_threshold =
+  auto all_locations_and_stresses_above_threshold =
       opera_hpc::getPointsandStressAboveStressThreshold(problem.getMaterial(1),
                                                         max_vp_scaled);
+  // Resize the bubble information vector to match the number of bubbles,
+  // initializing each entry with default values (0 identifier, {0,0,0}
+  // location, 0.0 stress)
+  bubbles_information.resize(bubbles.size(),
+                             BubbleInfoRecord(0, {0, 0, 0}, 0.0));
 
-  // For each bubble, find the maximum stress within distance dmin
-  for (auto& b : bubbles) {
+  {
     CatchTimeSection("BubbleLoop");
-    Message("Treating bubble #", b.boundary_identifier);
-    mfem_mgis::real tmp_stress = 0.;
-    std::array<mfem_mgis::real, 3u> tmp_loc{0., 0., 0.};
 
-    // Check all locations
-    for (auto& location_and_stress :
-         all_locations_and_stresses_above_threshold) {
-      const auto d = opera_hpc::distance(b, location_and_stress.location);
+    // Sort all  points by their X-coordinate for efficient spatial
+    // searching
+    std::sort(all_locations_and_stresses_above_threshold.begin(),
+              all_locations_and_stresses_above_threshold.end(),
+              [](const auto& a, const auto& b) {
+                return a.location[0] < b.location[0];
+              });
 
-      // If location is close enough and stress is higher than current max
-      if ((d < dmin) && (tmp_stress < location_and_stress.value)) {
-        tmp_stress = location_and_stress.value;
-        tmp_loc = location_and_stress.location;
+    // Pointers to avoid repeated vector access
+    const auto* bubbles_data = bubbles.data();
+    const auto* points_data = all_locations_and_stresses_above_threshold.data();
+    auto* results_data = bubbles_information.data();
+
+    const auto num_bubbles = bubbles.size();
+    const auto num_points = all_locations_and_stresses_above_threshold.size();
+
+    // Parallel loop over all bubbles
+    // NB it can run OMP on CPU parallelization if hypre was compiled with this
+    // support otherwise it degenerates to a simple for. it can do something
+    // exotic with gpu but idk.
+    mfem::forall(num_bubbles, [=](int i) {
+      // 1. Get current bubble to process
+      const auto& b = bubbles_data[i];
+
+      // Initialize tracking variables for maximum stress point near this bubble
+      auto local_max_stress = mfem_mgis::real{0.0};
+      auto local_max_loc = std::array<mfem_mgis::real, 3u>{0.0, 0.0, 0.0};
+
+      // bubble center coordinates
+      const auto bx = b.center[0];
+      const auto by = b.center[1];
+      const auto bz = b.center[2];
+
+      // X-axis slice:
+      // Only search points within distance 'dmin' along the X-axis
+      const auto min_x_search = bx - dmin;
+      const auto max_x_search = bx + dmin;
+
+      // Find the starting point for our search using binary search on sorted
+      // X-coordinates
+      const auto* start_ptr = points_data;
+      const auto* end_ptr = points_data + num_points;
+
+      // Find first point with X-coordinate >= min_x_search
+      const auto* it = std::lower_bound(start_ptr, end_ptr, min_x_search,
+                                        [](const auto& point, double val) {
+                                          return point.location[0] < val;
+                                        });
+
+      // Scan through candidate points, using early exits and filtering
+      // Stop when we leave the X-slice
+      for (; it != end_ptr; ++it) {
+        const auto& pt = *it;
+
+        // Early exit: If X-coordinate exceeds our search window, stop
+        // immediately (points are sorted by X, so all remaining points are also
+        // too far --> no need to do the rest of the stuff, we
+        // dont care about the stress there!)
+        if (pt.location[0] > max_x_search) break;
+        // Now we carry on with a matrioska checking
+        // Second check is on the y: check if point is within bounding box on
+        // Y-axis
+        if (std::abs(pt.location[1] - by) > dmin) continue;
+
+        // Third check is on the z: check if point is within bounding box on
+        // 2-axis
+        if (std::abs(pt.location[2] - bz) > dmin) continue;
+        // if we made here, the point is worthwile of consideration!
+        const auto dx = pt.location[0] - bx;
+        const auto dy = pt.location[1] - by;
+        const auto dz = pt.location[2] - bz;
+
+        const auto dist = [&dx, &dy, &dz] {
+          return std::sqrt(tfel::math::power<2>(dx) + tfel::math::power<2>(dy) +
+                           tfel::math::power<2>(dz));
+        }();
+
+        // If point is within spherical radius 'dmin' and has higher stress than
+        // current max, update the maximum stress and its location
+        if ((dist < dmin) && (local_max_stress < pt.value)) {
+          local_max_stress = pt.value;
+          local_max_loc = pt.location;
+        }
+      }
+
+      // Store the maximum stress information found for this bubble
+      results_data[i] = BubbleInfoRecord(b.boundary_identifier, local_max_loc,
+                                         local_max_stress);
+    });
+  }
+
+  if (mfem_mgis::getMPIrank() == 0) {
+    // Write CSV header and bubble stress data
+    write_message(output_file_locations, "Bubble ID", "Location[0]",
+                  "Location[1]", "Location[2]", "Stress");
+
+    for (auto& el : bubbles_information) {
+      Message("Bubble = ", el.boundary_id);
+      Message("Stress = ", el.stress_value);
+      for (auto& el1 : el.location) {
+        Message("Location=", el1);
       }
     }
-    // Store the result for this bubble
-    bubbles_information.emplace_back(b.boundary_identifier, tmp_loc,
-                                     tmp_stress);
+
+    write_bubble_infos(output_file_locations, bubbles_information);
   }
-
-  // Write CSV header and bubble stress data
-  write_message(output_file_locations, "Bubble ID", "Location[0]",
-                "Location[1]", "Location[2]", "Stress");
-
-  for (auto& el : bubbles_information) {
-    Message("Bubble = ", el.boundary_id);
-    Message("Stress = ", el.stress_value);
-    for (auto& el1 : el.location) {
-      Message("Location=", el1);
-    }
-  }
-
-  write_bubble_infos(output_file_locations, bubbles_information);
 
   if (mfem_mgis::getMPIrank() == 0)
     write_message(outfile_sighydr, "Volume", "Integral", "Average");
@@ -501,7 +597,7 @@ int main(int argc, char** argv) {
   if (post_processing) {
     CatchTimeSection("common::post_processing_step");
     // Execute standard post-processing (Paraview export)
-    post_process(problem, 0 , 1);
+    post_process(problem, 0, 1);
 
     // Compute and export principal stress and hydrostatic stress
     // field
@@ -519,13 +615,15 @@ int main(int argc, char** argv) {
                        {.name = "HydrostaticPressure", .functions = {hyp}}},
                       std::string(p.testcase_name) + "-pp");
 
-    export_stress.execute(problem.getImplementation<true>(), 0,
-                          1);
+    export_stress.execute(problem.getImplementation<true>(), 0, 1);
   }
 
   // Clean up, close, and win
-  outfile_sighydr.close();
-  output_file_locations.close();
+  if (mfem_mgis::getMPIrank() == 0) {
+    outfile_sighydr.close();
+    output_file_locations.close();
+  }
+
   print_memory_footprint("[End]");
   mfem_mgis::Profiler::timers::print_and_write_timers();
   return EXIT_SUCCESS;
