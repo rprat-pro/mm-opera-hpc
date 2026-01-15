@@ -71,7 +71,7 @@ static void parseCommandLineOptions(mfem::OptionsParser &args,
                  "Finite element order (polynomial degree).");
   args.AddOption(&p.refinement, "-r", "--refinement",
                  "refinement level of the mesh, default = 1");
-  args.AddOption(&p.post_processing, "-p", "--post-processing",
+  args.AddOption(&p.post_processing, "-p", "--postprocessing",
                  "run post processing step");
   args.AddOption(&p.verbosity_level, "-v", "--verbosity-level",
                  "choose the verbosity level");
