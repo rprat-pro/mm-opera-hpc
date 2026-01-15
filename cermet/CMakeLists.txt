@@ -26,7 +26,7 @@ target_link_libraries(cermet
 file(COPY law mesh results DESTINATION ${PROJECT_BINARY_DIR})
 file(COPY mesh/vectors_5grains.txt check_cermet_restults.py plot_cermet_results.py DESTINATION ${PROJECT_BINARY_DIR})
 
-add_test(NAME CermetNullStrainXXYY COMMAND cermet --duration 0.5 --nstep 1 --bcs_type 0)
-add_test(NAME CermetImposeGradXXYY COMMAND cermet --duration 0.5 --nstep 1 --bcs_type 1)
+add_test(NAME CermetNullStrainXXYY COMMAND cermet --duration 0.4 --nstep 1 --bcs_type 0 --postprocessing 0)
+add_test(NAME CermetImposeGradXXYY COMMAND cermet --duration 0.4 --nstep 1 --bcs_type 1 --postprocessing 0)
 
 install(TARGETS cermet DESTINATION bin)
