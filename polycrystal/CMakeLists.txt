@@ -27,4 +27,4 @@ target_include_directories(uniaxial-polycrystal PUBLIC ${CMAKE_CURRENT_SOURCE_DI
     
 # testing
 add_dependencies(check uniaxial-polycrystal generate-libBehaviour-polycrystal)
-add_test(NAME UniaxialPolycrystalTest COMMAND uniaxial-polycrystal --postprocessings 0)
+add_test(NAME UniaxialPolycrystalTest COMMAND uniaxial-polycrystal --postprocessing 0 --nstep 1 --duration 0.4)
