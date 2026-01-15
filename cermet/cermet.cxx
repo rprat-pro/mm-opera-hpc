@@ -77,7 +77,7 @@ static void parseCommandLineOptions(mfem::OptionsParser &args,
                  "choose the verbosity level");
   args.AddOption(&p.duration, "-d", "--duration",
                  "choose the duration (default = 5)");
-  args.AddOption(&p.nsteps, "-n", "--nsteps",
+  args.AddOption(&p.nsteps, "-n", "--nstep",
                  "choose the number of steps (default = 40)");
   args.AddOption(&p.vector_file, "-f", "--file", "Vector file to use");
   args.Parse();
