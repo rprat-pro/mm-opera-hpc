@@ -504,7 +504,7 @@ int main(int argc, char** argv) {
     // NB it can run OMP on CPU parallelization if hypre was compiled with this
     // support otherwise it degenerates to a simple for. it can do something
     // exotic with gpu but idk.
-    mfem::forall(num_bubbles, [=](int i) {
+    mfem::forall(num_bubbles, [=] MFEM_HOST_DEVICE (int i) {
       // 1. Get current bubble to process
       const auto& b = bubbles_data[i];
 
