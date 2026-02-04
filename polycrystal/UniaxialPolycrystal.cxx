@@ -119,7 +119,8 @@ struct TestParameters : MeshParameters,
 // a few utility functions defined after the main functions
 
 static void parseCommandLineArguments(mfem::OptionsParser &, TestParameters &);
-static void addPostProcessings(mfem_mgis::PeriodicNonLinearEvolutionProblem &,
+static void addPostProcessings(mfem_mgis::Context&,
+			       mfem_mgis::PeriodicNonLinearEvolutionProblem &,
                                const PostProcessingParameters &,
                                const std::string &);
 static void setupMaterials(
@@ -130,6 +131,7 @@ static void setLinearSolver(mfem_mgis::PeriodicNonLinearEvolutionProblem &,
                             const TestParameters &);
 
 int main(int argc, char *argv[]) {
+  auto ctx = mfem_mgis::Context{};
   // mpi initialization here
   mfem_mgis::initialize(argc, argv);
 
@@ -158,7 +160,7 @@ int main(int argc, char *argv[]) {
   setLinearSolver(problem, p);
   // add post processings
   if (p.post_processings) {
-    addPostProcessings(problem, p, "OutputFile-Uniaxial-polycrystal");
+    addPostProcessings(ctx, problem, p, "OutputFile-Uniaxial-polycrystal");
   }
   // definition of the temporal sequences
   const auto te = p.duration;
@@ -357,7 +359,8 @@ static void setLinearSolver(mfem_mgis::PeriodicNonLinearEvolutionProblem &p,
   p.setLinearSolver(params.linear_solver, solverParameters);
 }
 
-static void addPostProcessings(mfem_mgis::PeriodicNonLinearEvolutionProblem &p,
+static void addPostProcessings(mfem_mgis::Context& ctx,
+			       mfem_mgis::PeriodicNonLinearEvolutionProblem &p,
                                const PostProcessingParameters &params,
                                const std::string &msg) {
   p.addPostProcessing("ParaviewExportResults", {{"OutputFileName", msg}});
@@ -369,7 +372,7 @@ static void addPostProcessings(mfem_mgis::PeriodicNonLinearEvolutionProblem &p,
         std::make_unique<
             mfem_mgis::
                 ParaviewExportIntegrationPointPostProcessingsResultsAtNodes<
-                    true>>(
+	true>>(ctx,
             p.getImplementation<true>(), "vonMisesStress",
             p.getAssignedMaterialsIdentifiers(), 1,
             [&p](mfem_mgis::Context &ctx,
@@ -386,7 +389,7 @@ static void addPostProcessings(mfem_mgis::PeriodicNonLinearEvolutionProblem &p,
         std::make_unique<
             mfem_mgis::
                 ParaviewExportIntegrationPointPostProcessingsResultsAtNodes<
-                    true>>(
+	true>>(ctx,
             p.getImplementation<true>(), "FirstEigenStress",
             p.getAssignedMaterialsIdentifiers(), 1,
             [&p](mfem_mgis::Context &ctx,

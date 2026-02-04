@@ -24,18 +24,11 @@ add_executable(test-bubble
 add_dependencies(test-bubble lib-elasticity)
 
 target_link_libraries(test-bubble
- PRIVATE TFELMath TFELException
+ PRIVATE tfel::TFELMath tfel::TFELException
  PUBLIC mfem-mgis::MFEMMGIS)
 
 target_include_directories(test-bubble
-   PUBLIC
-   ${TFEL_INCLUDE_PATH} 
-   ${CMAKE_CURRENT_SOURCE_DIR}/include)
-
-target_link_directories(test-bubble
-   PUBLIC
-   ${TFEL_LIBRARY_PATH}) 
-
+   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # copy and install
 
