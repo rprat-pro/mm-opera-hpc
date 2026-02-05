@@ -8,17 +8,16 @@
  * on the principal stress field around them.
  */
 
-
 #include <cstdlib>
 #include <fstream>
-#include <tuple>
 
 #include "MGIS/Function/TFEL/Mechanics.hxx"
 
 #include "MFEMMGIS/Config.hxx"
+#include "MFEMMGIS/LinearSolverFactory.hxx"
+#include "MFEMMGIS/L2Projection.hxx"
 #include "MFEMMGIS/Material.hxx"
 #include "MFEMMGIS/MechanicalPostProcessings.hxx"
-#include "MFEMMGIS/ParaviewExportIntegrationPointResultsAtNodes.hxx"
 #include "MFEMMGIS/PartialQuadratureFunction.hxx"
 #include "MFEMMGIS/PartialQuadratureSpace.hxx"
 #include "MFEMMGIS/PeriodicNonLinearEvolutionProblem.hxx"
@@ -31,6 +30,7 @@
 #include "OperaHPC/Utilities.hxx"
 
 #include "mfem/general/forall.hpp"
+#include "mfem/fem/datacollection.hpp"
 
 namespace mfem_mgis {
   template <unsigned short N>
@@ -103,8 +103,9 @@ namespace opera_hpc {
  */
 struct BubbleInfoRecord {
   mfem_mgis::size_type boundary_id;  ///< Boundary identifier of the bubble
-  mfem_mgis::real location[3];       ///< 3D coordinates of max stress location
-  mfem_mgis::real stress_value;      ///< Maximum principal stress value
+  std::array<mfem_mgis::real, 3u>
+      location;                  ///< 3D coordinates of max stress location
+  mfem_mgis::real stress_value;  ///< Maximum principal stress value
 
   /**
    * \brief Constructor
@@ -196,8 +197,9 @@ void fill_parameters(mfem::OptionsParser& args, TestParameters& p) {
                  "Scaling factor for the principal stress");
   args.AddOption(&p.testcase_name, "-n", "--name-case",
                  "Name of the testcase.");
-  args.AddOption(&p.d_min, "-dm", "--dmin",
-                 "Distance to evaluate bubble rupture, in µm, default = 0.950.");
+  args.AddOption(
+      &p.d_min, "-dm", "--dmin",
+      "Distance to evaluate bubble rupture, in µm, default = 0.950.");
   args.AddOption(&p.bubble_pressure, "-pr", "--pref",
                  "Internal bubble pressure, in Pa, default = 1");
 
@@ -504,7 +506,7 @@ int main(int argc, char** argv) {
     // NB it can run OMP on CPU parallelization if hypre was compiled with this
     // support otherwise it degenerates to a simple for. it can do something
     // exotic with gpu but idk.
-    mfem::forall(num_bubbles, [=] MFEM_HOST_DEVICE (int i) {
+    mfem::forall(num_bubbles, [=] MFEM_HOST_DEVICE(int i) {
       // 1. Get current bubble to process
       const auto& b = bubbles_data[i];
 
@@ -575,27 +577,27 @@ int main(int argc, char** argv) {
     });
   }
 
-  if (mfem_mgis::getMPIrank() == 0) {
-    // Write CSV header and bubble stress data
-    write_message(output_file_locations, "Bubble ID", "Location[0]",
-                  "Location[1]", "Location[2]", "Stress");
-
-    for (auto& el : bubbles_information) {
-      Message("Bubble = ", el.boundary_id);
-      Message("Stress = ", el.stress_value);
-      for (auto& el1 : el.location) {
-        Message("Location=", el1);
-      }
-    }
-
-    write_bubble_infos(output_file_locations, bubbles_information);
-  }
-
-  if (mfem_mgis::getMPIrank() == 0)
-    write_message(outfile_sighydr, "Volume", "Integral", "Average");
-
   if (post_processing) {
     CatchTimeSection("common::post_processing_step");
+
+    if (mfem_mgis::getMPIrank() == 0) {
+      // Write CSV header and bubble stress data
+      write_message(output_file_locations, "Bubble ID", "Location[0]",
+                    "Location[1]", "Location[2]", "Stress");
+
+      for (auto& el : bubbles_information) {
+        Message("Bubble = ", el.boundary_id);
+        Message("Stress = ", el.stress_value);
+        for (auto& el1 : el.location) {
+          Message("Location=", el1);
+        }
+      }
+      write_bubble_infos(output_file_locations, bubbles_information);
+    }
+
+    if (mfem_mgis::getMPIrank() == 0)
+      write_message(outfile_sighydr, "Volume", "Integral", "Average");
+
     // Execute standard post-processing (Paraview export)
     post_process(problem, 0, 1);
 
@@ -609,13 +611,29 @@ int main(int argc, char** argv) {
     calculateAverageHydrostaticStress<true>(
         outfile_sighydr, problem.getImplementation<true>(), hyp);
 
-    mfem_mgis::ParaviewExportIntegrationPointResultsAtNodesImplementation<true>
-      export_stress(ctx, problem.getImplementation<true>(),
-                      {{.name = "FirstEigenStress", .functions = {eig}},
-                       {.name = "HydrostaticPressure", .functions = {hyp}}},
-                      std::string(p.testcase_name) + "-pp");
+    // L2 projection of the first eigenstress at the nodes
+    // for better visualization
+    auto& lsf = mfem_mgis::LinearSolverFactory<true>::getFactory();
+    auto& fespace =
+        problem.getFiniteElementDiscretization().getFiniteElementSpace<true>();
+    auto linear_solver = lsf.generate(
+        ctx, "HyprePCG", fespace,
+        mfem_mgis::Parameters{
+            {"Preconditioner", mfem_mgis::Parameters{{"Name", "HypreILU"}}}});
 
-    export_stress.execute(problem.getImplementation<true>(), 0, 1);
+    auto projection =
+        mfem_mgis::computeL2Projection<true>(ctx, linear_solver, {eig});
+
+    auto eigenstress_gf_ptr = projection->result.get();
+
+    mfem::ParaViewDataCollection exporter("Eigenstress-pp");
+    exporter.SetDataFormat(mfem::VTKFormat::BINARY);
+    exporter.RegisterField("FirstEigenStress", eigenstress_gf_ptr);
+    exporter.SetMesh(
+        &(problem.getFiniteElementDiscretization().getMesh<true>()));
+    exporter.SetCycle(1);
+    exporter.SetTime(1);
+    exporter.Save();
   }
 
   // Clean up, close, and win
