@@ -13,7 +13,7 @@
 #include <fstream>
 #include <tuple>
 
-#include "MGIS/Function/Mechanics.hxx"
+#include "MGIS/Function/TFEL/Mechanics.hxx"
 
 #include "MFEMMGIS/Config.hxx"
 #include "MFEMMGIS/Material.hxx"
@@ -610,7 +610,7 @@ int main(int argc, char** argv) {
         outfile_sighydr, problem.getImplementation<true>(), hyp);
 
     mfem_mgis::ParaviewExportIntegrationPointResultsAtNodesImplementation<true>
-        export_stress(problem.getImplementation<true>(),
+      export_stress(ctx, problem.getImplementation<true>(),
                       {{.name = "FirstEigenStress", .functions = {eig}},
                        {.name = "HydrostaticPressure", .functions = {hyp}}},
                       std::string(p.testcase_name) + "-pp");
