@@ -1,4 +1,8 @@
-project(OperaHPCBubble)
+project(OperaHPCCermetExample)
+
+# Copy
+file(COPY law mesh results DESTINATION ${PROJECT_BINARY_DIR})
+file(COPY mesh/vectors_5grains.txt check_cermet_restults.py plot_cermet_results.py DESTINATION ${PROJECT_BINARY_DIR})
 
 # behavior law
 add_custom_command(
@@ -14,19 +18,16 @@ add_custom_command(
 add_custom_target(generate-lib-cermet ALL
   DEPENDS "src/libBehaviour.so")
 
-# build executable
+## Build executable
 add_executable(cermet cermet.cxx)
-add_dependencies(cermet generate-lib-cermet)
-
 target_link_libraries(cermet
  PUBLIC MMOPERAHPC)
+add_dependencies(cermet generate-lib-cermet)
 
-# copy and install
-
-file(COPY law mesh results DESTINATION ${PROJECT_BINARY_DIR})
-file(COPY mesh/vectors_5grains.txt check_cermet_restults.py plot_cermet_results.py DESTINATION ${PROJECT_BINARY_DIR})
-
+## Test
+add_dependencies(check cermet generate-lib-cermet)
 add_test(NAME CermetNullStrainXXYY COMMAND cermet --duration 0.4 --nstep 1 --postprocessing 0)
 add_test(NAME CermetImposeGradXXYY COMMAND cermet --duration 0.4 --nstep 1 --postprocessing 0)
 
+## Install
 install(TARGETS cermet DESTINATION bin)
