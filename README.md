@@ -5,7 +5,7 @@ This directory groups together the various test cases implemented as part of the
 ## Installation using Spack [recommended]
 
 ```bash
-git clone --depth=2 --branch=v1.0.1 https://github.com/spack/spack.git
+git clone --depth=2 --branch=v1.1.0 https://github.com/spack/spack.git
 export SPACK_ROOT=$PWD/spack
 source ${SPACK_ROOT}/share/spack/setup-env.sh
 ```
@@ -20,7 +20,7 @@ spack repo add $PWD/spack-repo-mfem-mgis
 Secondly, install mfem-mgis.
 
 ```bash
-spack install mfem-mgis@1.0.3
+spack install mfem-mgis@1.0.4
 ```
 
 Thirdly, load mfem-mgis.
