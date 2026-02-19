@@ -166,7 +166,7 @@ int main(int argc, char *argv[]) {
   setupMaterials(problem, mp, p);
   setLinearSolver(problem, p);
   // add post processings
-  mfem::ParaViewDataCollection* paraview_exporter;
+  mfem::ParaViewDataCollection* paraview_exporter = nullptr;
   if (p.post_processings) {
     addPostProcessings(ctx, problem, "OutputFile-Uniaxial-polycrystal");
     addOptionalPostProcessings(ctx, problem, p, paraview_exporter);
@@ -201,7 +201,9 @@ int main(int argc, char *argv[]) {
       problem, Fzz, np, p.post_processings);
   const auto success = s.run(out, temporal_sequences);
 
-  delete paraview_exporter;
+  if (paraview_exporter != nullptr) {
+    delete paraview_exporter;
+  }
   // print and write timetable
   mfem_mgis::Profiler::timers::print_and_write_timers();
   return success ? EXIT_SUCCESS : EXIT_FAILURE;
