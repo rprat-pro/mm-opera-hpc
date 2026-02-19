@@ -27,4 +27,6 @@ target_include_directories(uniaxial-polycrystal PUBLIC ${CMAKE_CURRENT_SOURCE_DI
     
 # testing
 add_dependencies(check uniaxial-polycrystal generate-libBehaviour-polycrystal)
-add_test(NAME UniaxialPolycrystalTest COMMAND uniaxial-polycrystal --disable-post-processing --nstep 1 --duration 0.4)
+add_test(NAME UniaxialPolycrystalTest COMMAND uniaxial-polycrystal --disable-post-processing --nstep 1 --duration 0.1)
+add_test(NAME UniaxialPolycrystalTestPar COMMAND mpirun -n 2 ./uniaxial-polycrystal --disable-post-processing --nstep 1 --duration 0.1)
+add_test(NAME PolycrystalTestWithPostProPar COMMAND mpirun -n 2 ./uniaxial-polycrystal --enable-export-von-Mises-stress --enable-export-first_eigen_stress --nstep 1 --duration 0.01)
