@@ -586,7 +586,7 @@ int main(int argc, char** argv) {
                     "Location[1]", "Location[2]", "Stress");
 
       for (auto& el : bubbles_information) {
-        Message("Bubble = ", el.boundary_id);
+        Message("Bubble ID = ", el.boundary_id - 1);
         Message("Stress = ", el.stress_value);
         for (auto& el1 : el.location) {
           Message("Location=", el1);
