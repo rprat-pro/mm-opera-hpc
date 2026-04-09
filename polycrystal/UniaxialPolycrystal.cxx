@@ -43,6 +43,8 @@
 struct MeshParameters {
   //! \brief default value for the mesh file
   const char *mesh_file = "mesh/5crystals.msh";
+  //! \brief default value for the read mesh mode ("Restart")
+  const char *mesh_mode = "FromScratch";
   //! \brief number of uniform refinement of the mesh
   int refinement = 0;
 };
@@ -153,6 +155,7 @@ int main(int argc, char *argv[]) {
   // creating the finite element workspace
   auto fed = std::make_shared<mfem_mgis::FiniteElementDiscretization>(
       mfem_mgis::Parameters{{"MeshFileName", p.mesh_file},
+      {"MeshReadMode", p.mesh_mode},
       {"FiniteElementFamily", "H1"},
       {"FiniteElementOrder", p.order},
       {"UnknownsSize", mfem_mgis::size_type{3}},
@@ -216,6 +219,7 @@ static void parseCommandLineArguments(mfem::OptionsParser &args,
                  "components of the deformation gradient and the  diagonal "
                  "components of the Cauchy stress.");
   args.AddOption(&p.mesh_file, "-m", "--mesh", "Mesh file to use.");
+  args.AddOption(&p.mesh_mode, "-mm", "--mesh_mode", "Read Mesh Mode (FromScratch or Restart = splited file).");
   args.AddOption(&p.vect_file, "-f", "--vect", "Vector file to use.");
   args.AddOption(&p.library, "-l", "--library", "Material library.");
   args.AddOption(&p.behaviour, "-b", "--behaviour", "Mechanical behaviour.");
