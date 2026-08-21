@@ -32,7 +32,7 @@ spack load mfem-mgis
 Create a build directory, configure the project with CMake, build it, and install.
 
 ```bash
-git clone https://github.com/rprat-pro/mm-opera-hpc.git
+git clone --branch v1.0.0 https://github.com/rprat-pro/mm-opera-hpc.git
 cd mm-opera-hpc/
 mkdir build && cd build
 spack load tfel
