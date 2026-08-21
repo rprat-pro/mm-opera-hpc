@@ -133,8 +133,8 @@ struct BubbleInfoRecord {
  * \param end End time for post-processing
  */
 template <typename Problem>
-void post_process(Problem& p, double start, double end) {
-  p.executePostProcessings(start, end);
+void post_process(mfem_mgis::Context& ctx, Problem& p, double start, double end) {
+  p.executePostProcessings(ctx, start, end);
 }
 
 /**
@@ -328,8 +328,8 @@ int main(int argc, char** argv) {
 
   // Initialize MPI and profiling
   mfem_mgis::initialize(argc, argv);
-  mfem_mgis::Profiler::timers::init_timers();
   auto ctx = mfem_mgis::Context();
+  ctx.enableProfiling(true);
 
   // Open output file for bubble stress results
   std::string bubbles_selected = "bubbles_and_stresses_selected.txt";
@@ -372,6 +372,7 @@ int main(int argc, char** argv) {
   // Create finite element discretization
   print_memory_footprint("[Building problem ...]");
   auto fed = std::make_shared<mfem_mgis::FiniteElementDiscretization>(
+      ctx,
       mfem_mgis::Parameters{
           {"MeshFileName", p.mesh_file},
           {"MeshReadMode", p.parallel_mesh ? "Restart" : "FromScratch"},
@@ -382,7 +383,7 @@ int main(int argc, char** argv) {
           {"Parallel", true}});
 
   // Define the nonlinear evolution problem
-  auto problem = mfem_mgis::PeriodicNonLinearEvolutionProblem{fed};
+  auto problem = mfem_mgis::PeriodicNonLinearEvolutionProblem{ctx, fed};
   print_memory_footprint("[Building problem done]");
 
   print_mesh_information(problem.getImplementation<true>());
@@ -416,11 +417,11 @@ int main(int argc, char** argv) {
       {"Preconditioner", preconditioner}, {"Tolerance", 1e-10}});
 
   // Set up conjugate gradient solver
-  problem.setLinearSolver("HyprePCG", solverParameters);
-  problem.setSolverParameters({{"VerbosityLevel", 1},
-                               {"RelativeTolerance", 1e-11},
-                               {"AbsoluteTolerance", 0.},
-                               {"MaximumNumberOfIterations", 1}});
+  problem.setLinearSolver(ctx, "HyprePCG", solverParameters);
+  problem.setSolverParameters(ctx, {{"VerbosityLevel", 1},
+                                    {"RelativeTolerance", 1e-11},
+                                    {"AbsoluteTolerance", 0.},
+                                    {"MaximumNumberOfIterations", 1}});
 
   // Add elastic material behavior
   problem.addBehaviourIntegrator("Mechanics", 1, p.library, p.behaviour);
@@ -462,11 +463,11 @@ int main(int argc, char** argv) {
   mfem_mgis::size_type nstep{1};
 
   // Solve the mechanical equilibrium problem
-  problem.solve(0, 1);
+  problem.solve(ctx, 0, 1);
 
   // Find the maximum principal stress in the domain
   const auto r = opera_hpc::findFirstPrincipalStressValueAndLocation(
-      problem.getMaterial(1));
+      ctx, problem.getMaterial(1));
 
   std::vector<BubbleInfoRecord> bubbles_information;
 
@@ -484,7 +485,7 @@ int main(int argc, char** argv) {
                              BubbleInfoRecord(0, {0, 0, 0}, 0.0));
 
   {
-    CatchTimeSection("BubbleLoop");
+    CatchTimeSection(ctx, "BubbleLoop");
 
     // Sort all  points by their X-coordinate for efficient spatial
     // searching
@@ -578,7 +579,7 @@ int main(int argc, char** argv) {
   }
 
   if (post_processing) {
-    CatchTimeSection("common::post_processing_step");
+    CatchTimeSection(ctx, "common::post_processing_step");
 
     if (mfem_mgis::getMPIrank() == 0) {
       // Write CSV header and bubble stress data
@@ -599,7 +600,7 @@ int main(int argc, char** argv) {
       write_message(outfile_sighydr, "Volume", "Integral", "Average");
 
     // Execute standard post-processing (Paraview export)
-    post_process(problem, 0, 1);
+    post_process(ctx, problem, 0, 1);
 
     // Compute and export principal stress and hydrostatic stress
     // field
@@ -643,6 +644,6 @@ int main(int argc, char** argv) {
   }
 
   print_memory_footprint("[End]");
-  mfem_mgis::Profiler::timers::print_and_write_timers();
+  mfem_mgis::Profiler::OutputManager::printTimeTable(ctx);
   return EXIT_SUCCESS;
 }

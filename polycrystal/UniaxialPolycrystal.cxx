@@ -133,19 +133,19 @@ static void addOptionalPostProcessings(mfem_mgis::Context&,
                                        const PostProcessingParameters &,
                                        mfem::ParaViewDataCollection*&);
 static void setupMaterials(
+    mfem_mgis::Context &,
     mfem_mgis::PeriodicNonLinearEvolutionProblem &,
     mm_opera_hpc::MacroscropicElasticMaterialProperties &,
     const TestParameters &);
-static void setLinearSolver(mfem_mgis::PeriodicNonLinearEvolutionProblem &,
+static void setLinearSolver(mfem_mgis::Context &,
+                            mfem_mgis::PeriodicNonLinearEvolutionProblem &,
                             const TestParameters &);
 
 int main(int argc, char *argv[]) {
   auto ctx = mfem_mgis::Context{};
+  ctx.enableProfiling(true);
   // mpi initialization here
   mfem_mgis::initialize(argc, argv);
-
-  // init timers
-  mfem_mgis::Profiler::timers::init_timers();
 
   // get parameters
   TestParameters p;
@@ -154,6 +154,7 @@ int main(int argc, char *argv[]) {
 
   // creating the finite element workspace
   auto fed = std::make_shared<mfem_mgis::FiniteElementDiscretization>(
+      ctx,
       mfem_mgis::Parameters{{"MeshFileName", p.mesh_file},
       {"MeshReadMode", p.mesh_mode},
       {"FiniteElementFamily", "H1"},
@@ -161,13 +162,13 @@ int main(int argc, char *argv[]) {
       {"UnknownsSize", mfem_mgis::size_type{3}},
       {"NumberOfUniformRefinements", p.refinement},
       {"Parallel", true}});
-  mfem_mgis::PeriodicNonLinearEvolutionProblem problem(fed);
-  mm_opera_hpc::printMeshInformation(problem);
+  mfem_mgis::PeriodicNonLinearEvolutionProblem problem(ctx, fed);
+  mm_opera_hpc::printMeshInformation(ctx, problem);
 
   // set problem
   mm_opera_hpc::MacroscropicElasticMaterialProperties mp;
-  setupMaterials(problem, mp, p);
-  setLinearSolver(problem, p);
+  setupMaterials(ctx, problem, mp, p);
+  setLinearSolver(ctx, problem, p);
   // add post processings
   mfem::ParaViewDataCollection* paraview_exporter = nullptr;
   if (p.post_processings) {
@@ -202,13 +203,13 @@ int main(int argc, char *argv[]) {
       NumericalParameters{.macroscopic_elastic_material_properties = mp};
   mm_opera_hpc::UniaxialMacroscopicStressPeriodicSimulation s(
       problem, Fzz, np, p.post_processings);
-  const auto success = s.run(out, temporal_sequences);
+  const auto success = s.run(ctx, out, temporal_sequences);
 
   if (paraview_exporter != nullptr) {
     delete paraview_exporter;
   }
   // print and write timetable
-  mfem_mgis::Profiler::timers::print_and_write_timers();
+  mfem_mgis::Profiler::OutputManager::printTimeTable(ctx);
   return success ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
@@ -265,13 +266,14 @@ static void parseCommandLineArguments(mfem::OptionsParser &args,
 }
 
 static void setupMaterials(
+    mfem_mgis::Context &ctx,
     mfem_mgis::PeriodicNonLinearEvolutionProblem &problem,
     mm_opera_hpc::MacroscropicElasticMaterialProperties &mp,
     const TestParameters &p) {
   using namespace mgis::behaviour;
   using real = mfem_mgis::real;
 
-  CatchTimeSection("set_mgis_stuff");
+  CatchTimeSection(ctx, "set_mgis_stuff");
 
   // const int nMat = 8;
   const int nMat =
@@ -348,9 +350,10 @@ static void setupMaterials(
   }
 }
 
-static void setLinearSolver(mfem_mgis::PeriodicNonLinearEvolutionProblem &p,
+static void setLinearSolver(mfem_mgis::Context &ctx,
+                            mfem_mgis::PeriodicNonLinearEvolutionProblem &p,
                             const TestParameters &params) {
-  CatchTimeSection("set_linear_solver");
+  CatchTimeSection(ctx, "set_linear_solver");
   // pilote
   constexpr int defaultMaxNumOfIt = 5000;  // MaximumNumberOfIterations
   auto solverParameters = mfem_mgis::Parameters{};
@@ -373,7 +376,7 @@ static void setLinearSolver(mfem_mgis::PeriodicNonLinearEvolutionProblem &p,
       {"Name", params.linear_solver_preconditioner}, {"Options", options}};
     solverParameters.insert(mfem_mgis::Parameters{{"Preconditioner", preconditioner}});
   }
-  p.setLinearSolver(params.linear_solver, solverParameters);
+  p.setLinearSolver(ctx, params.linear_solver, solverParameters);
 }
 
 

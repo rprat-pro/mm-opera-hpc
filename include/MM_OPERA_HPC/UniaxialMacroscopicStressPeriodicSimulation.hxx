@@ -13,6 +13,7 @@
 #include <optional>
 #include <functional>
 #include <string_view>
+#include "MGIS/Context.hxx"
 #include "MM_OPERA_HPC/Config.hxx"
 #include "MM_OPERA_HPC/MacroscropicElasticMaterialProperties.hxx"
 
@@ -97,7 +98,8 @@ namespace mm_opera_hpc {
      * \pre the times must be sorted in ascending order
      * \return true on success, false otherwise
      */
-    [[nodiscard]] bool run(std::ostream &,
+    [[nodiscard]] bool run(mgis::Context &,
+                           std::ostream &,
                            const std::vector<mfem_mgis::real> &) noexcept;
 
    private:

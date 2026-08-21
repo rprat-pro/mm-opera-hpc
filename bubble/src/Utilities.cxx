@@ -41,8 +41,8 @@ namespace opera_hpc {
   template <bool parallel>
   static FirstPrincipalStressValueAndLocation
   findFirstPrincipalStressValueAndLocationImplementation(
-      const mfem_mgis::Material &m) {
-    CatchTimeSection("OperaHPC::FindFirstPrincipal");
+      mfem_mgis::Context &ctx, const mfem_mgis::Material &m) {
+    CatchTimeSection(ctx, "OperaHPC::FindFirstPrincipal");
 
     // Stress tensor has 6 components
     constexpr mfem_mgis::size_type stress_size = 6;
@@ -65,7 +65,7 @@ namespace opera_hpc {
 
     // Loop over all elements in the mesh
     {
-      CatchTimeSection("FindFirstPrincipal::LoopOverElem");
+      CatchTimeSection(ctx, "FindFirstPrincipal::LoopOverElem");
       for (mfem_mgis::size_type i = 0; i != fespace.GetNE(); ++i) {
         // Skip elements not belonging to this material
         if (fespace.GetAttribute(i) != mid) {
@@ -111,7 +111,7 @@ namespace opera_hpc {
 
     // In parallel mode, gather results from all processes
     if constexpr (parallel) {
-      CatchTimeSection("FindFirstPrincipal::GatherResults");
+      CatchTimeSection(ctx, "FindFirstPrincipal::GatherResults");
 
       int nprocs;
       MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
@@ -157,9 +157,10 @@ namespace opera_hpc {
    */
   template <bool parallel>
   static std::vector<std::array<mfem_mgis::real, 3u>>
-  getPointsAboveStressThresholdImplementation(const mfem_mgis::Material &m,
+  getPointsAboveStressThresholdImplementation(mfem_mgis::Context &ctx,
+                                              const mfem_mgis::Material &m,
                                               const mfem_mgis::real threshold) {
-    CatchTimeSection("OperaHPC::GetPointsAbove");
+    CatchTimeSection(ctx, "OperaHPC::GetPointsAbove");
 
     constexpr mfem_mgis::size_type stress_size = 6;
     const auto &s = m.getPartialQuadratureSpace();
@@ -175,7 +176,7 @@ namespace opera_hpc {
 
     // Loop over elements and integration points
     {
-      CatchTimeSection("GetPointsAbove::LoopOverElem");
+      CatchTimeSection(ctx, "GetPointsAbove::LoopOverElem");
       for (mfem_mgis::size_type i = 0; i != fespace.GetNE(); ++i) {
         if (fespace.GetAttribute(i) != mid) {
           continue;
@@ -208,7 +209,7 @@ namespace opera_hpc {
 
     // Gather results from all MPI processes
     if constexpr (parallel) {
-      CatchTimeSection("GetPointsAbove::GatherResults");
+      CatchTimeSection(ctx, "GetPointsAbove::GatherResults");
 
       int nprocs;
       MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
@@ -434,17 +435,19 @@ namespace opera_hpc {
    * \return Maximum principal stress value and its 3D location
    */
   FirstPrincipalStressValueAndLocation findFirstPrincipalStressValueAndLocation(
-      const mfem_mgis::Material &m) {
+      mfem_mgis::Context &ctx, const mfem_mgis::Material &m) {
     const auto &s = m.getPartialQuadratureSpace();
     const auto &fed = s.getFiniteElementDiscretization();
     if (fed.describesAParallelComputation()) {
 #ifdef MFEM_USE_MPI
-      return findFirstPrincipalStressValueAndLocationImplementation<true>(m);
+      return findFirstPrincipalStressValueAndLocationImplementation<true>(ctx,
+                                                                          m);
 #else  /* MFEM_USE_MPI */
       mfem_mgis::reportUnsupportedParallelComputations();
 #endif /* MFEM_USE_MPI */
     }
-    return findFirstPrincipalStressValueAndLocationImplementation<false>(m);
+    return findFirstPrincipalStressValueAndLocationImplementation<false>(ctx,
+                                                                         m);
   }  // end of findFirstPrincipalStressValueAndLocation
 
   /**
@@ -455,17 +458,18 @@ namespace opera_hpc {
    * \return Vector of 3D locations where stress exceeds threshold
    */
   std::vector<std::array<mfem_mgis::real, 3u>> getPointsAboveStressThreshold(
-      const mfem_mgis::Material &m, const mfem_mgis::real v) {
+      mfem_mgis::Context &ctx, const mfem_mgis::Material &m,
+      const mfem_mgis::real v) {
     const auto &s = m.getPartialQuadratureSpace();
     const auto &fed = s.getFiniteElementDiscretization();
     if (fed.describesAParallelComputation()) {
 #ifdef MFEM_USE_MPI
-      return getPointsAboveStressThresholdImplementation<true>(m, v);
+      return getPointsAboveStressThresholdImplementation<true>(ctx, m, v);
 #else  /* MFEM_USE_MPI */
       mfem_mgis::reportUnsupportedParallelComputations();
 #endif /* MFEM_USE_MPI */
     }
-    return getPointsAboveStressThresholdImplementation<false>(m, v);
+    return getPointsAboveStressThresholdImplementation<false>(ctx, m, v);
   }
 
   /**

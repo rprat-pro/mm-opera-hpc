@@ -55,7 +55,7 @@ namespace opera_hpc {
    */
 
   FirstPrincipalStressValueAndLocation findFirstPrincipalStressValueAndLocation(
-      const mfem_mgis::Material &);
+      mfem_mgis::Context &, const mfem_mgis::Material &);
 
   /*!
    * \brief Retrieves the locations of all points within the material
@@ -66,7 +66,7 @@ namespace opera_hpc {
    * exceeding the threshold.
    */
   std::vector<std::array<mfem_mgis::real, 3u>> getPointsAboveStressThreshold(
-      const mfem_mgis::Material &, const mfem_mgis::real);
+      mfem_mgis::Context &, const mfem_mgis::Material &, const mfem_mgis::real);
   /*!
    * \brief Retrieves both the stress value and location for all points
    * within the material where the first principal stress exceeds
