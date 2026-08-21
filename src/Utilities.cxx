@@ -14,8 +14,9 @@
 namespace mm_opera_hpc {
 
   void printMeshInformation(
+      mgis::Context &ctx,
       mfem_mgis::PeriodicNonLinearEvolutionProblem &problem) {
-    CatchTimeSection("common::print_mesh_information");
+    CatchTimeSection(ctx, "common::print_mesh_information");
 
     using mfem_mgis::Profiler::Utils::Message;
     using mfem_mgis::Profiler::Utils::sum;

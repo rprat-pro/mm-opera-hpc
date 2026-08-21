@@ -9,6 +9,7 @@
 #define LIB_MM_OPERA_HPC_UTILITIES_HXX
 
 #include <string_view>
+#include "MGIS/Context.hxx"
 #include "MM_OPERA_HPC/Config.hxx"
 
 namespace mfem_mgis {
@@ -20,7 +21,7 @@ namespace mfem_mgis {
 namespace mm_opera_hpc {
 
   MM_OPERA_HPC_EXPORT void printMeshInformation(
-      mfem_mgis::PeriodicNonLinearEvolutionProblem &);
+      mgis::Context &, mfem_mgis::PeriodicNonLinearEvolutionProblem &);
 
   MM_OPERA_HPC_EXPORT void printMemoryFootprint(std::string_view) noexcept;
 

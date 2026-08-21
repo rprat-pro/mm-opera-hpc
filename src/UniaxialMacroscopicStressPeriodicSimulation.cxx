@@ -51,6 +51,7 @@ namespace mm_opera_hpc {
   }  // end of computeMacroscopicCauchyStress
 
   [[nodiscard]] static bool simulateOverATimeStep(
+      mgis::Context &ctx,
       std::ostream &out,
       mfem_mgis::PeriodicNonLinearEvolutionProblem &problem,
       UniaxialMacroscopicStressPeriodicSimulation::MacroscopicUnknowns
@@ -101,26 +102,35 @@ namespace mm_opera_hpc {
       // -- note that MacroscopicGradientsEvolution takes into account of new
       // F[0] and F[1] -- //
       if (itFP == 0) {
-        problem.setSolverParameters(
-            {{"VerbosityLevel", np.microscopic_equilibrium_verbosity_level},
-             {"MaximumNumberOfIterations",
-              np.microscopic_equilibrium_maximum_number_of_iterations},
-             {"RelativeTolerance",
-              np.microscopic_equilibrium_relative_tolerance},
-             {"AbsoluteTolerance",
-              np.microscopic_equilibrium_absolute_tolerance}});
+        if (!problem.setSolverParameters(
+                ctx,
+                {{"VerbosityLevel", np.microscopic_equilibrium_verbosity_level},
+                 {"MaximumNumberOfIterations",
+                  np.microscopic_equilibrium_maximum_number_of_iterations},
+                 {"RelativeTolerance",
+                  np.microscopic_equilibrium_relative_tolerance},
+                 {"AbsoluteTolerance",
+                  np.microscopic_equilibrium_absolute_tolerance}})) {
+          Message("error: setSolverParameters failed.");
+          return false;
+        }
       } else {
         if (np.switch_microscopic_equilibrium_convergence_criterion) {
           const auto atol =
               initial_residual * np.microscopic_equilibrium_relative_tolerance;
-          problem.setSolverParameters(
-              {{"VerbosityLevel", np.microscopic_equilibrium_verbosity_level},
-               {"MaximumNumberOfIterations",
-                np.microscopic_equilibrium_maximum_number_of_iterations},
-               {"AbsoluteTolerance", atol}});
+          if (!problem.setSolverParameters(
+                  ctx,
+                  {{"VerbosityLevel",
+                    np.microscopic_equilibrium_verbosity_level},
+                   {"MaximumNumberOfIterations",
+                    np.microscopic_equilibrium_maximum_number_of_iterations},
+                   {"AbsoluteTolerance", atol}})) {
+            Message("error: setSolverParameters failed.");
+            return false;
+          }
         }
       }
-      auto statistics = problem.solve(bts, dt);
+      auto statistics = problem.solve(ctx, bts, dt);
       if (!statistics.status) {
         Message("error: the resolution failed.");
         S = S0;
@@ -156,8 +166,8 @@ namespace mm_opera_hpc {
     //
     if (post_processing) {
       // add postprocessing
-      CatchTimeSection("common::post_processing_step");
-      problem.executePostProcessings(bts, dt);
+      CatchTimeSection(ctx, "common::post_processing_step");
+      problem.executePostProcessings(ctx, bts, dt);
     }
     // update state variable for the next time step
     problem.update();
@@ -171,6 +181,7 @@ namespace mm_opera_hpc {
   }
 
   [[nodiscard]] static bool simulateOverATemporalSequence(
+      mgis::Context &ctx,
       std::ostream &out,
       mfem_mgis::PeriodicNonLinearEvolutionProblem &problem,
       UniaxialMacroscopicStressPeriodicSimulation::MacroscopicUnknowns
@@ -191,7 +202,7 @@ namespace mm_opera_hpc {
     while (nstep != 0) {
       const auto do_post_processing = post_processing && (nstep == 1);
       const auto success =
-          simulateOverATimeStep(out, problem, macroscopic_unknowns,
+          simulateOverATimeStep(ctx, out, problem, macroscopic_unknowns,
                                 imposed_axial_deformation_gradient_value, np,
                                 do_post_processing, t, t + dt);
       if (success) {
@@ -237,11 +248,12 @@ namespace mm_opera_hpc {
   }  // end of UniaxialMacroscopicStressPeriodicSimulation
 
   bool UniaxialMacroscopicStressPeriodicSimulation::run(
+      mgis::Context &ctx,
       std::ostream &out,
       const std::vector<mfem_mgis::real> &temporal_sequences) noexcept {
     for (std::size_t i = 0; i + 1 != temporal_sequences.size(); i++) {
       if (!simulateOverATemporalSequence(
-              out, this->problem, this->macroscopic_unknowns,
+              ctx, out, this->problem, this->macroscopic_unknowns,
               this->imposed_axial_deformation_gradient_value,
               this->numerical_parameters, this->post_processing,
               temporal_sequences[i], temporal_sequences[i + 1])) {
