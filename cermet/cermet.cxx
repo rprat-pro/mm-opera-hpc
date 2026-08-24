@@ -184,7 +184,8 @@ int main(int argc, char **argv) {
   using namespace mfem_mgis::Profiler::Utils;  // Use Message
                                                // options treatment
   mfem_mgis::initialize(argc, argv);
-  mfem_mgis::Profiler::timers::init_timers();
+  auto ctx = mfem_mgis::Context{};
+  ctx.enableProfiling(true);
 
   // get parameters
   TestParameters p;
@@ -192,6 +193,7 @@ int main(int argc, char **argv) {
   parseCommandLineOptions(args, p);
   // definition of the nonlinear problem
   auto fed = std::make_shared<mfem_mgis::FiniteElementDiscretization>(
+      ctx,
       mfem_mgis::Parameters{
           {"MeshFileName", p.mesh_file},
           {"FiniteElementFamily", "H1"},
@@ -200,10 +202,10 @@ int main(int argc, char **argv) {
           {"NumberOfUniformRefinements", p.refinement},  // faster for testing
           {"MeshReadMode", "FromScratch"},
           {"Parallel", true}});
-  mfem_mgis::PeriodicNonLinearEvolutionProblem problem(fed);
+  mfem_mgis::PeriodicNonLinearEvolutionProblem problem(ctx, fed);
 
   // get problem information
-  mm_opera_hpc::printMeshInformation(problem);
+  mm_opera_hpc::printMeshInformation(ctx, problem);
   mm_opera_hpc::printMemoryFootprint("[Building problem]");
 
   // choix du solver linéaire +
@@ -225,7 +227,7 @@ int main(int argc, char **argv) {
           {"Options", mfem_mgis::Parameters{{"VerbosityLevel", verbosity}}}};
   solverParameters.insert(
       mfem_mgis::Parameters{{"Preconditioner", preconditionner}});
-  problem.setLinearSolver("HyprePCG", solverParameters);
+  problem.setLinearSolver(ctx, "HyprePCG", solverParameters);
   // problem.setLinearSolver("HypreGMRES", solverParameters);
   // problem.setLinearSolver("MUMPSSolver", {});
 
@@ -273,9 +275,9 @@ int main(int argc, char **argv) {
       NumericalParameters{.macroscopic_elastic_material_properties = mp};
   mm_opera_hpc::UniaxialMacroscopicStressPeriodicSimulation s(problem, Fzz, np,
                                                               post_processing);
-  const auto success = s.run(out, temporal_sequences);
+  const auto success = s.run(ctx, out, temporal_sequences);
   //
   mm_opera_hpc::printMemoryFootprint("[End]");
-  mfem_mgis::Profiler::timers::print_and_write_timers();
+  mfem_mgis::Profiler::OutputManager::printTimeTable(ctx);
   return success ? EXIT_SUCCESS : EXIT_FAILURE;
 }
