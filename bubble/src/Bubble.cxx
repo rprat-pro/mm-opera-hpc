@@ -133,7 +133,10 @@ struct BubbleInfoRecord {
  * \param end End time for post-processing
  */
 template <typename Problem>
-void post_process(mfem_mgis::Context& ctx, Problem& p, double start, double end) {
+void post_process(mfem_mgis::Context& ctx,
+                  Problem& p,
+                  double start,
+                  double end) {
   p.executePostProcessings(ctx, start, end);
 }
 
@@ -372,15 +375,14 @@ int main(int argc, char** argv) {
   // Create finite element discretization
   print_memory_footprint("[Building problem ...]");
   auto fed = std::make_shared<mfem_mgis::FiniteElementDiscretization>(
-      ctx,
-      mfem_mgis::Parameters{
-          {"MeshFileName", p.mesh_file},
-          {"MeshReadMode", p.parallel_mesh ? "Restart" : "FromScratch"},
-          {"FiniteElementFamily", "H1"},  // Continuous Lagrange elements
-          {"FiniteElementOrder", p.order},
-          {"UnknownsSize", 3},  // 3D displacement field
-          {"NumberOfUniformRefinements", p.refinement},
-          {"Parallel", true}});
+      ctx, mfem_mgis::Parameters{
+               {"MeshFileName", p.mesh_file},
+               {"MeshReadMode", p.parallel_mesh ? "Restart" : "FromScratch"},
+               {"FiniteElementFamily", "H1"},  // Continuous Lagrange elements
+               {"FiniteElementOrder", p.order},
+               {"UnknownsSize", 3},  // 3D displacement field
+               {"NumberOfUniformRefinements", p.refinement},
+               {"Parallel", true}});
 
   // Define the nonlinear evolution problem
   auto problem = mfem_mgis::PeriodicNonLinearEvolutionProblem{ctx, fed};

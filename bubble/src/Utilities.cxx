@@ -458,7 +458,8 @@ namespace opera_hpc {
    * \return Vector of 3D locations where stress exceeds threshold
    */
   std::vector<std::array<mfem_mgis::real, 3u>> getPointsAboveStressThreshold(
-      mfem_mgis::Context &ctx, const mfem_mgis::Material &m,
+      mfem_mgis::Context &ctx,
+      const mfem_mgis::Material &m,
       const mfem_mgis::real v) {
     const auto &s = m.getPartialQuadratureSpace();
     const auto &fed = s.getFiniteElementDiscretization();
