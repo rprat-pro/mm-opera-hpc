@@ -25,8 +25,8 @@ Definition:
 -- Parameters:
 --- Young Modulus = 222.e9
 --- Poisson ratio = 0.27
---- Shear Modulus = 54.e9 
-- [Interface] Behavior law: Norton 
+--- Shear Modulus = 54.e9
+- [Interface] Behavior law: Norton
 -- Parameters (@see law/NortonCr.mfront):
 --- Young Modulus = 276e+09
 --- Poisson ratio = 0.3
@@ -193,15 +193,14 @@ int main(int argc, char **argv) {
   parseCommandLineOptions(args, p);
   // definition of the nonlinear problem
   auto fed = std::make_shared<mfem_mgis::FiniteElementDiscretization>(
-      ctx,
-      mfem_mgis::Parameters{
-          {"MeshFileName", p.mesh_file},
-          {"FiniteElementFamily", "H1"},
-          {"FiniteElementOrder", p.order},
-          {"UnknownsSize", 3},
-          {"NumberOfUniformRefinements", p.refinement},  // faster for testing
-          {"MeshReadMode", "FromScratch"},
-          {"Parallel", true}});
+      ctx, mfem_mgis::Parameters{{"MeshFileName", p.mesh_file},
+                                 {"FiniteElementFamily", "H1"},
+                                 {"FiniteElementOrder", p.order},
+                                 {"UnknownsSize", 3},
+                                 {"NumberOfUniformRefinements",
+                                  p.refinement},  // faster for testing
+                                 {"MeshReadMode", "FromScratch"},
+                                 {"Parallel", true}});
   mfem_mgis::PeriodicNonLinearEvolutionProblem problem(ctx, fed);
 
   // get problem information
