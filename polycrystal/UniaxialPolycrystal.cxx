@@ -407,19 +407,24 @@ static void addOptionalPostProcessings(
       // vmes = VonMisesEquivalentStress
       std::vector<mfem_mgis::ImmutablePartialQuadratureFunctionView> fesView{};
       std::vector<mfem_mgis::ImmutablePartialQuadratureFunctionView> vmesView{};
+      // the functions must outlive the views used by the projections
+      std::vector<mfem_mgis::PartialQuadratureFunction> fes_pqfs;
+      std::vector<mfem_mgis::PartialQuadratureFunction> vmes_pqfs;
+      fes_pqfs.reserve(nMat);
+      vmes_pqfs.reserve(nMat);
       auto ets = mfem_mgis::Material::END_OF_TIME_STEP;
       // For each material
       for (int i = 1; i <= nMat; i++) {
         auto &m = p.getMaterial(i);
         if (params.export_first_eigen_stress) {
-          auto fes_pqf = mfem_mgis::PartialQuadratureFunction{
-              m.getPartialQuadratureSpacePointer(), 1};
+          auto &fes_pqf =
+              fes_pqfs.emplace_back(m.getPartialQuadratureSpacePointer(), 1);
           mfem_mgis::computeFirstEigenStress(ctx, fes_pqf, m, ets);
           fesView.push_back(fes_pqf);
         }
         if (params.export_von_Mises_stress) {
-          auto vmes_pqf = mfem_mgis::PartialQuadratureFunction{
-              m.getPartialQuadratureSpacePointer(), 1};
+          auto &vmes_pqf =
+              vmes_pqfs.emplace_back(m.getPartialQuadratureSpacePointer(), 1);
           bool success =
               mfem_mgis::computeVonMisesEquivalentStress(ctx, vmes_pqf, m, ets);
           if (!success) {
