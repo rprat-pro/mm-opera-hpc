@@ -135,7 +135,9 @@ namespace mm_opera_hpc {
         Message("error: the resolution failed.");
         S = S0;
         F = F0;
-        problem.revert();
+        if (!problem.revert(ctx)) {
+          mfem_mgis::abort("revert failed");
+        }
         return false;
       }
       if (itFP == 0) {
@@ -160,7 +162,9 @@ namespace mm_opera_hpc {
           "fixed-point algorithm reached");
       S = S0;
       F = F0;
-      problem.revert();
+      if (!problem.revert(ctx)) {
+        mfem_mgis::abort("revert failed");
+      }
       return false;
     }
     //
@@ -170,7 +174,9 @@ namespace mm_opera_hpc {
       problem.executePostProcessings(ctx, bts, dt);
     }
     // update state variable for the next time step
-    problem.update();
+    if (!problem.update(ctx)) {
+      mfem_mgis::abort("update failed");
+    }
     // update information for time extrapolation
     auto &dF = macroscopic_unknowns.dF;
     macroscopic_unknowns.previous_time_increment = dt;
