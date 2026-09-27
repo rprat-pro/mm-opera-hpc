@@ -96,9 +96,12 @@ static void parseCommandLineOptions(mfem::OptionsParser &args,
 }
 
 static void setup_material_properties(
+    mfem_mgis::attributes::MayAbort,
+    mfem_mgis::Context &ctx,
     mfem_mgis::PeriodicNonLinearEvolutionProblem &problem,
     TestParameters &p,
     mm_opera_hpc::MacroscropicElasticMaterialProperties &mp) {
+  auto or_die = ctx.getFatalFailureHandler();
   // cubic symmetry elasticity
   const double young1 = 222.e9;
   const double young2 = young1;
@@ -113,35 +116,35 @@ static void setup_material_properties(
   mp.update(young1, poisson12, shear12);  // used in solve_null_strain
 
   // ceramic
-  auto set_temperature = [](auto &m) {
-    setExternalStateVariable(m.s0, "Temperature", 1600);
-    setExternalStateVariable(m.s1, "Temperature", 1600);
+  auto set_temperature = [&ctx, &or_die](auto &m) {
+    setExternalStateVariable(ctx, m.s0, "Temperature", 1600) | or_die;
+    setExternalStateVariable(ctx, m.s1, "Temperature", 1600) | or_die;
   };
 
   auto set_properties_mono =
-      [](auto &m, const double yo1, const double yo2, const double yo3,
-         const double po12, const double po23, const double po13,
-         const double sm12, const double sm23, const double sm13) {
-        setMaterialProperty(m.s0, "YoungModulus1", yo1);
-        setMaterialProperty(m.s0, "YoungModulus2", yo2);
-        setMaterialProperty(m.s0, "YoungModulus3", yo3);
-        setMaterialProperty(m.s0, "PoissonRatio12", po12);
-        setMaterialProperty(m.s0, "PoissonRatio23", po23);
-        setMaterialProperty(m.s0, "PoissonRatio13", po13);
-        setMaterialProperty(m.s0, "ShearModulus12", sm12);
-        setMaterialProperty(m.s0, "ShearModulus23", sm23);
-        setMaterialProperty(m.s0, "ShearModulus13", sm13);
+      [&ctx, &or_die](auto &m, const double yo1, const double yo2,
+                      const double yo3, const double po12, const double po23,
+                      const double po13, const double sm12, const double sm23,
+                      const double sm13) {
+        setMaterialProperty(ctx, m.s0, "YoungModulus1", yo1) | or_die;
+        setMaterialProperty(ctx, m.s0, "YoungModulus2", yo2) | or_die;
+        setMaterialProperty(ctx, m.s0, "YoungModulus3", yo3) | or_die;
+        setMaterialProperty(ctx, m.s0, "PoissonRatio12", po12) | or_die;
+        setMaterialProperty(ctx, m.s0, "PoissonRatio23", po23) | or_die;
+        setMaterialProperty(ctx, m.s0, "PoissonRatio13", po13) | or_die;
+        setMaterialProperty(ctx, m.s0, "ShearModulus12", sm12) | or_die;
+        setMaterialProperty(ctx, m.s0, "ShearModulus23", sm23) | or_die;
+        setMaterialProperty(ctx, m.s0, "ShearModulus13", sm13) | or_die;
 
-        setMaterialProperty(m.s1, "YoungModulus1", yo1);
-        setMaterialProperty(m.s1, "YoungModulus2", yo2);
-        setMaterialProperty(m.s1, "YoungModulus3", yo3);
-        setMaterialProperty(m.s1, "PoissonRatio12", po12);
-        setMaterialProperty(m.s1, "PoissonRatio23", po23);
-        setMaterialProperty(m.s1, "PoissonRatio13", po13);
-
-        setMaterialProperty(m.s1, "ShearModulus12", sm12);
-        setMaterialProperty(m.s1, "ShearModulus23", sm23);
-        setMaterialProperty(m.s1, "ShearModulus13", sm13);
+        setMaterialProperty(ctx, m.s1, "YoungModulus1", yo1) | or_die;
+        setMaterialProperty(ctx, m.s1, "YoungModulus2", yo2) | or_die;
+        setMaterialProperty(ctx, m.s1, "YoungModulus3", yo3) | or_die;
+        setMaterialProperty(ctx, m.s1, "PoissonRatio12", po12) | or_die;
+        setMaterialProperty(ctx, m.s1, "PoissonRatio23", po23) | or_die;
+        setMaterialProperty(ctx, m.s1, "PoissonRatio13", po13) | or_die;
+        setMaterialProperty(ctx, m.s1, "ShearModulus12", sm12) | or_die;
+        setMaterialProperty(ctx, m.s1, "ShearModulus23", sm23) | or_die;
+        setMaterialProperty(ctx, m.s1, "ShearModulus13", sm13) | or_die;
       };
 
   const int nMat =
@@ -157,16 +160,18 @@ static void setup_material_properties(
 
   // TEST metal
   {
-    problem.addBehaviourIntegrator("Mechanics", 1, p.libraryMetal,
-                                   p.behaviourMetal);
-    auto &metal = problem.getMaterial(1);
+    problem.addBehaviourIntegrator(ctx, "Mechanics", 1, p.libraryMetal,
+                                   p.behaviourMetal) |
+        or_die;
+    auto &metal = problem.getMaterial(ctx, 1, 0) | or_die;
     set_temperature(metal);
   }
 
   for (int grainID = 2; grainID <= nMat; grainID++) {
-    problem.addBehaviourIntegrator("Mechanics", grainID, p.libraryGrain,
-                                   p.behaviourGrain);
-    auto &grain = problem.getMaterial(grainID);
+    problem.addBehaviourIntegrator(ctx, "Mechanics", grainID, p.libraryGrain,
+                                   p.behaviourGrain) |
+        or_die;
+    auto &grain = problem.getMaterial(ctx, grainID, 0) | or_die;
     set_properties_mono(grain, young1, young2, young3, poisson12, poisson23,
                         poisson13, shear12, shear23, shear13);
     set_temperature(grain);
@@ -185,6 +190,7 @@ int main(int argc, char **argv) {
                                                // options treatment
   mfem_mgis::initialize(argc, argv);
   auto ctx = mfem_mgis::Context{};
+  auto or_die = ctx.getFatalFailureHandler();
   ctx.enableProfiling(true);
 
   // get parameters
@@ -192,16 +198,21 @@ int main(int argc, char **argv) {
   mfem::OptionsParser args(argc, argv);
   parseCommandLineOptions(args, p);
   // definition of the nonlinear problem
-  auto fed = std::make_shared<mfem_mgis::FiniteElementDiscretization>(
-      ctx, mfem_mgis::Parameters{{"MeshFileName", p.mesh_file},
-                                 {"FiniteElementFamily", "H1"},
-                                 {"FiniteElementOrder", p.order},
-                                 {"UnknownsSize", 3},
-                                 {"NumberOfUniformRefinements",
-                                  p.refinement},  // faster for testing
-                                 {"MeshReadMode", "FromScratch"},
-                                 {"Parallel", true}});
-  mfem_mgis::PeriodicNonLinearEvolutionProblem problem(ctx, fed);
+  auto fed =
+      mfem_mgis::make_shared<mfem_mgis::FiniteElementDiscretization>(
+          ctx, mfem_mgis::Parameters{{"MeshFileName", p.mesh_file},
+                                     {"FiniteElementFamily", "H1"},
+                                     {"FiniteElementOrder", p.order},
+                                     {"UnknownsSize", 3},
+                                     {"NumberOfUniformRefinements",
+                                      p.refinement},  // faster for testing
+                                     {"MeshReadMode", "FromScratch"},
+                                     {"Parallel", true}}) |
+      or_die;
+  auto problem =
+      mfem_mgis::construct<mfem_mgis::PeriodicNonLinearEvolutionProblem>(ctx,
+                                                                         fed) |
+      or_die;
 
   // get problem information
   mm_opera_hpc::printMeshInformation(ctx, problem);
@@ -213,10 +224,13 @@ int main(int argc, char **argv) {
   double Tol = 1e-12;
   int defaultMaxNumOfIt = 2000;
   auto solverParameters = mfem_mgis::Parameters{};
-  solverParameters.insert(mfem_mgis::Parameters{{"VerbosityLevel", verbosity}});
+  solverParameters.insert(mfem_mgis::throwing,
+                          mfem_mgis::Parameters{{"VerbosityLevel", verbosity}});
   solverParameters.insert(
+      mfem_mgis::throwing,
       mfem_mgis::Parameters{{"MaximumNumberOfIterations", defaultMaxNumOfIt}});
-  solverParameters.insert(mfem_mgis::Parameters{{"Tolerance", Tol}});
+  solverParameters.insert(mfem_mgis::throwing,
+                          mfem_mgis::Parameters{{"Tolerance", Tol}});
 
   //
   auto preconditionner =
@@ -225,8 +239,9 @@ int main(int argc, char **argv) {
           {"Name", "HypreBoomerAMG"},
           {"Options", mfem_mgis::Parameters{{"VerbosityLevel", verbosity}}}};
   solverParameters.insert(
+      mfem_mgis::throwing,
       mfem_mgis::Parameters{{"Preconditioner", preconditionner}});
-  problem.setLinearSolver(ctx, "HyprePCG", solverParameters);
+  problem.setLinearSolver(ctx, "HyprePCG", solverParameters) | or_die;
   // problem.setLinearSolver("HypreGMRES", solverParameters);
   // problem.setLinearSolver("MUMPSSolver", {});
 
@@ -237,14 +252,16 @@ int main(int argc, char **argv) {
   };
   //
   mm_opera_hpc::MacroscropicElasticMaterialProperties mp;
-  setup_material_properties(problem, p, mp);
+  setup_material_properties(mfem_mgis::may_abort, ctx, problem, p, mp);
 
   if (post_processing) {
     mfem_mgis::Profiler::Utils::Message("Define post processings");
-    problem.addPostProcessing("ParaviewExportResults",
-                              {{"OutputFileName", "Displacement"}});
-    problem.addPostProcessing("MeanThermodynamicForces",
-                              {{"OutputFileName", "avgStress"}});
+    problem.addPostProcessing(ctx, "ParaviewExportResults",
+                              {{"OutputFileName", "Displacement"}}) |
+        or_die;
+    problem.addPostProcessing(ctx, "MeanThermodynamicForces",
+                              {{"OutputFileName", "avgStress"}}) |
+        or_die;
     /* BUG
        problem.addPostProcessing(
        "ParaviewExportIntegrationPointResultsAtNodes",

@@ -16,15 +16,19 @@ namespace mm_opera_hpc {
 
   [[nodiscard]] static const std::array<mfem_mgis::real, 3u>
   computeMacroscopicCauchyStress(
+      mfem_mgis::attributes::MayAbort,
+      mfem_mgis::Context &ctx,
       mfem_mgis::PeriodicNonLinearEvolutionProblem &problem,
       const std::array<mfem_mgis::real, 3u> &F) {
+    auto or_die = ctx.getFatalFailureHandler();
     // integrals of the diagonal components of the First Piola-Kirchhoff stress
     auto pk1_integral = std::array<mfem_mgis::real, 3u>{};
     auto volume = mfem_mgis::real{};
     // get pk1 integral and volume on all materials //
-    auto [pk1_integrals, volumes] =
+    const auto [pk1_integrals, volumes] =
         mfem_mgis::computeMeanThermodynamicForcesValues<true>(
-            problem.template getImplementation<true>());
+            ctx, problem.template getImplementation<true>()) |
+        or_die;
     // sum volume of all materials
     // sum pk1 integrals
     for (const auto &m : problem.getAssignedMaterialsIdentifiers()) {
@@ -64,6 +68,7 @@ namespace mm_opera_hpc {
       const mfem_mgis::real bts,  //
       const mfem_mgis::real ets) {
     using namespace mfem_mgis::Profiler::Utils;
+    auto or_die = ctx.getFatalFailureHandler();
     Message("Solving time step from ", bts, " to ", ets);
     // --- fixed-point param
     const double tolFP = np.macroscopic_stress_absolute_tolerance;
@@ -135,15 +140,13 @@ namespace mm_opera_hpc {
         Message("error: the resolution failed.");
         S = S0;
         F = F0;
-        if (!problem.revert(ctx)) {
-          mfem_mgis::abort("revert failed");
-        }
+        problem.revert(ctx) | or_die;
         return false;
       }
       if (itFP == 0) {
         initial_residual = statistics.initial_residual_norm;
       }
-      S = computeMacroscopicCauchyStress(problem, F);
+      S = computeMacroscopicCauchyStress(mfem_mgis::may_abort, ctx, problem, F);
       const auto r = std::sqrt(S[0] * S[0] + S[1] * S[1]);
       //
       Message("Fixed Point iteration", itFP, ": |res| =", r);
@@ -162,9 +165,7 @@ namespace mm_opera_hpc {
           "fixed-point algorithm reached");
       S = S0;
       F = F0;
-      if (!problem.revert(ctx)) {
-        mfem_mgis::abort("revert failed");
-      }
+      problem.revert(ctx) | or_die;
       return false;
     }
     //
@@ -174,9 +175,7 @@ namespace mm_opera_hpc {
       problem.executePostProcessings(ctx, bts, dt);
     }
     // update state variable for the next time step
-    if (!problem.update(ctx)) {
-      mfem_mgis::abort("update failed");
-    }
+    problem.update(ctx) | or_die;
     // update information for time extrapolation
     auto &dF = macroscopic_unknowns.dF;
     macroscopic_unknowns.previous_time_increment = dt;

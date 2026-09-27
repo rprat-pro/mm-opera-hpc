@@ -40,8 +40,11 @@ namespace mfem_mgis {
       const Material& m,
       const Material::StateSelection s) {
     using namespace mgis::function;
-    const auto sig = getThermodynamicForce(m, "Stress", s);
-    const auto ok = sig | as_stensor<N> | hydrostatic_stress | hyp;
+    const auto osig = getThermodynamicForce(ctx, m, "Stress", s);
+    if (isInvalid(osig)) {
+      return {};
+    }
+    const auto ok = *osig | as_stensor<N> | hydrostatic_stress | hyp;
     if (!ok) {
       return ctx.registerErrorMessage(
           "computeHydrostaticPressure: computation of the hydrostatic "
@@ -264,9 +267,12 @@ void write_bubble_infos(std::ofstream& file_to_write,
  */
 template <bool parallel>
 static void calculateAverageHydrostaticStress(
+    mfem_mgis::attributes::MayAbort,
+    mfem_mgis::Context& ctx,
     std::ostream& os,
     const mfem_mgis::NonLinearEvolutionProblemImplementation<parallel>& prob,
     const mfem_mgis::ImmutablePartialQuadratureFunctionView& f) {
+  auto or_die = ctx.getFatalFailureHandler();
   const auto& s = f.getPartialQuadratureSpace();
   const auto& fed = s.getFiniteElementDiscretization();
   const auto& fespace = fed.getFiniteElementSpace<parallel>();
@@ -289,9 +295,8 @@ static void calculateAverageHydrostaticStress(
     for (mfem_mgis::size_type g = 0; g != ir.GetNPoints(); ++g) {
       const auto& ip = ir.IntPoint(g);
       tr.SetIntPoint(&ip);
-      const auto w =
-          prob.getBehaviourIntegrator(m).getIntegrationPointWeight(tr, ip);
-
+      const auto& bi = prob.getBehaviourIntegrator(ctx, m, 0) | or_die;
+      const auto w = bi.getIntegrationPointWeight(tr, ip);
       integral += f.getIntegrationPointValue(i, g) * w;
       volume += w;
     }
@@ -332,8 +337,8 @@ int main(int argc, char** argv) {
   // Initialize MPI and profiling
   mfem_mgis::initialize(argc, argv);
   auto ctx = mfem_mgis::Context();
+  auto or_die = ctx.getFatalFailureHandler();
   ctx.enableProfiling(true);
-
   // Open output file for bubble stress results
   std::string bubbles_selected = "bubbles_and_stresses_selected.txt";
   std::string hydrostatic_stress_f = "sig_hydro.txt";
@@ -371,21 +376,25 @@ int main(int argc, char** argv) {
     }
     return r;
   }();
-
   // Create finite element discretization
   print_memory_footprint("[Building problem ...]");
-  auto fed = std::make_shared<mfem_mgis::FiniteElementDiscretization>(
-      ctx, mfem_mgis::Parameters{
-               {"MeshFileName", p.mesh_file},
-               {"MeshReadMode", p.parallel_mesh ? "Restart" : "FromScratch"},
-               {"FiniteElementFamily", "H1"},  // Continuous Lagrange elements
-               {"FiniteElementOrder", p.order},
-               {"UnknownsSize", 3},  // 3D displacement field
-               {"NumberOfUniformRefinements", p.refinement},
-               {"Parallel", true}});
+  auto fed =
+      mfem_mgis::make_shared<mfem_mgis::FiniteElementDiscretization>(
+          ctx,
+          mfem_mgis::Parameters{
+              {"MeshFileName", p.mesh_file},
+              {"MeshReadMode", p.parallel_mesh ? "Restart" : "FromScratch"},
+              {"FiniteElementFamily", "H1"},  // Continuous Lagrange elements
+              {"FiniteElementOrder", p.order},
+              {"UnknownsSize", 3},  // 3D displacement field
+              {"NumberOfUniformRefinements", p.refinement},
+              {"Parallel", true}}) |
+      or_die;
 
   // Define the nonlinear evolution problem
-  auto problem = mfem_mgis::PeriodicNonLinearEvolutionProblem{ctx, fed};
+  auto problem =
+      construct<mfem_mgis::PeriodicNonLinearEvolutionProblem>(ctx, fed) |
+      or_die;
   print_memory_footprint("[Building problem done]");
 
   print_mesh_information(problem.getImplementation<true>());
@@ -394,40 +403,46 @@ int main(int argc, char** argv) {
   std::vector<mfem_mgis::real> e(6, mfem_mgis::real{0});
   problem.setMacroscopicGradientsEvolution(
       [e](const mfem_mgis::real) { return e; });
-
   // Apply pressure boundary conditions on each bubble
   for (const auto& b : bubbles) {
     problem.addBoundaryCondition(
-        std::make_unique<mfem_mgis::UniformImposedPressureBoundaryCondition>(
-            problem.getFiniteElementDiscretizationPointer(),
-            b.boundary_identifier,
-            [&b, pref = p.bubble_pressure](const mfem_mgis::real) {
-              // If bubble is broken, pressure = 0; otherwise pressure = pref
-              return b.broken ? 0 : pref;
-            }));
+        ctx, mfem_mgis::make_unique<
+                 mfem_mgis::UniformImposedPressureBoundaryCondition>(
+                 ctx, problem.getFiniteElementDiscretizationPointer(),
+                 b.boundary_identifier,
+                 [&b, pref = p.bubble_pressure](const mfem_mgis::real) {
+                   // If bubble is broken, pressure = 0; otherwise pressure =
+                   // pref
+                   return b.broken ? 0 : pref;
+                 }) |
+                 or_die) |
+        or_die;
   }
 
   // Configure linear solver
   int verbosity = p.verbosity_level;
   int post_processing = p.post_processing;
   mfem_mgis::Parameters solverParameters;
-  solverParameters.insert(mfem_mgis::Parameters{{"VerbosityLevel", verbosity}});
-
+  solverParameters.insert(mfem_mgis::throwing,
+                          mfem_mgis::Parameters{{"VerbosityLevel", verbosity}});
   // Use diagonal scaling preconditioner
   auto preconditioner = mfem_mgis::Parameters{{"Name", "HypreDiagScale"}};
-  solverParameters.insert(mfem_mgis::Parameters{
-      {"Preconditioner", preconditioner}, {"Tolerance", 1e-10}});
+  solverParameters.insert(
+      mfem_mgis::throwing,
+      mfem_mgis::Parameters{{"Preconditioner", preconditioner},
+                            {"Tolerance", 1e-10}});
 
   // Set up conjugate gradient solver
-  problem.setLinearSolver(ctx, "HyprePCG", solverParameters);
+  problem.setLinearSolver(ctx, "HyprePCG", solverParameters) | or_die;
   problem.setSolverParameters(ctx, {{"VerbosityLevel", 1},
-                                    {"RelativeTolerance", 1e-11},
+                                    {"RelativeTolerance", 1e-8},
                                     {"AbsoluteTolerance", 0.},
-                                    {"MaximumNumberOfIterations", 1}});
-
+                                    {"MaximumNumberOfIterations", 1}}) |
+      or_die;
   // Add elastic material behavior
-  problem.addBehaviourIntegrator("Mechanics", 1, p.library, p.behaviour);
-  auto& m = problem.getMaterial(1);
+  problem.addBehaviourIntegrator(ctx, "Mechanics", 1, p.library, p.behaviour) |
+      or_die;
+  auto& m = problem.getMaterial(ctx, 1, 0) | or_die;
 
   // Set material properties (elastic constants and temperature)
   // The sphere is not meshed, thus no material properties need to be
@@ -438,20 +453,23 @@ int main(int argc, char** argv) {
   // we are scaling everything to µm, we consider the Elastic
   // modulus in N/µm² to have a consistent displacement field.
   for (auto& s : {&m.s0, &m.s1}) {
-    mgis::behaviour::setMaterialProperty(*s, "YoungModulus",
-                                         150e-3);  // Young's modulus
-    mgis::behaviour::setMaterialProperty(*s, "PoissonRatio",
-                                         0.3);  // Poisson's ratio
-    mgis::behaviour::setExternalStateVariable(*s, "Temperature",
-                                              293.15);  // Room temperature
+    mgis::behaviour::setMaterialProperty(ctx, *s, "YoungModulus",
+                                         150e-3) |
+        or_die;  // Young's modulus
+    mgis::behaviour::setMaterialProperty(ctx, *s, "PoissonRatio",
+                                         0.3) |
+        or_die;  // Poisson's ratio
+    mgis::behaviour::setExternalStateVariable(ctx, *s, "Temperature",
+                                              293.15) |
+        or_die;  // Room temperature
   }
-
   // Configure post-processing output
   if (post_processing) {
     auto results = std::vector<mfem_mgis::Parameter>{"Stress"};
     problem.addPostProcessing(
-        "ParaviewExportIntegrationPointResultsAtNodes",
-        {{"OutputFileName", p.testcase_name}, {"Results", results}});
+        ctx, "ParaviewExportIntegrationPointResultsAtNodes",
+        {{"OutputFileName", p.testcase_name}, {"Results", results}}) |
+        or_die;
   }
 
   // Partial Quadrature functions for post-processing needs
@@ -463,13 +481,11 @@ int main(int argc, char** argv) {
       m.getPartialQuadratureSpacePointer(), 1};
 
   mfem_mgis::size_type nstep{1};
-
   // Solve the mechanical equilibrium problem
-  problem.solve(ctx, 0, 1);
-
+  problem.solve(ctx, 0, 1) | or_die;
   // Find the maximum principal stress in the domain
   const auto r = opera_hpc::findFirstPrincipalStressValueAndLocation(
-      ctx, problem.getMaterial(1));
+      ctx, problem.getMaterial(ctx, 1, 0) | or_die);
 
   std::vector<BubbleInfoRecord> bubbles_information;
 
@@ -478,8 +494,8 @@ int main(int argc, char** argv) {
 
   // Get all locations where stress exceeds threshold
   auto all_locations_and_stresses_above_threshold =
-      opera_hpc::getPointsandStressAboveStressThreshold(problem.getMaterial(1),
-                                                        max_vp_scaled);
+      opera_hpc::getPointsandStressAboveStressThreshold(
+          problem.getMaterial(ctx, 1, 0) | or_die, max_vp_scaled);
   // Resize the bubble information vector to match the number of bubbles,
   // initializing each entry with default values (0 identifier, {0,0,0}
   // location, 0.0 stress)
@@ -612,17 +628,20 @@ int main(int argc, char** argv) {
 
     // calculate the average hydrostatic stress on the rev
     calculateAverageHydrostaticStress<true>(
-        outfile_sighydr, problem.getImplementation<true>(), hyp);
+        mfem_mgis::may_abort, ctx, outfile_sighydr,
+        problem.getImplementation<true>(), hyp);
 
     // L2 projection of the first eigenstress at the nodes
     // for better visualization
     auto& lsf = mfem_mgis::LinearSolverFactory<true>::getFactory();
     auto& fespace =
         problem.getFiniteElementDiscretization().getFiniteElementSpace<true>();
-    auto linear_solver = lsf.generate(
-        ctx, "HyprePCG", fespace,
-        mfem_mgis::Parameters{
-            {"Preconditioner", mfem_mgis::Parameters{{"Name", "HypreILU"}}}});
+    auto linear_solver =
+        lsf.generate(ctx, "HyprePCG", fespace,
+                     mfem_mgis::Parameters{
+                         {"Preconditioner",
+                          mfem_mgis::Parameters{{"Name", "HypreILU"}}}}) |
+        or_die;
 
     auto projection =
         mfem_mgis::computeL2Projection<true>(ctx, linear_solver, {eig});
