@@ -15,6 +15,9 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # filled by the continuous integration of mfem-mgis, only read here
+      BUILD_CACHE: oci://ghcr.io/thelfer/mfem-mgis-spack-buildcache
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -26,16 +29,38 @@ jobs:
           buildcache: false      # the public build cache would bring older dependencies
           color: true            # Force color output (SPACK_COLOR=always)
           spack_path: spack      # Where to clone Spack
+      # the configuration of mfem-mgis, as its binaries are only reused when their hash matches
+      - name: Set up the build cache
+        uses: thelfer/mfem-mgis/.github/actions/setup-build-cache@master
+      - name: Set up ccache
+        id: ccache
+        uses: thelfer/mfem-mgis/.github/actions/setup-ccache@master
+        with:
+          key: test-cases
       - name: Install MFEM MGIS
-        run: spack install mfem-mgis@master
+        run: |
+          # only MFEM MGIS is compiled with ccache, the dependencies come from the build cache
+          spack config add config:ccache:true
+          # stage directories named without the hash of mfem-mgis, which changes with each commit:
+          # spack passes the path of the sources to gcc with -frandom-seed, which ccache hashes
+          spack config add "config:stage_name:spack-stage-{name}-{version}"
+          # pin the master commits, as mfem-mgis does when it fills its build cache
+          tfel=$(git ls-remote https://github.com/thelfer/tfel.git refs/heads/master | cut -f1)
+          mgis=$(git ls-remote https://github.com/thelfer/MFrontGenericInterfaceSupport.git refs/heads/master | cut -f1)
+          spack install mfem-mgis@master ^tfel@master commit=$tfel ^mgis@master commit=$mgis
       - name: Build the test cases
         shell: spack-sh {0}
         run: |
           spack load mfem-mgis
-          cmake -B build -DCMAKE_BUILD_TYPE=Release
+          cmake -B build -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           cmake --build build -j $(nproc)
       - name: Run the test cases
         shell: spack-sh {0}
         run: |
           spack load mfem-mgis
           ctest --test-dir build -j $(nproc) --output-on-failure
+      # even when a test case fails, so that the next run does not compile everything again
+      - name: Save ccache
+        if: ${{ !cancelled() && steps.ccache.outcome == 'success' }}
+        uses: thelfer/mfem-mgis/.github/actions/save-ccache@master
