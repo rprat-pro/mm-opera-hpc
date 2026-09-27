@@ -279,7 +279,7 @@ namespace opera_hpc {
                              });
 
       if (!out)
-        mgis::raise(
+        mgis::abort(
             "Error in fetching the positions from the distributed processes.");
 
       return all_locations;

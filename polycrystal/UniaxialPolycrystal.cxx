@@ -125,20 +125,24 @@ struct TestParameters : MeshParameters,
 // a few utility functions defined after the main functions
 
 static void parseCommandLineArguments(mfem::OptionsParser &, TestParameters &);
-static void addPostProcessings(mfem_mgis::Context &,
+static void addPostProcessings(mfem_mgis::attributes::MayAbort,
+                               mfem_mgis::Context &,
                                mfem_mgis::PeriodicNonLinearEvolutionProblem &,
                                const std::string &);
 static void addOptionalPostProcessings(
+    mfem_mgis::attributes::MayAbort,
     mfem_mgis::Context &,
     mfem_mgis::PeriodicNonLinearEvolutionProblem &,
     const PostProcessingParameters &,
     mfem::ParaViewDataCollection *&);
 static void setupMaterials(
+    mfem_mgis::attributes::MayAbort,
     mfem_mgis::Context &,
     mfem_mgis::PeriodicNonLinearEvolutionProblem &,
     mm_opera_hpc::MacroscropicElasticMaterialProperties &,
     const TestParameters &);
-static void setLinearSolver(mfem_mgis::Context &,
+static void setLinearSolver(mfem_mgis::attributes::MayAbort,
+                            mfem_mgis::Context &,
                             mfem_mgis::PeriodicNonLinearEvolutionProblem &,
                             const TestParameters &);
 
@@ -167,13 +171,15 @@ int main(int argc, char *argv[]) {
 
   // set problem
   mm_opera_hpc::MacroscropicElasticMaterialProperties mp;
-  setupMaterials(ctx, problem, mp, p);
-  setLinearSolver(ctx, problem, p);
+  setupMaterials(mfem_mgis::may_abort, ctx, problem, mp, p);
+  setLinearSolver(mfem_mgis::may_abort, ctx, problem, p);
   // add post processings
   mfem::ParaViewDataCollection *paraview_exporter = nullptr;
   if (p.post_processings) {
-    addPostProcessings(ctx, problem, "OutputFile-Uniaxial-polycrystal");
-    addOptionalPostProcessings(ctx, problem, p, paraview_exporter);
+    addPostProcessings(mfem_mgis::may_abort, ctx, problem,
+                       "OutputFile-Uniaxial-polycrystal");
+    addOptionalPostProcessings(mfem_mgis::may_abort, ctx, problem, p,
+                               paraview_exporter);
   }
   // definition of the temporal sequences
   const auto te = p.duration;
@@ -268,11 +274,13 @@ static void parseCommandLineArguments(mfem::OptionsParser &args,
 }
 
 static void setupMaterials(
+    mfem_mgis::attributes::MayAbort,
     mfem_mgis::Context &ctx,
     mfem_mgis::PeriodicNonLinearEvolutionProblem &problem,
     mm_opera_hpc::MacroscropicElasticMaterialProperties &mp,
     const TestParameters &p) {
   using namespace mgis::behaviour;
+  auto or_die = ctx.getFatalFailureHandler();
   using real = mfem_mgis::real;
 
   CatchTimeSection(ctx, "set_mgis_stuff");
@@ -284,7 +292,9 @@ static void setupMaterials(
   mfem_mgis::Profiler::Utils::Message("Nombre de matériaux : ", nMat);
 
   for (int i = 0; i < nMat; i++) {
-    problem.addBehaviourIntegrator("Mechanics", i + 1, p.library, p.behaviour);
+    problem.addBehaviourIntegrator(ctx, "Mechanics", i + 1, p.library,
+                                   p.behaviour) |
+        or_die;
   }
 
   // cubic symmetry elasticity
@@ -302,31 +312,31 @@ static void setupMaterials(
   mp.update(young1, poisson12, shear12);
   // materials
   auto set_properties =
-      [](auto &m, const mfem_mgis::real yo1, const mfem_mgis::real yo2,
-         const mfem_mgis::real yo3, const mfem_mgis::real po12,
-         const mfem_mgis::real po23, const mfem_mgis::real po13,
-         const mfem_mgis::real sm12, const mfem_mgis::real sm23,
-         const mfem_mgis::real sm13) {
+      [&ctx, &or_die](auto &m, const mfem_mgis::real yo1,
+                      const mfem_mgis::real yo2, const mfem_mgis::real yo3,
+                      const mfem_mgis::real po12, const mfem_mgis::real po23,
+                      const mfem_mgis::real po13, const mfem_mgis::real sm12,
+                      const mfem_mgis::real sm23, const mfem_mgis::real sm13) {
         for (auto s : {&m.s0, &m.s1}) {
-          setMaterialProperty(*s, "YoungModulus1", yo1);
-          setMaterialProperty(*s, "YoungModulus2", yo2);
-          setMaterialProperty(*s, "YoungModulus3", yo3);
-          setMaterialProperty(*s, "PoissonRatio12", po12);
-          setMaterialProperty(*s, "PoissonRatio23", po23);
-          setMaterialProperty(*s, "PoissonRatio13", po13);
-          setMaterialProperty(*s, "ShearModulus12", sm12);
-          setMaterialProperty(*s, "ShearModulus23", sm23);
-          setMaterialProperty(*s, "ShearModulus13", sm13);
+          setMaterialProperty(ctx, *s, "YoungModulus1", yo1) | or_die;
+          setMaterialProperty(ctx, *s, "YoungModulus2", yo2) | or_die;
+          setMaterialProperty(ctx, *s, "YoungModulus3", yo3) | or_die;
+          setMaterialProperty(ctx, *s, "PoissonRatio12", po12) | or_die;
+          setMaterialProperty(ctx, *s, "PoissonRatio23", po23) | or_die;
+          setMaterialProperty(ctx, *s, "PoissonRatio13", po13) | or_die;
+          setMaterialProperty(ctx, *s, "ShearModulus12", sm12) | or_die;
+          setMaterialProperty(ctx, *s, "ShearModulus23", sm23) | or_die;
+          setMaterialProperty(ctx, *s, "ShearModulus13", sm13) | or_die;
         }
       };
 
-  auto set_temperature = [&p](auto &m) {
-    setExternalStateVariable(m.s0, "Temperature", p.temperature);
-    setExternalStateVariable(m.s1, "Temperature", p.temperature);
+  auto set_temperature = [&ctx, &or_die, &p](auto &m) {
+    setExternalStateVariable(ctx, m.s0, "Temperature", p.temperature) | or_die;
+    setExternalStateVariable(ctx, m.s1, "Temperature", p.temperature) | or_die;
   };
 
   for (int i = 0; i < nMat; i++) {
-    auto &mat = problem.getMaterial(i + 1);
+    auto &mat = problem.getMaterial(ctx, i + 1, 0) | or_die;
     set_properties(mat, young1, young2, young3,      // young modulus
                    poisson12, poisson23, poisson13,  // poisson ration
                    shear12, shear23, shear13         // shear modulus
@@ -343,7 +353,7 @@ static void setupMaterials(
 
   std::array<mfem_mgis::MaterialAxis3D, 2u> r;
   for (int i = 0; i < nMat; i++) {
-    auto &mat = problem.getMaterial(i + 1);
+    auto &mat = problem.getMaterial(ctx, i + 1, 0) | or_die;
     if (mat.b.symmetry == mgis::behaviour::Behaviour::ORTHOTROPIC) {
       r[0] = vectors[2 * i];
       r[1] = vectors[2 * i + 1];
@@ -352,20 +362,25 @@ static void setupMaterials(
   }
 }
 
-static void setLinearSolver(mfem_mgis::Context &ctx,
+static void setLinearSolver(mfem_mgis::attributes::MayAbort,
+                            mfem_mgis::Context &ctx,
                             mfem_mgis::PeriodicNonLinearEvolutionProblem &p,
                             const TestParameters &params) {
   CatchTimeSection(ctx, "set_linear_solver");
+  auto or_die = ctx.getFatalFailureHandler();
   // pilote
   constexpr int defaultMaxNumOfIt = 5000;  // MaximumNumberOfIterations
   auto solverParameters = mfem_mgis::Parameters{};
   solverParameters.insert(
+      mfem_mgis::throwing,
       mfem_mgis::Parameters{{"VerbosityLevel", params.verbosity_level}});
   solverParameters.insert(
+      mfem_mgis::throwing,
       mfem_mgis::Parameters{{"MaximumNumberOfIterations", defaultMaxNumOfIt}});
   // solverParameters.insert(mfem_mgis::Parameters{{"AbsoluteTolerance", Tol}});
   // solverParameters.insert(mfem_mgis::Parameters{{"RelativeTolerance", Tol}});
   solverParameters.insert(
+      mfem_mgis::throwing,
       mfem_mgis::Parameters{{"Tolerance", params.linear_solver_tolerance}});
 
   // preconditioner
@@ -377,26 +392,29 @@ static void setLinearSolver(mfem_mgis::Context &ctx,
     auto preconditioner = mfem_mgis::Parameters{
         {"Name", params.linear_solver_preconditioner}, {"Options", options}};
     solverParameters.insert(
+        mfem_mgis::throwing,
         mfem_mgis::Parameters{{"Preconditioner", preconditioner}});
   }
-  p.setLinearSolver(ctx, params.linear_solver, solverParameters);
+  p.setLinearSolver(ctx, params.linear_solver, solverParameters) | or_die;
 }
 
 static void addOptionalPostProcessings(
+    mfem_mgis::attributes::MayAbort,
     mfem_mgis::Context &ctx,
     mfem_mgis::PeriodicNonLinearEvolutionProblem &p,
     const PostProcessingParameters &params,
     mfem::ParaViewDataCollection *&exporter) {
+  auto or_die = ctx.getFatalFailureHandler();
   // setup paraview
   exporter = new mfem::ParaViewDataCollection("PolycrystalParaviewOutput");
   exporter->SetDataFormat(mfem::VTKFormat::BINARY);
   exporter->SetMesh(&(p.getFiniteElementDiscretization().getMesh<true>()));
 
   if (params.export_von_Mises_stress || params.export_first_eigen_stress) {
-    p.getImplementation<true>().addPostProcessing([&ctx, &p, &params,
-                                                   &exporter](
-                                                      mfem_mgis::real t,
-                                                      mfem_mgis::real dt) {
+    p.getImplementation<true>().addPostProcessing(ctx, [&ctx, &p, &params,
+                                                        &exporter, &or_die](
+                                                           mfem_mgis::real t,
+                                                           mfem_mgis::real dt) {
       static int count = 0;
       exporter->SetCycle(count++);
       exporter->SetTime(t);
@@ -415,7 +433,7 @@ static void addOptionalPostProcessings(
       auto ets = mfem_mgis::Material::END_OF_TIME_STEP;
       // For each material
       for (int i = 1; i <= nMat; i++) {
-        auto &m = p.getMaterial(i);
+        auto &m = p.getMaterial(ctx, i, 0) | or_die;
         if (params.export_first_eigen_stress) {
           auto &fes_pqf =
               fes_pqfs.emplace_back(m.getPartialQuadratureSpacePointer(), 1);
@@ -462,14 +480,18 @@ static void addOptionalPostProcessings(
 
       // save paraview files
       exporter->Save();
-    });
+    }) | or_die;
   }
 }
 
-static void addPostProcessings(mfem_mgis::Context &ctx,
+static void addPostProcessings(mfem_mgis::attributes::MayAbort,
+                               mfem_mgis::Context &ctx,
                                mfem_mgis::PeriodicNonLinearEvolutionProblem &p,
                                const std::string &msg) {
-  p.addPostProcessing("ParaviewExportResults", {{"OutputFileName", msg}});
-  p.addPostProcessing("MeanThermodynamicForces",
-                      {{"OutputFileName", "avgStressPolycrystal"}});
+  auto or_die = ctx.getFatalFailureHandler();
+  p.addPostProcessing(ctx, "ParaviewExportResults", {{"OutputFileName", msg}}) |
+      or_die;
+  p.addPostProcessing(ctx, "MeanThermodynamicForces",
+                      {{"OutputFileName", "avgStressPolycrystal"}}) |
+      or_die;
 }  // end timer add_postprocessing_and_outputs
