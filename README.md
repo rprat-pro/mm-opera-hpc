@@ -5,43 +5,30 @@ This directory groups together the various test cases implemented as part of the
 ## Installation using Spack [recommended]
 
 ```bash
-git clone --depth=2 --branch=v1.1.0 https://github.com/spack/spack.git
-export SPACK_ROOT=$PWD/spack
-source ${SPACK_ROOT}/share/spack/setup-env.sh
+git clone --depth=2 --branch=v1.2.2 https://github.com/spack/spack.git
+source spack/share/spack/setup-env.sh
+spack repo update builtin --branch develop
 ```
 
-Firstly, get the mfem-mgis spack repository.
+The last command selects the `develop` branch of the Spack packages, because their releases do not provide mfem-mgis yet.
+
+The test cases require the `@master` version of mfem-mgis:
 
 ```bash
-git clone https://github.com/rprat-pro/spack-repo-mfem-mgis.git
-spack repo add $PWD/spack-repo-mfem-mgis
-```
-
-Secondly, install mfem-mgis.
-
-```bash
-spack install mfem-mgis@1.0.4
-```
-
-Thirdly, load mfem-mgis.
-
-```bash
+spack install mfem-mgis@master
 spack load mfem-mgis
 ```
 
-Create a build directory, configure the project with CMake, build it, and install.
+Build and run the test cases:
 
 ```bash
-git clone --branch v1.0.0 https://github.com/rprat-pro/mm-opera-hpc.git
-cd mm-opera-hpc/
-mkdir build && cd build
-spack load tfel
-cmake .. -DCMAKE_PREFIX_PATH=`spack location -i tfel`/share/tfel/cmake -DCMAKE_INSTALL_PREFIX=../install
-make -j 4
-ctest
+git clone https://github.com/rprat-pro/mm-opera-hpc.git
+cmake -S mm-opera-hpc -B build
+cmake --build build -j 4
+ctest --test-dir build
 ```
 
-For more details on installing mfem-mgis, particularly for installing mfem-mgis without spack (cmake, not recommended) or without the internet, please visit: https://thelfer.github.io/mfem-mgis/installation_guide/installation_guide.html
+For more details on installing mfem-mgis, for example on a supercomputer without internet access, see its installation guide: https://thelfer.github.io/mfem-mgis/installation_guide/installation_guide.html
 
 ## Over-pressurized bubbles scenario 
 
