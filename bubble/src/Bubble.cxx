@@ -276,7 +276,7 @@ static void calculateAverageHydrostaticStress(
   const auto& s = f.getPartialQuadratureSpace();
   const auto& fed = s.getFiniteElementDiscretization();
   const auto& fespace = fed.getFiniteElementSpace<parallel>();
-  const auto m = s.getId();
+  const auto m = s.getLocation().material_identifier->id;
 
   mfem_mgis::real integral = 0.;
   mfem_mgis::real volume = 0.;
