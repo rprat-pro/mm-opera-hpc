@@ -53,7 +53,7 @@ namespace opera_hpc {
     const auto &fespace = fed.getFiniteElementSpace<parallel>();
 
     // Material identifier for filtering elements
-    const auto mid = s.getId();
+    const auto mid = s.getLocation().material_identifier->id;
 
     // Pointer to stress values at end of time step
     const auto *stress_values = m.s1.thermodynamic_forces.data();
@@ -167,7 +167,7 @@ namespace opera_hpc {
     const auto &fed = s.getFiniteElementDiscretization();
     const auto &fespace = fed.getFiniteElementSpace<parallel>();
 
-    const auto mid = s.getId();
+    const auto mid = s.getLocation().material_identifier->id;
     const auto *stress_values = m.s1.thermodynamic_forces.data();
 
     // Local collection of locations exceeding threshold
@@ -309,7 +309,7 @@ namespace opera_hpc {
     const auto &fed = s.getFiniteElementDiscretization();
     const auto &fespace = fed.getFiniteElementSpace<parallel>();
 
-    const auto mid = s.getId();
+    const auto mid = s.getLocation().material_identifier->id;
     const auto *stress_values = m.s1.thermodynamic_forces.data();
 
     // Collect both stress values and locations
