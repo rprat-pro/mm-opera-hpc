@@ -82,17 +82,17 @@ static void parseCommandLineOptions(mfem::OptionsParser &args,
   args.AddOption(&p.vector_file, "-f", "--file", "Vector file to use");
   args.Parse();
   if (!args.Good()) {
-    if (mfem_mgis::getMPIrank() == 0) args.PrintUsage(std::cout);
+    if (mfem_mgis::isMPIMainProcessForDefaultCommunicator()) args.PrintUsage(std::cout);
     mfem_mgis::finalize();
     exit(0);
   }
   if (p.mesh_file == nullptr) {
-    if (mfem_mgis::getMPIrank() == 0)
+    if (mfem_mgis::isMPIMainProcessForDefaultCommunicator())
       std::cout << "ERROR: Mesh file missing" << std::endl;
     args.PrintUsage(std::cout);
     mfem_mgis::abort(EXIT_FAILURE);
   }
-  if (mfem_mgis::getMPIrank() == 0) args.PrintOptions(std::cout);
+  if (mfem_mgis::isMPIMainProcessForDefaultCommunicator()) args.PrintOptions(std::cout);
 }
 
 static void setup_material_properties(
@@ -224,12 +224,12 @@ int main(int argc, char **argv) {
   double Tol = 1e-12;
   int defaultMaxNumOfIt = 2000;
   auto solverParameters = mfem_mgis::Parameters{};
-  solverParameters.insert(mfem_mgis::throwing,
+  solverParameters.insert(mfem_mgis::may_throw,
                           mfem_mgis::Parameters{{"VerbosityLevel", verbosity}});
   solverParameters.insert(
-      mfem_mgis::throwing,
+      mfem_mgis::may_throw,
       mfem_mgis::Parameters{{"MaximumNumberOfIterations", defaultMaxNumOfIt}});
-  solverParameters.insert(mfem_mgis::throwing,
+  solverParameters.insert(mfem_mgis::may_throw,
                           mfem_mgis::Parameters{{"Tolerance", Tol}});
 
   //
@@ -239,7 +239,7 @@ int main(int argc, char **argv) {
           {"Name", "HypreBoomerAMG"},
           {"Options", mfem_mgis::Parameters{{"VerbosityLevel", verbosity}}}};
   solverParameters.insert(
-      mfem_mgis::throwing,
+      mfem_mgis::may_throw,
       mfem_mgis::Parameters{{"Preconditioner", preconditionner}});
   problem.setLinearSolver(ctx, "HyprePCG", solverParameters) | or_die;
   // problem.setLinearSolver("HypreGMRES", solverParameters);

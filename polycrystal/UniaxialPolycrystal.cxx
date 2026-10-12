@@ -260,17 +260,17 @@ static void parseCommandLineArguments(mfem::OptionsParser &args,
   args.Parse();
 
   if (!args.Good()) {
-    if (mfem_mgis::getMPIrank() == 0) args.PrintUsage(std::cout);
+    if (mfem_mgis::isMPIMainProcessForDefaultCommunicator()) args.PrintUsage(std::cout);
     mfem_mgis::finalize();
     exit(0);
   }
   if (p.mesh_file == nullptr) {
-    if (mfem_mgis::getMPIrank() == 0)
+    if (mfem_mgis::isMPIMainProcessForDefaultCommunicator())
       std::cout << "ERROR: Mesh file missing" << std::endl;
     args.PrintUsage(std::cout);
     mfem_mgis::abort(EXIT_FAILURE);
   }
-  if (mfem_mgis::getMPIrank() == 0) args.PrintOptions(std::cout);
+  if (mfem_mgis::isMPIMainProcessForDefaultCommunicator()) args.PrintOptions(std::cout);
 }
 
 static void setupMaterials(
@@ -372,15 +372,15 @@ static void setLinearSolver(mfem_mgis::attributes::MayAbort,
   constexpr int defaultMaxNumOfIt = 5000;  // MaximumNumberOfIterations
   auto solverParameters = mfem_mgis::Parameters{};
   solverParameters.insert(
-      mfem_mgis::throwing,
+      mfem_mgis::may_throw,
       mfem_mgis::Parameters{{"VerbosityLevel", params.verbosity_level}});
   solverParameters.insert(
-      mfem_mgis::throwing,
+      mfem_mgis::may_throw,
       mfem_mgis::Parameters{{"MaximumNumberOfIterations", defaultMaxNumOfIt}});
   // solverParameters.insert(mfem_mgis::Parameters{{"AbsoluteTolerance", Tol}});
   // solverParameters.insert(mfem_mgis::Parameters{{"RelativeTolerance", Tol}});
   solverParameters.insert(
-      mfem_mgis::throwing,
+      mfem_mgis::may_throw,
       mfem_mgis::Parameters{{"Tolerance", params.linear_solver_tolerance}});
 
   // preconditioner
@@ -392,7 +392,7 @@ static void setLinearSolver(mfem_mgis::attributes::MayAbort,
     auto preconditioner = mfem_mgis::Parameters{
         {"Name", params.linear_solver_preconditioner}, {"Options", options}};
     solverParameters.insert(
-        mfem_mgis::throwing,
+        mfem_mgis::may_throw,
         mfem_mgis::Parameters{{"Preconditioner", preconditioner}});
   }
   p.setLinearSolver(ctx, params.linear_solver, solverParameters) | or_die;
