@@ -55,7 +55,7 @@ namespace opera_hpc {
     // Material identifier for filtering elements
     const auto l = s.getLocation();
     if(isInvalid(l.material_identifier)){
-      mfem_mgis::abort("partial quadrature space shall be defined on materials");
+      mfem_mgis::abort("findFirstPrincipalStressValueAndLocationImplementation only works on materials");
     }
     const auto mid = l.material_identifier->id;
 
@@ -173,7 +173,7 @@ namespace opera_hpc {
 
     const auto l = s.getLocation();
     if(isInvalid(l.material_identifier)){
-      mfem_mgis::abort("partial quadrature space shall be defined on materials");
+      mfem_mgis::abort("getPointsAboveStressThresholdImplementation only works on materials");
     }
     const auto mid = l.material_identifier->id;
     const auto *stress_values = m.s1.thermodynamic_forces.data();
@@ -319,7 +319,7 @@ namespace opera_hpc {
 
     const auto l = s.getLocation();
     if(isInvalid(l.material_identifier)){
-      mfem_mgis::abort("partial quadrature space shall be defined on materials");
+      mfem_mgis::abort("getPointsandStressAboveStressThresholdImplementation only works on materials");
     }
     const auto mid = l.material_identifier->id;
     const auto *stress_values = m.s1.thermodynamic_forces.data();

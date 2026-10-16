@@ -213,17 +213,17 @@ void fill_parameters(mfem::OptionsParser& args, TestParameters& p) {
 
   // Validate arguments
   if (!args.Good()) {
-    if (mfem_mgis::getMPIrank() == 0) args.PrintUsage(std::cout);
+    if (mfem_mgis::isMPIMainProcessForDefaultCommunicator()) args.PrintUsage(std::cout);
     mfem_mgis::finalize();
     exit(0);
   }
   if (p.mesh_file == nullptr) {
-    if (mfem_mgis::getMPIrank() == 0)
+    if (mfem_mgis::isMPIMainProcessForDefaultCommunicator())
       std::cout << "ERROR: Mesh file missing" << std::endl;
     args.PrintUsage(std::cout);
     mfem_mgis::abort(EXIT_FAILURE);
   }
-  if (mfem_mgis::getMPIrank() == 0) args.PrintOptions(std::cout);
+  if (mfem_mgis::isMPIMainProcessForDefaultCommunicator()) args.PrintOptions(std::cout);
 }
 
 /**
@@ -278,10 +278,10 @@ static void calculateAverageHydrostaticStress(
   const auto& fespace = fed.getFiniteElementSpace<parallel>();
   const auto l = s.getLocation();
   if(isInvalid(l.material_identifier)){
-    mfem_mgis::abort("partial quadrature space shall be defined on materials");
+    mfem_mgis::abort("calculateAverageHydrostaticStress only works on materials");
   }
   const auto m = l.material_identifier->id;
-
+  
   mfem_mgis::real integral = 0.;
   mfem_mgis::real volume = 0.;
 
@@ -315,7 +315,7 @@ static void calculateAverageHydrostaticStress(
              MPI_COMM_WORLD);
 
   // Write results on rank 0
-  if (mfem_mgis::getMPIrank() == 0) {
+  if (mfem_mgis::isMPIMainProcessForDefaultCommunicator()) {
     os << global_volume << "," << global_integral << ","
        << global_integral / global_volume << "\n";
   }
@@ -427,12 +427,12 @@ int main(int argc, char** argv) {
   int verbosity = p.verbosity_level;
   int post_processing = p.post_processing;
   mfem_mgis::Parameters solverParameters;
-  solverParameters.insert(mfem_mgis::throwing,
+  solverParameters.insert(mfem_mgis::may_throw,
                           mfem_mgis::Parameters{{"VerbosityLevel", verbosity}});
   // Use diagonal scaling preconditioner
   auto preconditioner = mfem_mgis::Parameters{{"Name", "HypreDiagScale"}};
   solverParameters.insert(
-      mfem_mgis::throwing,
+      mfem_mgis::may_throw,
       mfem_mgis::Parameters{{"Preconditioner", preconditioner},
                             {"Tolerance", 1e-10}});
 
@@ -479,10 +479,10 @@ int main(int argc, char** argv) {
   // Partial Quadrature functions for post-processing needs
   // eig for the first eigenstress
   auto eig = mfem_mgis::PartialQuadratureFunction{
-      m.getPartialQuadratureSpacePointer(), 1};
+      m.getPartialQuadratureSpace(), 1};
   // hyp for the hydrostatic stress
   auto hyp = mfem_mgis::PartialQuadratureFunction{
-      m.getPartialQuadratureSpacePointer(), 1};
+      m.getPartialQuadratureSpace(), 1};
 
   mfem_mgis::size_type nstep{1};
   // Solve the mechanical equilibrium problem
@@ -603,7 +603,7 @@ int main(int argc, char** argv) {
   if (post_processing) {
     CatchTimeSection(ctx, "common::post_processing_step");
 
-    if (mfem_mgis::getMPIrank() == 0) {
+    if (mfem_mgis::isMPIMainProcessForDefaultCommunicator()) {
       // Write CSV header and bubble stress data
       write_message(output_file_locations, "Bubble ID", "Location[0]",
                     "Location[1]", "Location[2]", "Stress");
@@ -618,7 +618,7 @@ int main(int argc, char** argv) {
       write_bubble_infos(output_file_locations, bubbles_information);
     }
 
-    if (mfem_mgis::getMPIrank() == 0)
+    if (mfem_mgis::isMPIMainProcessForDefaultCommunicator())
       write_message(outfile_sighydr, "Volume", "Integral", "Average");
 
     // Execute standard post-processing (Paraview export)
@@ -663,7 +663,7 @@ int main(int argc, char** argv) {
   }
 
   // Clean up, close, and win
-  if (mfem_mgis::getMPIrank() == 0) {
+  if (mfem_mgis::isMPIMainProcessForDefaultCommunicator()) {
     outfile_sighydr.close();
     output_file_locations.close();
   }
