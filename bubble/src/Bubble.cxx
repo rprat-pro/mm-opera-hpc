@@ -480,10 +480,10 @@ int main(int argc, char** argv) {
   // Partial Quadrature functions for post-processing needs
   // eig for the first eigenstress
   auto eig = mfem_mgis::PartialQuadratureFunction{
-      m.getPartialQuadratureSpacePointer(), 1};
+      m.getPartialQuadratureSpace(), 1};
   // hyp for the hydrostatic stress
   auto hyp = mfem_mgis::PartialQuadratureFunction{
-      m.getPartialQuadratureSpacePointer(), 1};
+      m.getPartialQuadratureSpace(), 1};
 
   mfem_mgis::size_type nstep{1};
   // Solve the mechanical equilibrium problem
