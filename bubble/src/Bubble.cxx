@@ -383,7 +383,7 @@ int main(int argc, char** argv) {
   // Create finite element discretization
   print_memory_footprint("[Building problem ...]");
   auto fed =
-      mfem_mgis::make_shared<mfem_mgis::FiniteElementDiscretization>(
+      mfem_mgis::construct<mfem_mgis::FiniteElementDiscretization>(
           ctx,
           mfem_mgis::Parameters{
               {"MeshFileName", p.mesh_file},
@@ -412,7 +412,7 @@ int main(int argc, char** argv) {
     problem.addBoundaryCondition(
         ctx, mfem_mgis::make_unique<
                  mfem_mgis::UniformImposedPressureBoundaryCondition>(
-                 ctx, problem.getFiniteElementDiscretizationPointer(),
+                 ctx, problem.getFiniteElementDiscretization(),
                  b.boundary_identifier,
                  [&b, pref = p.bubble_pressure](const mfem_mgis::real) {
                    // If bubble is broken, pressure = 0; otherwise pressure =

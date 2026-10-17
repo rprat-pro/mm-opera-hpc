@@ -148,7 +148,7 @@ static void setup_material_properties(
       };
 
   const int nMat =
-      getMaterialsAttributes(*(problem.getFiniteElementDiscretizationPointer()))
+      getMaterialsAttributes(problem.getFiniteElementDiscretization())
           .Max();
 
   const auto vectors = mm_opera_hpc::readVectorsFromFile(p.vector_file);
@@ -199,7 +199,7 @@ int main(int argc, char **argv) {
   parseCommandLineOptions(args, p);
   // definition of the nonlinear problem
   auto fed =
-      mfem_mgis::make_shared<mfem_mgis::FiniteElementDiscretization>(
+      mfem_mgis::construct<mfem_mgis::FiniteElementDiscretization>(
           ctx, mfem_mgis::Parameters{{"MeshFileName", p.mesh_file},
                                      {"FiniteElementFamily", "H1"},
                                      {"FiniteElementOrder", p.order},

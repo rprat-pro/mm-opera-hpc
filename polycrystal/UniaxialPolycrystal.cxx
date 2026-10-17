@@ -148,6 +148,7 @@ static void setLinearSolver(mfem_mgis::attributes::MayAbort,
 
 int main(int argc, char *argv[]) {
   auto ctx = mfem_mgis::Context{};
+  auto or_die = ctx.getFatalFailureHandler();
   ctx.enableProfiling(true);
   // mpi initialization here
   mfem_mgis::initialize(argc, argv);
@@ -158,15 +159,15 @@ int main(int argc, char *argv[]) {
   parseCommandLineArguments(args, p);
 
   // creating the finite element workspace
-  auto fed = std::make_shared<mfem_mgis::FiniteElementDiscretization>(
+  auto fed = mfem_mgis::construct<mfem_mgis::FiniteElementDiscretization>(
       ctx, mfem_mgis::Parameters{{"MeshFileName", p.mesh_file},
                                  {"MeshReadMode", p.mesh_mode},
                                  {"FiniteElementFamily", "H1"},
                                  {"FiniteElementOrder", p.order},
                                  {"UnknownsSize", mfem_mgis::size_type{3}},
                                  {"NumberOfUniformRefinements", p.refinement},
-                                 {"Parallel", true}});
-  mfem_mgis::PeriodicNonLinearEvolutionProblem problem(ctx, fed);
+                                 {"Parallel", true}})|or_die;
+  auto problem = mfem_mgis::construct<mfem_mgis::PeriodicNonLinearEvolutionProblem>(ctx, fed)|or_die;
   mm_opera_hpc::printMeshInformation(ctx, problem);
 
   // set problem
