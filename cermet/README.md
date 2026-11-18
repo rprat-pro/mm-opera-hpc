@@ -17,10 +17,11 @@ This case is similar to the `UO2` polycrystal with the addition of a metallic in
 	- Young's modulus = 276e+09 Pa
 	- Shear Modulus = 54.e9
 - **Norton creep law:**
-	- </head> <body> <p>$$\dot{\varepsilon}_{eq} = \frac{A D_0 \exp\!\left(-\frac{Q}{R T}\right)}{b^2}\left( \frac{\sigma_{eq}}{C} \right)^n$$</p></body></html>
+	- $$\dot{\varepsilon}_{eq} = \frac{A D_0 \exp\!\left(-\frac{Q}{R T}\right)}{b^2}\left( \frac{\sigma_{eq}}{C} \right)^n$$
 	- A = 2.5e+11 [a. u.]
 	- n1 = 4.75
-	- Q = 306.27e+03 [a. u.]D0 = 1.55e-5 [a. u.]
+	- Q = 306.27e+03 [a. u.]
+	- D0 = 1.55e-5 [a. u.]
 	- b = 2.5e-10 [a. u.]
 - **Finite element order:** 1 (linear interpolation).
 - **Finite element space:** H1.
@@ -33,7 +34,7 @@ This case is similar to the `UO2` polycrystal with the addition of a metallic in
 This section explains how to generate a sample mesh with `Mérope`.
 
 Before running the script, make sure that the environment variable
-`MEROPE_DIR` is properly loaded:
+`MEROPE_DIR` is properly set.
 
 Then, you can generate the mesh in two steps:
 
@@ -46,8 +47,6 @@ gmsh -3 5grains.geo # generate 5grains.msh
 You will obtain a 3D mesh (5grains.msh) of a polycrystalline sample with 5 grains.
 
 ### Options
-
-Mesh Generation Examples
 
 The mesh can be customized by adjusting the input parameters in the Python script.
 Below are two examples:

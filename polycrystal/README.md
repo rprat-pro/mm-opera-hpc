@@ -21,7 +21,7 @@ The orthotropic basis of each grain is given as an input of the crystal plastici
 This section explains how to generate a sample mesh with the Mérope toolkit [^1].
 
 Before running the script, make sure that the environment variable
-`MEROPE_DIR` is properly loaded:
+`MEROPE_DIR` is properly set.
 
 Then, you can generate the mesh in two steps:
 
@@ -32,13 +32,7 @@ gmsh -3 5crystals.geo # generate 5crystals.msh
 ```
 
 You will obtain a 3D mesh (5crystals.msh) of a polycrystalline sample
-with 5 grains. Make sure to load the `MEROPE` environment before running the mesh generation script:
-
-```
-source ${MEROPE_DIR}/Env_Merope.sh
-python3 mesh/5crystals.py   # generates 5crystals.geo
-gmsh -3 5crystals.geo       # generates 5crystals.msh
-```
+with 5 grains.
 
 ### Mesh generation options
 
