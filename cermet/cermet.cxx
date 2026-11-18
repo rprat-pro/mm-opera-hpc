@@ -70,15 +70,15 @@ static void parseCommandLineOptions(mfem::OptionsParser &args,
   args.AddOption(&p.order, "-o", "--order",
                  "Finite element order (polynomial degree).");
   args.AddOption(&p.refinement, "-r", "--refinement",
-                 "refinement level of the mesh, default = 1");
+                 "refinement level of the mesh");
   args.AddOption(&p.post_processing, "-p", "--postprocessing",
                  "run post processing step");
   args.AddOption(&p.verbosity_level, "-v", "--verbosity-level",
                  "choose the verbosity level");
   args.AddOption(&p.duration, "-d", "--duration",
-                 "choose the duration (default = 5)");
+                 "choose the duration");
   args.AddOption(&p.nsteps, "-n", "--nstep",
-                 "choose the number of steps (default = 40)");
+                 "choose the number of steps");
   args.AddOption(&p.vector_file, "-f", "--file", "Vector file to use");
   args.Parse();
   if (!args.Good()) {

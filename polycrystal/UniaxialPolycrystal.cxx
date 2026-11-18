@@ -254,9 +254,9 @@ static void parseCommandLineArguments(mfem::OptionsParser &args,
   args.AddOption(&p.verbosity_level, "-v", "--verbosity-level",
                  "choose the verbosity level");
   args.AddOption(&p.duration, "-d", "--duration",
-                 "choose the duration (default = 5)");
+                 "choose the duration");
   args.AddOption(&p.nstep, "-n", "--nstep",
-                 "choose the number of steps (default = 40)");
+                 "choose the number of steps");
 
   args.Parse();
 
