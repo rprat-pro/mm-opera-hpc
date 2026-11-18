@@ -9,12 +9,12 @@ This test case illustrates the simulation of a Representative Volume Element (RV
 - **Finite element space:** H1.
 - **Simulation duration:** 200 s.
 - **Number of time steps:** 600.
-- **[Crystal] Constitutive law:** The UO₂ crystal plasticity law used in the example is detailed in reference [^2]; the corresponding MFront file is on the MMM GitHub. In the case of uranium dioxide, the crystal symmetry is cubic and the corresponding orthotropic elastic properties used in the crystal plasticity law are:
+- **[Crystal] Constitutive law:** The UO₂ crystal plasticity law used in the example is detailed in reference [^2]; the corresponding MFront file is `law/Mono_UO2_CosH_Jaco3.mfront`. In the case of uranium dioxide, the crystal symmetry is cubic and the corresponding orthotropic elastic properties used in the crystal plasticity law are:
 	- Young's modulus = 222.e9 Pa
 	- Poisson's ratio = 0.27
 	- Shear modulus = 54.e9 Pa
 
-The orthotropic basis of each grain is given as an input of the crystal plasticity law. This orthotropic basis is precomputed with the Euler angles of the grain. The fixed-point algorithm uses the homogenized elastic properties of the polycrystal in order to predict the displacement gradient needed to converge toward a uniaxial tensile test. These macroscopic properties are derived from the single-crystal elastic constants given above with the mean values of the Voigt and Reuss bounds for an isotropic polycrystal (see `MacroscropicElasticMaterialProperties.cxx` in the repository).
+The orthotropic basis of each grain is given as an input of the crystal plasticity law. This orthotropic basis is precomputed with the Euler angles of the grain. The fixed-point algorithm uses the homogenized elastic properties of the polycrystal in order to predict the displacement gradient needed to converge toward a uniaxial tensile test. These macroscopic properties are derived from the single-crystal elastic constants given above with the mean values of the Voigt and Reuss bounds for an isotropic polycrystal (see `src/MacroscropicElasticMaterialProperties.cxx` in the repository).
 
 ## Mesh generation
 
@@ -114,7 +114,7 @@ To visualize and compare the results, run the following Python script:
 python3 plot_polycrystal_results.py
 ```
 
-This script generates a figure named `plot_polycrystal.png` as given in the Figure 6. In this figure we can observe that there is a good agreement between Cast3M and MFEM-MGIS results. Although Cast3M is our reference, the stress-strain curve shows an unexpected non-smooth evolution. These oscillations are associated with the time step discretization which was specified in the MFEM-MGIS simulation. For a larger number of time steps the Cast3M curve is smoother, like the MMM results presented in Figure 6. A first analysis of this issue led us to conclude that the implicit formulation of the Cast3M code, based on a quasi-Newton algorithm using the elastic stiffness and line search type convergence acceleration, is not fully stable. The main conclusion of this work is that the implicit formulation of MFEM-MGIS (full Newton algorithm using the tangent stiffness) is very efficient, thanks to the quadratic convergence and parallelization, and provides a high-quality solution. For the verification process, the number of time steps has been significantly increased in order to avoid as much as possible the oscillations of the Cast3M solution.      
+This script generates a figure named `plot_polycrystal.png`, shown below. In this figure we can observe that there is a good agreement between Cast3M and MFEM-MGIS results. Although Cast3M is our reference, the stress-strain curve shows an unexpected non-smooth evolution. These oscillations are associated with the time step discretization which was specified in the MFEM-MGIS simulation. For a larger number of time steps the Cast3M curve is smoother, like the MMM results shown below. A first analysis of this issue led us to conclude that the implicit formulation of the Cast3M code, based on a quasi-Newton algorithm using the elastic stiffness and line search type convergence acceleration, is not fully stable. The main conclusion of this work is that the implicit formulation of MFEM-MGIS (full Newton algorithm using the tangent stiffness) is very efficient, thanks to the quadratic convergence and parallelization, and provides a high-quality solution. For the verification process, the number of time steps has been significantly increased in order to avoid as much as possible the oscillations of the Cast3M solution.      
 
 ![](doc/plot_polycrystal.png)
 

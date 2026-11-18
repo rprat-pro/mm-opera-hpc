@@ -4,7 +4,7 @@
 
 ## Problem description
 
-The default example consists of a single spherical porosity in a quasi-infinite medium. The finite element solution can be compared with an analytical solution giving the elastic stress field as a function of the internal pressure, the bubble radius, and the distance from the bubble. As mentioned above, the boundary conditions for the problem are periodic, and we consider a zero macroscopic displacement gradient, which in turn generates a uniform compressive hydrostatic pressure on the representative volume element (RVE). In this case with one porosity in a quasi-infinite medium, the compressive hydrostatic pressure is negligible, in agreement with the analytical solution mentioned above.
+The default example consists of a single spherical porosity in a quasi-infinite medium. The finite element solution can be compared with an analytical solution giving the elastic stress field as a function of the internal pressure, the bubble radius, and the distance from the bubble. As described in the [main README](../README.md), the boundary conditions for the problem are periodic, and we consider a zero macroscopic displacement gradient, which in turn generates a uniform compressive hydrostatic pressure on the representative volume element (RVE). In this case with one porosity in a quasi-infinite medium, the compressive hydrostatic pressure is negligible, in agreement with the analytical solution mentioned above.
 
 ### Modify the geometry for the single bubble case and mesh it
 
@@ -79,7 +79,7 @@ $$
 
 where $p_{in}$ is the internal pressure and $R_b$ the bubble radius; the expression holds for $r>R_b$.
 
-The script available in `verification/bubble` can be used to compare the analytical solution to the MMM one:
+The script `mmm_vs_analytical.py`, available in the `verification` folder, can be used to compare the analytical solution to the MMM one:
 
 ```bash
 python3 mmm_vs_analytical.py 

@@ -8,11 +8,11 @@ This case is similar to the `UO2` polycrystal with the addition of a metallic in
 
 *Parameters:*
 - **Boundary conditions:** periodic boundary conditions are applied on the faces of the representative volume element (RVE). The loading is imposed in one direction, ensuring compatibility and equilibrium across periodic faces. More precisely, the axial component Fzz of the macroscopic deformation gradient is imposed. The off-diagonal components of the macroscopic deformation gradient are set to zero. The components Fxx and Fzz are the unknowns; they are determined via the fixed-point algorithm imposing zero values for the components Sxx and Syy of the macroscopic Cauchy stress tensor. The main result used for verification is a stress-strain curve with the evolution of the axial component Szz of the Cauchy stress as a function of Fxx.
-- **[Crystal] Constitutive law:** The UO₂ crystal plasticity law used in the example is detailed in reference [^1]; the corresponding MFront file is on the MMM GitHub. In the case of uranium dioxide, the crystal symmetry is cubic and the corresponding orthotropic elastic properties used in the crystal plasticity law are:
+- **[Crystal] Constitutive law:** The UO₂ crystal plasticity law used in the example is detailed in reference [^1]; the corresponding MFront file is `law/Mono_UO2_CosH_Jaco3.mfront`. In the case of uranium dioxide, the crystal symmetry is cubic and the corresponding orthotropic elastic properties used in the crystal plasticity law are:
 	- Young's modulus = 222.e9 Pa
 	- Poisson's ratio = 0.27
 	- Shear modulus = 54.e9 Pa
-- **[Metallic Interface] Constitutive law:** The Norton creep law used for the interface is derived from the elasto-viscoplastic properties of chromium coating used in eATF claddings as proposed in the reference [], the corresponding MFront file is on the MMM GitHub. 
+- **[Metallic Interface] Constitutive law:** The Norton creep law used for the interface is derived from the elasto-viscoplastic properties of the chromium coating used in eATF claddings; the corresponding MFront file is `law/NortonCr.mfront`.
 - **Elastic properties:**
 	- Young's modulus = 276e+09 Pa
 	- Shear Modulus = 54.e9
@@ -165,7 +165,7 @@ To visualize and compare the results, run the following Python script:
 python3 plot_cermet_results.py
 ```
 
-This script generates a figure named: plot_cermet.png as given in the Figure. In this figure we can observe that there is a good agreement between Cast3M and MFEM-MGIS results. As observed for the polycrystal test case, there are also some oscillations in the Cast3M solution, which is of poorer quality than the MFEM-MGIS results. The main conclusion of this work is that the implicit formulation of MFEM-MGIS (full Newton algorithm using the tangent stiffness) is very efficient, thanks to the quadratic convergence and parallelization, and provides a high-quality solution. For the verification process, the number of time steps has been significantly increased in order to avoid as much as possible the oscillations of the Cast3M solution.
+This script generates a figure named `plot_cermet.png`, shown below. In this figure we can observe that there is a good agreement between Cast3M and MFEM-MGIS results. As observed for the polycrystal test case, there are also some oscillations in the Cast3M solution, which is of poorer quality than the MFEM-MGIS results. The main conclusion of this work is that the implicit formulation of MFEM-MGIS (full Newton algorithm using the tangent stiffness) is very efficient, thanks to the quadratic convergence and parallelization, and provides a high-quality solution. For the verification process, the number of time steps has been significantly increased in order to avoid as much as possible the oscillations of the Cast3M solution.
 
 
 ![](doc/plot_cermet.png)

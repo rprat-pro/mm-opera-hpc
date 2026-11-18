@@ -1,6 +1,6 @@
 # Random Orthogonal Vector Pair Generator
 
-This project provides a simple Python script to generate a specified number of pairs of orthogonal vectors. In mfem-mgis-examples, these vectors are used to describe the principal directions of crystals. The script is used to randomly generate the principal directions of crystals within a polycrystal.
+This project provides a simple Python script to generate a specified number of pairs of orthogonal vectors. In the polycrystal and cermet test cases, these vectors are used to describe the principal directions of crystals. The script is used to randomly generate the principal directions of crystals within a polycrystal.
 
 ## Prerequisites
 
@@ -23,4 +23,4 @@ The “default” algorithm generates random vectors by generating vector coordi
 
 #### Angles
 
-The “angles” algorithm generates random vector directions using Euler angles obtained from a uniform distribution. This method is based on the approach described in Appendix A of the paper *Approche micromécanique du comportement du combustible dioxyde d'uranium* by Julian Soulacroix (2014).
+The “angles” algorithm generates random vector directions using Euler angles obtained from a uniform distribution. This method is based on the approach described in Appendix A of the PhD thesis *Approche micromécanique du comportement du combustible dioxyde d'uranium* by Julian Soulacroix (2014).
