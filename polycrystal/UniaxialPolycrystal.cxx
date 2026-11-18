@@ -413,7 +413,7 @@ static void addOptionalPostProcessings(
 
   if (params.export_von_Mises_stress || params.export_first_eigen_stress) {
     p.getImplementation<true>().addPostProcessing(ctx, [&ctx, &p, &params,
-                                                        &exporter, &or_die](
+                                                        &exporter, or_die](
                                                            mfem_mgis::real t,
                                                            mfem_mgis::real dt) {
       static int count = 0;
