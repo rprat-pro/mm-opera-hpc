@@ -12,7 +12,7 @@ The script generates pairs of orthonormal vectors. You can specify the number of
 
 ### Arguments
 
-- nbVec (int): The number of vectors to generate.
+- nbVec (int): The number of vectors to generate (two per grain).
 - algoKey (str): The algorithm to use for generating vectors. It can be either 'default' or 'angles'. 'default' uses a standard method for generating orthonormal vectors, while 'angles' generates orthonormal vectors using specific angles.
 
 ### Algorithms
