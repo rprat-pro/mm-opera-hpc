@@ -18,7 +18,7 @@ The orthotropic basis of each grain is given as an input of the crystal plastici
 
 ## Mesh generation
 
-This section explains how to generate a sample mesh with the Merope toolkit [^1].
+This section explains how to generate a sample mesh with the Mérope toolkit [^1].
 
 Before running the script, make sure that the environment variable
 `MEROPE_DIR` is properly loaded:

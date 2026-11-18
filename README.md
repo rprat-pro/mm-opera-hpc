@@ -38,7 +38,7 @@ Directory: `bubble`.
 
 ### Physical Problem
 
-The case studied is the elastic computation of the stress field induced by an internal pressure prescribed in spherical porosities (e.g., a fission gas bubble for fuel) distributed randomly in a periodic RVE. The boundary condition is a zero macroscopic displacement gradient, which corresponds to a macroscopic strain equal to zero. The periodic surface of the RVE is defined according to a Voronoi tessellation principle in order to avoid truncated porosities and ensure a high quality of the periodic solution near the boundary. In the general case, the zero periodic displacement boundary condition prevents the volume expansion, which results in a non-zero macroscopic hydrostatic stress. The latter can be derived from the periodic elastic stress field with the equation: 
+The case studied is the elastic computation of the stress field induced by an internal pressure prescribed in spherical porosities (e.g., a fission gas bubble for fuel) distributed randomly in a periodic representative volume element (RVE). The boundary condition is a zero macroscopic displacement gradient, which corresponds to a macroscopic strain equal to zero. The periodic surface of the RVE is defined according to a Voronoi tessellation principle in order to avoid truncated porosities and ensure a high quality of the periodic solution near the boundary. In the general case, the zero periodic displacement boundary condition prevents the volume expansion, which results in a non-zero macroscopic hydrostatic stress. The latter can be derived from the periodic elastic stress field with the equation: 
 
 $$
 p_{hyd} = -\dfrac{1}{3} tr\left(\dfrac{1}{V}\int_V \overline{\overline{\sigma}} dV\right)

@@ -4,7 +4,7 @@
 
 ## Problem description
 
-The default example consists of a single spherical porosity in a quasi-infinite medium. The finite element solution can be compared with an analytical solution giving the elastic stress field as a function of the internal pressure, the bubble radius, and the distance from the bubble. As mentioned above, the boundary conditions for the problem are periodic, and we consider a zero macroscopic displacement gradient, which in turn generates a uniform compressive hydrostatic pressure on the REV. In this case with one porosity in a quasi-infinite medium, the compressive hydrostatic pressure is negligible, in agreement with the analytical solution mentioned above.
+The default example consists of a single spherical porosity in a quasi-infinite medium. The finite element solution can be compared with an analytical solution giving the elastic stress field as a function of the internal pressure, the bubble radius, and the distance from the bubble. As mentioned above, the boundary conditions for the problem are periodic, and we consider a zero macroscopic displacement gradient, which in turn generates a uniform compressive hydrostatic pressure on the representative volume element (RVE). In this case with one porosity in a quasi-infinite medium, the compressive hydrostatic pressure is negligible, in agreement with the analytical solution mentioned above.
 
 ### Modify the geometry for the single bubble case and mesh it
 
@@ -28,9 +28,9 @@ The simulation considers an empty (i.e., not meshed) cavity, on whose surface we
 
 The elastic modulus is rescaled to consistently describe the geometry in micrometers, rather than in SI units. This choice is made to facilitate the creation of more complex geometries when using `Mérope`, given the characteristic length scale of the considered inclusions.
 
-The geometry is meshed using quadratic elements, to better describe the spherical inclusions contained in the representative elementary volume (REV). Although `MFEM` allows sub-, super-, and isoparametric analyses, we recommend sticking at least to the isoparametric choice (i.e., not subparametric) for the polynomial shape functions.
+The geometry is meshed using quadratic elements, to better describe the spherical inclusions contained in the RVE. Although `MFEM` allows sub-, super-, and isoparametric analyses, we recommend sticking at least to the isoparametric choice (i.e., not subparametric) for the polynomial shape functions.
 
-The boundary conditions for the problem are periodic, and we consider a zero macroscopic displacement gradient, which in turn generates a uniform compressive hydrostatic pressure on the REV.
+The boundary conditions for the problem are periodic, and we consider a zero macroscopic displacement gradient, which in turn generates a uniform compressive hydrostatic pressure on the RVE.
 
 ### Parameters
 

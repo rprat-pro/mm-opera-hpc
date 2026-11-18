@@ -7,7 +7,7 @@
 This case is similar to the `UO2` polycrystal with the addition of a metallic interface at the grain boundary. In the Gmsh mesh each grain has a material ID (from 2 to (N_grain + 1)), as well as its orientation needed for the orthotropic basis. The metallic interface has the material ID equal to 1, and is considered to be made of an isotropic elasto-viscoplastic material. In addition to the mechanical analysis, this example implements a fixed-point algorithm enabling the simulation of a uniaxial compression/tensile test with periodic boundary conditions.
 
 *Parameters:*
-- **Boundary conditions:** periodic boundary conditions are applied on the RVE faces. The loading is imposed in one direction, ensuring compatibility and equilibrium across periodic faces. More precisely, the axial component Fzz of the macroscopic deformation gradient is imposed. The off-diagonal components of the macroscopic deformation gradient are set to zero. The components Fxx and Fzz are the unknowns; they are determined via the fixed-point algorithm imposing zero values for the components Sxx and Syy of the macroscopic Cauchy stress tensor. The main result used for verification is a stress-strain curve with the evolution of the axial component Szz of the Cauchy stress as a function of Fxx.
+- **Boundary conditions:** periodic boundary conditions are applied on the faces of the representative volume element (RVE). The loading is imposed in one direction, ensuring compatibility and equilibrium across periodic faces. More precisely, the axial component Fzz of the macroscopic deformation gradient is imposed. The off-diagonal components of the macroscopic deformation gradient are set to zero. The components Fxx and Fzz are the unknowns; they are determined via the fixed-point algorithm imposing zero values for the components Sxx and Syy of the macroscopic Cauchy stress tensor. The main result used for verification is a stress-strain curve with the evolution of the axial component Szz of the Cauchy stress as a function of Fxx.
 - **[Crystal] Constitutive law:** The UO₂ crystal plasticity law used in the example is detailed in reference [^1]; the corresponding MFront file is on the MMM GitHub. In the case of uranium dioxide, the crystal symmetry is cubic and the corresponding orthotropic elastic properties used in the crystal plasticity law are:
 	- Young's modulus = 222.e9 Pa
 	- Poisson's ratio = 0.27
@@ -30,7 +30,7 @@ This case is similar to the `UO2` polycrystal with the addition of a metallic in
 
 ## Mesh generation
 
-This section explains how to generate a sample mesh with `Merope`.
+This section explains how to generate a sample mesh with `Mérope`.
 
 Before running the script, make sure that the environment variable
 `MEROPE_DIR` is properly loaded:
