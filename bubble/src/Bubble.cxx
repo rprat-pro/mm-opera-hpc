@@ -213,7 +213,8 @@ void fill_parameters(mfem::OptionsParser& args, TestParameters& p) {
 
   // Validate arguments
   if (!args.Good()) {
-    if (mfem_mgis::isMPIMainProcessForDefaultCommunicator()) args.PrintUsage(std::cout);
+    if (mfem_mgis::isMPIMainProcessForDefaultCommunicator())
+      args.PrintUsage(std::cout);
     mfem_mgis::finalize();
     exit(args.Help() ? EXIT_SUCCESS : EXIT_FAILURE);
   }
@@ -223,7 +224,8 @@ void fill_parameters(mfem::OptionsParser& args, TestParameters& p) {
     args.PrintUsage(std::cout);
     mfem_mgis::abort(EXIT_FAILURE);
   }
-  if (mfem_mgis::isMPIMainProcessForDefaultCommunicator()) args.PrintOptions(std::cout);
+  if (mfem_mgis::isMPIMainProcessForDefaultCommunicator())
+    args.PrintOptions(std::cout);
 }
 
 /**
@@ -277,11 +279,12 @@ static void calculateAverageHydrostaticStress(
   const auto& fed = s.getFiniteElementDiscretization();
   const auto& fespace = fed.getFiniteElementSpace<parallel>();
   const auto l = s.getLocation();
-  if(isInvalid(l.material_identifier)){
-    mfem_mgis::abort("calculateAverageHydrostaticStress only works on materials");
+  if (isInvalid(l.material_identifier)) {
+    mfem_mgis::abort(
+        "calculateAverageHydrostaticStress only works on materials");
   }
   const auto m = l.material_identifier->id;
-  
+
   mfem_mgis::real integral = 0.;
   mfem_mgis::real volume = 0.;
 
@@ -480,11 +483,11 @@ int main(int argc, char** argv) {
 
   // Partial Quadrature functions for post-processing needs
   // eig for the first eigenstress
-  auto eig = mfem_mgis::PartialQuadratureFunction{
-      m.getPartialQuadratureSpace(), 1};
+  auto eig =
+      mfem_mgis::PartialQuadratureFunction{m.getPartialQuadratureSpace(), 1};
   // hyp for the hydrostatic stress
-  auto hyp = mfem_mgis::PartialQuadratureFunction{
-      m.getPartialQuadratureSpace(), 1};
+  auto hyp =
+      mfem_mgis::PartialQuadratureFunction{m.getPartialQuadratureSpace(), 1};
 
   mfem_mgis::size_type nstep{1};
   // Solve the mechanical equilibrium problem
