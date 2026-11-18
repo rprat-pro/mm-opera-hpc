@@ -215,7 +215,7 @@ void fill_parameters(mfem::OptionsParser& args, TestParameters& p) {
   if (!args.Good()) {
     if (mfem_mgis::isMPIMainProcessForDefaultCommunicator()) args.PrintUsage(std::cout);
     mfem_mgis::finalize();
-    exit(0);
+    exit(args.Help() ? EXIT_SUCCESS : EXIT_FAILURE);
   }
   if (p.mesh_file == nullptr) {
     if (mfem_mgis::isMPIMainProcessForDefaultCommunicator())

@@ -26,8 +26,7 @@ add_dependencies(cermet generate-lib-cermet)
 
 ## Test
 add_dependencies(check cermet generate-lib-cermet)
-add_test(NAME CermetNullStrainXXYY COMMAND cermet --duration 0.4 --nstep 1 --postprocessing 0)
-add_test(NAME CermetImposeGradXXYY COMMAND cermet --duration 0.4 --nstep 1 --postprocessing 0)
+add_test(NAME CermetTest COMMAND cermet --duration 0.4 --nstep 1 --postprocessing 0)
 
 ## Install
 install(TARGETS cermet DESTINATION bin)

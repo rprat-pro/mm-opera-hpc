@@ -84,7 +84,7 @@ static void parseCommandLineOptions(mfem::OptionsParser &args,
   if (!args.Good()) {
     if (mfem_mgis::isMPIMainProcessForDefaultCommunicator()) args.PrintUsage(std::cout);
     mfem_mgis::finalize();
-    exit(0);
+    exit(args.Help() ? EXIT_SUCCESS : EXIT_FAILURE);
   }
   if (p.mesh_file == nullptr) {
     if (mfem_mgis::isMPIMainProcessForDefaultCommunicator())
@@ -113,7 +113,7 @@ static void setup_material_properties(
   const double shear23 = shear12;
   const double shear13 = shear12;
 
-  mp.update(young1, poisson12, shear12);  // used in solve_null_strain
+  mp.update(young1, poisson12, shear12);  // used by the fixed-point algorithm
 
   // ceramic
   auto set_temperature = [&ctx, &or_die](auto &m) {
