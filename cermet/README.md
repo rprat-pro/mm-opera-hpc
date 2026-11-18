@@ -17,7 +17,7 @@ This case is similar to the `UO2` polycrystal with the addition of a metallic in
 		- Young's modulus = 276e+09 Pa
 		- Poisson's ratio = 0.3
 	- **Norton creep law:**
-		- $$\dot{\varepsilon}_{eq} = \frac{A D_0 \exp\!\left(-\frac{Q}{R T}\right)}{b^2}\left( \frac{\sigma_{eq}}{C} \right)^n$$
+		- $`\displaystyle \dot{\varepsilon}_{eq} = \frac{A D_0 \exp\!\left(-\frac{Q}{R T}\right)}{b^2}\left( \frac{\sigma_{eq}}{C} \right)^n`$
 		- A = 2.5e+11 [a. u.]
 		- n = 4.75
 		- Q = 306.27e+03 [a. u.]
