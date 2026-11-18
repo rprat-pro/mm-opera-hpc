@@ -124,7 +124,7 @@ This script generates a figure named `plot_polycrystal.png`, shown below. In thi
 To verify the simulation results, run the following Python script:
 
 ```
-python3 check_polycrystal_restults.py
+python3 check_polycrystal_results.py
 ```
 
 The expected output is: `Check PASS`.

@@ -176,7 +176,7 @@ This script generates a figure named `plot_cermet.png`, shown below. In this fig
 To verify the simulation results, run the following Python script:
 
 ```
-python3 check_cermet_restults.py
+python3 check_cermet_results.py
 ```
 
 The expected output is: `Check PASS`.
