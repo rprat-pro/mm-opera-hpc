@@ -227,7 +227,7 @@ static void parseCommandLineArguments(mfem::OptionsParser &args,
                  "components of the Cauchy stress.");
   args.AddOption(&p.mesh_file, "-m", "--mesh", "Mesh file to use.");
   args.AddOption(&p.mesh_mode, "-mm", "--mesh_mode",
-                 "Read Mesh Mode (FromScratch or Restart = splited file).");
+                 "Read Mesh Mode (FromScratch or Restart = split file).");
   args.AddOption(&p.vect_file, "-f", "--vect", "Vector file to use.");
   args.AddOption(&p.library, "-l", "--library", "Material library.");
   args.AddOption(&p.behaviour, "-b", "--behaviour", "Mechanical behaviour.");

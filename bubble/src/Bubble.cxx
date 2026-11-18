@@ -578,7 +578,7 @@ int main(int argc, char** argv) {
         // Third check is on the z: check if point is within bounding box on
         // 2-axis
         if (std::abs(pt.location[2] - bz) > dmin) continue;
-        // if we made here, the point is worthwile of consideration!
+        // if we made it here, the point is worthy of consideration!
         const auto dx = pt.location[0] - bx;
         const auto dy = pt.location[1] - by;
         const auto dz = pt.location[2] - bz;

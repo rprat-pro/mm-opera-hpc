@@ -31,7 +31,7 @@ namespace mm_opera_hpc {
    *
    * - the macroscopic stress state is uniaxial along the zz axis (up to a given
    *   tolerance)
-   * - the axial componenent Fzz of the macroscopic deformation gradient is
+   * - the axial component Fzz of the macroscopic deformation gradient is
    *   prescribed
    * - the off-diagonal components of the macroscopic deformation gradient are
    *   set to zero
@@ -76,7 +76,7 @@ namespace mm_opera_hpc {
       std::array<mfem_mgis::real, 3u> dF = std::array<mfem_mgis::real, 3u>{};
       // diagonal components of the macroscopic Cauchy stress
       std::array<mfem_mgis::real, 3u> S = std::array<mfem_mgis::real, 3u>{};
-      // previous succesful time step
+      // previous successful time step
       std::optional<mfem_mgis::real> previous_time_increment;
     };
     /*!

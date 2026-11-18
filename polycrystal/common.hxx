@@ -208,6 +208,6 @@ void print_mesh_information(Implementation &impl) {
 
   Message("Info problem: number of vertices -> ", numbers_of_vertices);
   Message("Info problem: number of elements -> ", numbers_of_elements);
-  Message("Info prolbem: element size -> ", h);
-  Message("Info porblem: Number of finite element unknowns: ", unknowns);
+  Message("Info problem: element size -> ", h);
+  Message("Info problem: Number of finite element unknowns: ", unknowns);
 }
