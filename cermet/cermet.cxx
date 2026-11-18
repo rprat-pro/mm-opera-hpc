@@ -15,13 +15,13 @@
 Problem:
 
 This simulation consists of applying a tensile load on a cermet RVE. The cermet
-is a polycrystal where each grain has a material ID (from 2 to Nmat – 1) and a
+is a polycrystal where each grain has a material ID (from 2 to Nmat) and a
 different orientation. A metallic interface is present between the different
 polycrystals (material ID 1)
 
 Definition:
 
-- [Crystal] Behavior law: MonoCristal_UO2
+- [Crystal] Behavior law: Mono_UO2_Cosh_Jaco3
 -- Parameters:
 --- Young Modulus = 222.e9
 --- Poisson ratio = 0.27
@@ -70,15 +70,15 @@ static void parseCommandLineOptions(mfem::OptionsParser &args,
   args.AddOption(&p.order, "-o", "--order",
                  "Finite element order (polynomial degree).");
   args.AddOption(&p.refinement, "-r", "--refinement",
-                 "refinement level of the mesh, default = 1");
+                 "refinement level of the mesh");
   args.AddOption(&p.post_processing, "-p", "--postprocessing",
                  "run post processing step");
   args.AddOption(&p.verbosity_level, "-v", "--verbosity-level",
                  "choose the verbosity level");
   args.AddOption(&p.duration, "-d", "--duration",
-                 "choose the duration (default = 5)");
+                 "choose the duration");
   args.AddOption(&p.nsteps, "-n", "--nstep",
-                 "choose the number of steps (default = 40)");
+                 "choose the number of steps");
   args.AddOption(&p.vector_file, "-f", "--file", "Vector file to use");
   args.Parse();
   if (!args.Good()) {
@@ -100,7 +100,7 @@ static void setup_material_properties(
     mfem_mgis::Context &ctx,
     mfem_mgis::PeriodicNonLinearEvolutionProblem &problem,
     TestParameters &p,
-    mm_opera_hpc::MacroscropicElasticMaterialProperties &mp) {
+    mm_opera_hpc::MacroscopicElasticMaterialProperties &mp) {
   auto or_die = ctx.getFatalFailureHandler();
   // cubic symmetry elasticity
   const double young1 = 222.e9;
@@ -251,7 +251,7 @@ int main(int argc, char **argv) {
     return 1 + def * ets;
   };
   //
-  mm_opera_hpc::MacroscropicElasticMaterialProperties mp;
+  mm_opera_hpc::MacroscopicElasticMaterialProperties mp;
   setup_material_properties(mfem_mgis::may_abort, ctx, problem, p, mp);
 
   if (post_processing) {

@@ -36,11 +36,12 @@ def main(nbVec:int, algoKey:str='default'):
             file.write(line + "\n")
 
     # Display
-    print(f"{nbVec} vectors have been exported to the file vectors.txt.")
+    print(f"{len(vectors)} vectors have been exported to the file vectors.txt.")
 
 
 if __name__ == '__main__':
-    main(nbVec=5,algoKey='angles')
+    # two vectors per grain: 10 vectors for the 5 grains of the test case
+    main(nbVec=10,algoKey='angles')
 
     vec1 = [0.71287845123819126857966921306797,
             0.40877656662388073272040855954401,

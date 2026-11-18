@@ -7,33 +7,35 @@
 This case is similar to the `UO2` polycrystal with the addition of a metallic interface at the grain boundary. In the Gmsh mesh each grain has a material ID (from 2 to (N_grain + 1)), as well as its orientation needed for the orthotropic basis. The metallic interface has the material ID equal to 1, and is considered to be made of an isotropic elasto-viscoplastic material. In addition to the mechanical analysis, this example implements a fixed-point algorithm enabling the simulation of a uniaxial compression/tensile test with periodic boundary conditions.
 
 *Parameters:*
-- **Boundary conditions:** periodic boundary conditions are applied on the RVE faces. The loading is imposed in one direction, ensuring compatibility and equilibrium across periodic faces. More precisely, the axial component Fzz of the macroscopic deformation gradient is imposed. The off-diagonal components of the macrocroscopic deformation gradient are set to zero. The components Fxx and Fzz are the unknowns, they are determined via the fixed-point algorithm imposing null values for the components Sxx and Syy of the macroscopic Cauchy stress tensor. The main result used for verification is a stress-strain curve with the evolution of the axial component Szz of the Cauchy stress as a function of Fxx.
-- **[Crystal] Constitutive law:** The UO₂ crystal plasticity law used in the example is detailed in the reference [^1], the corresponding Mfront file is on the MMM Github. In the case of Uranium dioxide, the crystal symmetry is cubic and the corresponding orthotropic elastic properties used in the crystal plasticity law are:
-	- Young Modulus = 222.e9 Pa
-	- Poisson ratio = 0.27
-	- Shear Modulus = 54.e9 Pa
-- **[Metalic Interface] Constitutive law:** The Norton creep law used for the interface is derived from the elasto-viscoplastic properties of chromium coating used in eATF claddings as proposed in the reference [], the corresponding Mfront file is on the MMM Github. 
-- **Elastic properties:**
-	- Young Modulus = 276e+09 Pa
-	- Shear Modulus = 54.e9
-- **Norton creep law:**
-	- </head> <body> <p>$$\dot{\varepsilon}_{eq} = \frac{A D_0 \exp\!\left(-\frac{Q}{R T}\right)}{b^2}\left( \frac{\sigma_{eq}}{C} \right)^n$$</p></body></html>
-	- A = 2.5e+11 [a. u.]
-	- n1 = 4.75
-	- Q = 306.27e+03 [a. u.]D0 = 1.55e-5 [a. u.]
-	- b = 2.5e-10 [a. u.]
+- **Boundary conditions:** periodic boundary conditions are applied on the faces of the representative volume element (RVE). The loading is imposed in one direction, ensuring compatibility and equilibrium across periodic faces. More precisely, the axial component Fzz of the macroscopic deformation gradient is imposed. The off-diagonal components of the macroscopic deformation gradient are set to zero. The components Fxx and Fyy are the unknowns; they are determined via the fixed-point algorithm imposing zero values for the components Sxx and Syy of the macroscopic Cauchy stress tensor. The main result used for verification is the evolution of the axial component Szz of the Cauchy stress as a function of time, which is a stress-strain curve as Fzz increases linearly with time.
+- **[Crystal] Constitutive law:** The UO₂ crystal plasticity law used in the example is detailed in reference [^1]; the corresponding MFront file is `law/Mono_UO2_CosH_Jaco3.mfront`. In the case of uranium dioxide, the crystal symmetry is cubic and the corresponding orthotropic elastic properties used in the crystal plasticity law are:
+	- Young's modulus = 222.e9 Pa
+	- Poisson's ratio = 0.27
+	- Shear modulus = 54.e9 Pa
+- **[Metallic Interface] Constitutive law:** The Norton creep law used for the interface is derived from the elasto-viscoplastic properties of the chromium coating used in eATF claddings; the corresponding MFront file is `law/NortonCr.mfront`.
+	- **Elastic properties:**
+		- Young's modulus = 276e+09 Pa
+		- Poisson's ratio = 0.3
+	- **Norton creep law:**
+		- $`\displaystyle \dot{\varepsilon}_{eq} = \frac{A D_0 \exp\!\left(-\frac{Q}{R T}\right)}{b^2}\left( \frac{\sigma_{eq}}{C} \right)^n`$
+		- A = 2.5e+11 [a. u.]
+		- n = 4.75
+		- Q = 306.27e+03 [a. u.]
+		- D0 = 1.55e-5 [a. u.]
+		- b = 2.5e-10 [a. u.]
+		- C = 264110 - 10 T - 0.025 T², with $$\sigma_{eq}$$ and C in MPa
 - **Finite element order:** 1 (linear interpolation).
 - **Finite element space:** H1.
 - **Simulation duration:** 200 s.
 - **Number of time steps:** 500.
-- **Linear solver:** HyprePCG (solver) /(precond)
+- **Linear solver:** HyprePCG, with the HypreBoomerAMG preconditioner.
 
 ## Mesh generation
 
-This section explains how to generate a sample mesh with `Merope`.
+This section explains how to generate a sample mesh with `Mérope`.
 
 Before running the script, make sure that the environment variable
-`MEROPE_DIR` is properly loaded:
+`MEROPE_DIR` is properly set.
 
 Then, you can generate the mesh in two steps:
 
@@ -47,14 +49,12 @@ You will obtain a 3D mesh (5grains.msh) of a polycrystalline sample with 5 grain
 
 ### Options
 
-Mesh Generation Examples
-
 The mesh can be customized by adjusting the input parameters in the Python script.
 Below are two examples:
 
 #### Small Example
 
-This setup generates a small polycrystalline mesh with (gmsh version `11.1`):
+This setup generates a small polycrystalline mesh with (gmsh version `4.11.1`):
 
 - 5 grains
 - 12,992 nodes
@@ -62,8 +62,8 @@ This setup generates a small polycrystalline mesh with (gmsh version `11.1`):
 
 ```
 L = [1, 1, 1]
-nbSpheres = 20 
-distMin = 0.3
+nbSpheres = 5
+distMin = 0.4
 randomSeed = 0
 layer=0.02
 MeshOrder = 1
@@ -107,11 +107,11 @@ Usage: ./cermet [options] ...
 | `-h, --help`                                | —      | —                     | Print the help message and exit.                                                                                                                                  |
 | `-m <string>, --mesh <string>`              | string | `mesh/5grains.msh`    | Mesh file to use.                                                                                                                                                 |
 | `-o <int>, --order <int>`                   | int    | `1`                   | Finite element order (polynomial degree).                                                                                                                         |
-| `-r <int>, --refinement <int>`              | int    | `0`                   | Refinement level of the mesh (default = 1).                                                                                                                       |
-| `-p <int>, --post-processing <int>`         | int    | `1`                   | Run the post-processing step.                                                                                                                                     |
+| `-r <int>, --refinement <int>`              | int    | `0`                   | Refinement level of the mesh.                                                                                                                                     |
+| `-p <int>, --postprocessing <int>`          | int    | `1`                   | Run the post-processing step.                                                                                                                                     |
 | `-v <int>, --verbosity-level <int>`         | int    | `0`                   | Verbosity level of the output.                                                                                                                                    |
-| `-d <double>, --duration <double>`          | double | `200`                 | Duration of the simulation (default = 5).                                                                                                                         |
-| `-n <int>, --nstep <int>`                   | int    | `400`                 | Number of simulation steps (default = 40).                                                                                                                        |
+| `-d <double>, --duration <double>`          | double | `200`                 | Duration of the simulation.                                                                                                                                       |
+| `-n <int>, --nstep <int>`                   | int    | `500`                 | Number of simulation steps.                                                                                                                                       |
 | `-f <string>, --file <string>`              | string | `vectors_5grains.txt` | Vector file to use.                                                                                                                                               |
 | `--macroscopic-stress-output-file <string>` | string | `cermet.res`          | Main output file containing:<br>• Evolution of the diagonal components of the deformation gradient<br>• Evolution of the diagonal components of the Cauchy stress |
 
@@ -166,7 +166,7 @@ To visualize and compare the results, run the following Python script:
 python3 plot_cermet_results.py
 ```
 
-This script generates a figure named: plot_cermet.png as given in the Figure. In this figure we can observe that there is a good agreement between Cast3M and MFEM-MGIS results. As observed for the polycrystal test case there are also some oscillations for the Cast3M solution which is of poorer quality compare to the MFEM-MGIS results. The main output of this work is that the implicit formulation of MFEM-MGIS (full newton algorithm using the tangent stiffness) is very performant, thanks to the quadratic convergence and parallelization, and provides a high-quality solution. For the verification process, the number of time steps has been significantly increased in order to avoid as much as possible the oscillation of the Cast3M solution.
+This script generates a figure named `plot_cermet.png`, shown below. In this figure we can observe that there is a good agreement between Cast3M and MFEM-MGIS results. As observed for the polycrystal test case, there are also some oscillations in the Cast3M solution, which is of poorer quality than the MFEM-MGIS results. The main conclusion of this work is that the implicit formulation of MFEM-MGIS (full Newton algorithm using the tangent stiffness) is very efficient, thanks to the quadratic convergence and parallelization, and provides a high-quality solution. For the verification process, the number of time steps has been significantly increased in order to avoid as much as possible the oscillations of the Cast3M solution.
 
 
 ![](doc/plot_cermet.png)
@@ -176,7 +176,7 @@ This script generates a figure named: plot_cermet.png as given in the Figure. In
 To verify the simulation results, run the following Python script:
 
 ```
-python3 check_cermet_restults.py
+python3 check_cermet_results.py
 ```
 
 The expected output is: `Check PASS`.

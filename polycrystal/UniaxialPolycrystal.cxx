@@ -1,5 +1,5 @@
 /*!
- * \file   Mono_UO2_CosH_Jaco.cxx
+ * \file   UniaxialPolycrystal.cxx
  * \brief
  * This example is modelling ...
  * \author Raphael Prat, Maxence Wangermez
@@ -34,7 +34,7 @@
 #include "MFEMMGIS/NonLinearEvolutionProblem.hxx"
 #include "MM_OPERA_HPC/Utilities.hxx"
 #include "MM_OPERA_HPC/GrainOrientations.hxx"
-#include "MM_OPERA_HPC/MacroscropicElasticMaterialProperties.hxx"
+#include "MM_OPERA_HPC/MacroscopicElasticMaterialProperties.hxx"
 #include "MM_OPERA_HPC/UniaxialMacroscopicStressPeriodicSimulation.hxx"
 
 /*!
@@ -139,7 +139,7 @@ static void setupMaterials(
     mfem_mgis::attributes::MayAbort,
     mfem_mgis::Context &,
     mfem_mgis::PeriodicNonLinearEvolutionProblem &,
-    mm_opera_hpc::MacroscropicElasticMaterialProperties &,
+    mm_opera_hpc::MacroscopicElasticMaterialProperties &,
     const TestParameters &);
 static void setLinearSolver(mfem_mgis::attributes::MayAbort,
                             mfem_mgis::Context &,
@@ -171,7 +171,7 @@ int main(int argc, char *argv[]) {
   mm_opera_hpc::printMeshInformation(ctx, problem);
 
   // set problem
-  mm_opera_hpc::MacroscropicElasticMaterialProperties mp;
+  mm_opera_hpc::MacroscopicElasticMaterialProperties mp;
   setupMaterials(mfem_mgis::may_abort, ctx, problem, mp, p);
   setLinearSolver(mfem_mgis::may_abort, ctx, problem, p);
   // add post processings
@@ -227,7 +227,7 @@ static void parseCommandLineArguments(mfem::OptionsParser &args,
                  "components of the Cauchy stress.");
   args.AddOption(&p.mesh_file, "-m", "--mesh", "Mesh file to use.");
   args.AddOption(&p.mesh_mode, "-mm", "--mesh_mode",
-                 "Read Mesh Mode (FromScratch or Restart = splited file).");
+                 "Read Mesh Mode (FromScratch or Restart = split file).");
   args.AddOption(&p.vect_file, "-f", "--vect", "Vector file to use.");
   args.AddOption(&p.library, "-l", "--library", "Material library.");
   args.AddOption(&p.behaviour, "-b", "--behaviour", "Mechanical behaviour.");
@@ -254,9 +254,9 @@ static void parseCommandLineArguments(mfem::OptionsParser &args,
   args.AddOption(&p.verbosity_level, "-v", "--verbosity-level",
                  "choose the verbosity level");
   args.AddOption(&p.duration, "-d", "--duration",
-                 "choose the duration (default = 5)");
+                 "choose the duration");
   args.AddOption(&p.nstep, "-n", "--nstep",
-                 "choose the number of steps (default = 40)");
+                 "choose the number of steps");
 
   args.Parse();
 
@@ -278,7 +278,7 @@ static void setupMaterials(
     mfem_mgis::attributes::MayAbort,
     mfem_mgis::Context &ctx,
     mfem_mgis::PeriodicNonLinearEvolutionProblem &problem,
-    mm_opera_hpc::MacroscropicElasticMaterialProperties &mp,
+    mm_opera_hpc::MacroscopicElasticMaterialProperties &mp,
     const TestParameters &p) {
   using namespace mgis::behaviour;
   auto or_die = ctx.getFatalFailureHandler();

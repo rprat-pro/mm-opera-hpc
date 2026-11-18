@@ -2,7 +2,7 @@ project(OperaHPCCermetExample)
 
 # Copy
 file(COPY law mesh results DESTINATION ${PROJECT_BINARY_DIR})
-file(COPY mesh/vectors_5grains.txt check_cermet_restults.py plot_cermet_results.py DESTINATION ${PROJECT_BINARY_DIR})
+file(COPY mesh/vectors_5grains.txt check_cermet_results.py plot_cermet_results.py DESTINATION ${PROJECT_BINARY_DIR})
 
 # behavior law
 add_custom_command(

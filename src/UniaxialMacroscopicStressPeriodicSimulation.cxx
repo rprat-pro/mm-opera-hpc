@@ -38,7 +38,7 @@ namespace mm_opera_hpc {
       pk1_integral[2] += pk1_integrals[m][2];
     }
     assert(volume > 0.0);
-    // -- sum volumes of all processess
+    // -- sum volumes of all processes
     MPI_Allreduce(MPI_IN_PLACE, &volume, 1, MPI_DOUBLE, MPI_SUM,
                   MPI_COMM_WORLD);
     // -- sum integrals from all processes

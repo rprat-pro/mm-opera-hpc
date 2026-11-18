@@ -1,5 +1,5 @@
 /*!
- * \file   MacroscropicElasticMaterialProperties.cxx
+ * \file   MacroscopicElasticMaterialProperties.cxx
  * \brief
  * \author Thomas Helfer
  * \date   16/09/2025
@@ -7,11 +7,11 @@
 
 #include <cmath>
 #include "MFEMMGIS/Profiler.hxx"
-#include "MM_OPERA_HPC/MacroscropicElasticMaterialProperties.hxx"
+#include "MM_OPERA_HPC/MacroscopicElasticMaterialProperties.hxx"
 
 namespace mm_opera_hpc {
 
-  void MacroscropicElasticMaterialProperties::update(
+  void MacroscopicElasticMaterialProperties::update(
       const mfem_mgis::real E,
       const mfem_mgis::real nu,
       const mfem_mgis::real G) noexcept {

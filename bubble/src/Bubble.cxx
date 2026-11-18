@@ -1,5 +1,5 @@
 /*!
- * \file   main.cxx
+ * \file   Bubble.cxx
  * \brief  Main program for bubble fracture simulation in porous materials
  * \date   29/09/2024
  *
@@ -207,7 +207,7 @@ void fill_parameters(mfem::OptionsParser& args, TestParameters& p) {
       &p.d_min, "-dm", "--dmin",
       "Distance to evaluate bubble rupture, in µm, default = 0.950.");
   args.AddOption(&p.bubble_pressure, "-pr", "--pref",
-                 "Internal bubble pressure, in Pa, default = 1");
+                 "Internal bubble pressure, in N/µm², default = 1");
 
   args.Parse();
 
@@ -578,7 +578,7 @@ int main(int argc, char** argv) {
         // Third check is on the z: check if point is within bounding box on
         // 2-axis
         if (std::abs(pt.location[2] - bz) > dmin) continue;
-        // if we made here, the point is worthwile of consideration!
+        // if we made it here, the point is worthy of consideration!
         const auto dx = pt.location[0] - bx;
         const auto dy = pt.location[1] - by;
         const auto dz = pt.location[2] - bz;
