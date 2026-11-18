@@ -49,7 +49,8 @@ void common_parameters(mfem::OptionsParser &args, TestParameters &p) {
   args.Parse();
 
   if (!args.Good()) {
-    if (mfem_mgis::isMPIMainProcessForDefaultCommunicator()) args.PrintUsage(std::cout);
+    if (mfem_mgis::isMPIMainProcessForDefaultCommunicator())
+      args.PrintUsage(std::cout);
     mfem_mgis::finalize();
     exit(0);
   }
@@ -59,7 +60,8 @@ void common_parameters(mfem::OptionsParser &args, TestParameters &p) {
     args.PrintUsage(std::cout);
     mfem_mgis::abort(EXIT_FAILURE);
   }
-  if (mfem_mgis::isMPIMainProcessForDefaultCommunicator()) args.PrintOptions(std::cout);
+  if (mfem_mgis::isMPIMainProcessForDefaultCommunicator())
+    args.PrintOptions(std::cout);
 }
 
 /**

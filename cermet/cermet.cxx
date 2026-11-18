@@ -94,14 +94,13 @@ static void parseCommandLineOptions(mfem::OptionsParser &args,
                  "export first eigen stress", false);
   args.AddOption(&p.verbosity_level, "-v", "--verbosity-level",
                  "choose the verbosity level");
-  args.AddOption(&p.duration, "-d", "--duration",
-                 "choose the duration");
-  args.AddOption(&p.nsteps, "-n", "--nstep",
-                 "choose the number of steps");
+  args.AddOption(&p.duration, "-d", "--duration", "choose the duration");
+  args.AddOption(&p.nsteps, "-n", "--nstep", "choose the number of steps");
   args.AddOption(&p.vector_file, "-f", "--file", "Vector file to use");
   args.Parse();
   if (!args.Good()) {
-    if (mfem_mgis::isMPIMainProcessForDefaultCommunicator()) args.PrintUsage(std::cout);
+    if (mfem_mgis::isMPIMainProcessForDefaultCommunicator())
+      args.PrintUsage(std::cout);
     mfem_mgis::finalize();
     exit(args.Help() ? EXIT_SUCCESS : EXIT_FAILURE);
   }
@@ -111,7 +110,8 @@ static void parseCommandLineOptions(mfem::OptionsParser &args,
     args.PrintUsage(std::cout);
     mfem_mgis::abort(EXIT_FAILURE);
   }
-  if (mfem_mgis::isMPIMainProcessForDefaultCommunicator()) args.PrintOptions(std::cout);
+  if (mfem_mgis::isMPIMainProcessForDefaultCommunicator())
+    args.PrintOptions(std::cout);
 }
 
 static void setup_material_properties(
@@ -167,8 +167,7 @@ static void setup_material_properties(
       };
 
   const int nMat =
-      getMaterialsAttributes(problem.getFiniteElementDiscretization())
-          .Max();
+      getMaterialsAttributes(problem.getFiniteElementDiscretization()).Max();
 
   const auto vectors = mm_opera_hpc::readVectorsFromFile(p.vector_file);
   if (vectors.size() != 2 * (nMat - 1)) {
@@ -226,8 +225,7 @@ static void addOptionalPostProcessings(
       // the stresses are computed at the end of the time step
       exporter->SetTime(t + dt);
       const int nMat =
-          getMaterialsAttributes(p.getFiniteElementDiscretization())
-              .Max();
+          getMaterialsAttributes(p.getFiniteElementDiscretization()).Max();
       // fes = FirstEigenStress
       // vmes = VonMisesEquivalentStress
       std::vector<mfem_mgis::ImmutablePartialQuadratureFunctionView> fesView{};

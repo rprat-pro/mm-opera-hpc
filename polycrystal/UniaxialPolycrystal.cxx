@@ -135,12 +135,11 @@ static void addOptionalPostProcessings(
     mfem_mgis::PeriodicNonLinearEvolutionProblem &,
     const PostProcessingParameters &,
     mfem::ParaViewDataCollection *&);
-static void setupMaterials(
-    mfem_mgis::attributes::MayAbort,
-    mfem_mgis::Context &,
-    mfem_mgis::PeriodicNonLinearEvolutionProblem &,
-    mm_opera_hpc::MacroscopicElasticMaterialProperties &,
-    const TestParameters &);
+static void setupMaterials(mfem_mgis::attributes::MayAbort,
+                           mfem_mgis::Context &,
+                           mfem_mgis::PeriodicNonLinearEvolutionProblem &,
+                           mm_opera_hpc::MacroscopicElasticMaterialProperties &,
+                           const TestParameters &);
 static void setLinearSolver(mfem_mgis::attributes::MayAbort,
                             mfem_mgis::Context &,
                             mfem_mgis::PeriodicNonLinearEvolutionProblem &,
@@ -159,15 +158,21 @@ int main(int argc, char *argv[]) {
   parseCommandLineArguments(args, p);
 
   // creating the finite element workspace
-  auto fed = mfem_mgis::construct<mfem_mgis::FiniteElementDiscretization>(
-      ctx, mfem_mgis::Parameters{{"MeshFileName", p.mesh_file},
-                                 {"MeshReadMode", p.mesh_mode},
-                                 {"FiniteElementFamily", "H1"},
-                                 {"FiniteElementOrder", p.order},
-                                 {"UnknownsSize", mfem_mgis::size_type{3}},
-                                 {"NumberOfUniformRefinements", p.refinement},
-                                 {"Parallel", true}})|or_die;
-  auto problem = mfem_mgis::construct<mfem_mgis::PeriodicNonLinearEvolutionProblem>(ctx, fed)|or_die;
+  auto fed =
+      mfem_mgis::construct<mfem_mgis::FiniteElementDiscretization>(
+          ctx,
+          mfem_mgis::Parameters{{"MeshFileName", p.mesh_file},
+                                {"MeshReadMode", p.mesh_mode},
+                                {"FiniteElementFamily", "H1"},
+                                {"FiniteElementOrder", p.order},
+                                {"UnknownsSize", mfem_mgis::size_type{3}},
+                                {"NumberOfUniformRefinements", p.refinement},
+                                {"Parallel", true}}) |
+      or_die;
+  auto problem =
+      mfem_mgis::construct<mfem_mgis::PeriodicNonLinearEvolutionProblem>(ctx,
+                                                                         fed) |
+      or_die;
   mm_opera_hpc::printMeshInformation(ctx, problem);
 
   // set problem
@@ -253,15 +258,14 @@ static void parseCommandLineArguments(mfem::OptionsParser &args,
                  false);
   args.AddOption(&p.verbosity_level, "-v", "--verbosity-level",
                  "choose the verbosity level");
-  args.AddOption(&p.duration, "-d", "--duration",
-                 "choose the duration");
-  args.AddOption(&p.nstep, "-n", "--nstep",
-                 "choose the number of steps");
+  args.AddOption(&p.duration, "-d", "--duration", "choose the duration");
+  args.AddOption(&p.nstep, "-n", "--nstep", "choose the number of steps");
 
   args.Parse();
 
   if (!args.Good()) {
-    if (mfem_mgis::isMPIMainProcessForDefaultCommunicator()) args.PrintUsage(std::cout);
+    if (mfem_mgis::isMPIMainProcessForDefaultCommunicator())
+      args.PrintUsage(std::cout);
     mfem_mgis::finalize();
     exit(args.Help() ? EXIT_SUCCESS : EXIT_FAILURE);
   }
@@ -271,7 +275,8 @@ static void parseCommandLineArguments(mfem::OptionsParser &args,
     args.PrintUsage(std::cout);
     mfem_mgis::abort(EXIT_FAILURE);
   }
-  if (mfem_mgis::isMPIMainProcessForDefaultCommunicator()) args.PrintOptions(std::cout);
+  if (mfem_mgis::isMPIMainProcessForDefaultCommunicator())
+    args.PrintOptions(std::cout);
 }
 
 static void setupMaterials(
@@ -288,8 +293,7 @@ static void setupMaterials(
 
   // const int nMat = 8;
   const int nMat =
-      getMaterialsAttributes(problem.getFiniteElementDiscretization())
-          .Max();
+      getMaterialsAttributes(problem.getFiniteElementDiscretization()).Max();
   mfem_mgis::Profiler::Utils::Message("Nombre de matériaux : ", nMat);
 
   for (int i = 0; i < nMat; i++) {
@@ -421,8 +425,7 @@ static void addOptionalPostProcessings(
       // the stresses are computed at the end of the time step
       exporter->SetTime(t + dt);
       const int nMat =
-          getMaterialsAttributes(p.getFiniteElementDiscretization())
-              .Max();
+          getMaterialsAttributes(p.getFiniteElementDiscretization()).Max();
       // fes = FirstEigenStress
       // vmes = VonMisesEquivalentStress
       std::vector<mfem_mgis::ImmutablePartialQuadratureFunctionView> fesView{};
