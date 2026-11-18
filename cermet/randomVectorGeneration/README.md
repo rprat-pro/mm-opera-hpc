@@ -4,7 +4,7 @@ This project provides a simple Python script to generate a specified number of p
 
 ## Prerequisites
 
-To run this script, you need to have Python installed on your system. The script requires the `Numpy` Python package
+To run this script, you need to have Python installed on your system. The script requires the `NumPy` Python package.
 
 ## Usage
 

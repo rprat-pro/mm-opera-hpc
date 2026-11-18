@@ -76,7 +76,7 @@ More details in [bubble/README.md](./bubble/README.md)
 
 This test case illustrates the simulation of a Representative Volume Element (RVE) of a polycrystal made of uranium dioxide (`UO₂`). The objective is to study the mechanical viscoplastic response of the material under a macroscopic uniaxial loading. The example given in the repository of this test case corresponds to a simplification with a polycrystal composed of 5 crystals in order to enable an easy comparison with a reference solution given by the Cast3M code. 
 
-![Polycristal Case](img/polycrystal/polycrystal.png)
+![Polycrystal Case](img/polycrystal/polycrystal.png)
 
 More details in [polycrystal/README.md](./polycrystal/README.md)
 
