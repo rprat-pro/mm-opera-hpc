@@ -431,10 +431,12 @@ int main(int argc, char** argv) {
                           mfem_mgis::Parameters{{"VerbosityLevel", verbosity}});
   // Use diagonal scaling preconditioner
   auto preconditioner = mfem_mgis::Parameters{{"Name", "HypreDiagScale"}};
+  // The default limit of 1000 iterations is not enough on fine meshes
   solverParameters.insert(
       mfem_mgis::may_throw,
       mfem_mgis::Parameters{{"Preconditioner", preconditioner},
-                            {"Tolerance", 1e-10}});
+                            {"Tolerance", 1e-10},
+                            {"MaximumNumberOfIterations", 5000}});
 
   // Set up conjugate gradient solver
   problem.setLinearSolver(ctx, "HyprePCG", solverParameters) | or_die;
