@@ -91,21 +91,17 @@ Note: To generate the grain orientation vectors, use the randomVectorGeneration 
 
 ![RVE of Polycrystal of UO2 with 5 crystals](doc/5crystals.png)
 
+## Run the simulation
+
+You can run the simulation in parallel using MPI:
+
+```
+mpirun -n 16 ./uniaxial-polycrystal
+```
+
+By default, the simulation generates the file `uniaxial-polycrystal.res`.
+
 ## Results and post-processing
-
-You can run the simulation in parallel using MPI.
-
-```
-mpirun -n 16 ./uniaxial-polycrystal
-```
-
-## Check Results
-
-By default, the simulation generates the file `uniaxial-polycrystal.res` when running:
-
-```
-mpirun -n 16 ./uniaxial-polycrystal
-```
 
 ### Plot and Compare
 

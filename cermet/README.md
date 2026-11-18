@@ -13,17 +13,17 @@ This case is similar to the `UO2` polycrystal with the addition of a metallic in
 	- Poisson's ratio = 0.27
 	- Shear modulus = 54.e9 Pa
 - **[Metallic Interface] Constitutive law:** The Norton creep law used for the interface is derived from the elasto-viscoplastic properties of the chromium coating used in eATF claddings; the corresponding MFront file is `law/NortonCr.mfront`.
-- **Elastic properties:**
-	- Young's modulus = 276e+09 Pa
-	- Poisson's ratio = 0.3
-- **Norton creep law:**
-	- $$\dot{\varepsilon}_{eq} = \frac{A D_0 \exp\!\left(-\frac{Q}{R T}\right)}{b^2}\left( \frac{\sigma_{eq}}{C} \right)^n$$
-	- A = 2.5e+11 [a. u.]
-	- n = 4.75
-	- Q = 306.27e+03 [a. u.]
-	- D0 = 1.55e-5 [a. u.]
-	- b = 2.5e-10 [a. u.]
-	- C = 264110 - 10 T - 0.025 T², with $$\sigma_{eq}$$ and C in MPa
+	- **Elastic properties:**
+		- Young's modulus = 276e+09 Pa
+		- Poisson's ratio = 0.3
+	- **Norton creep law:**
+		- $$\dot{\varepsilon}_{eq} = \frac{A D_0 \exp\!\left(-\frac{Q}{R T}\right)}{b^2}\left( \frac{\sigma_{eq}}{C} \right)^n$$
+		- A = 2.5e+11 [a. u.]
+		- n = 4.75
+		- Q = 306.27e+03 [a. u.]
+		- D0 = 1.55e-5 [a. u.]
+		- b = 2.5e-10 [a. u.]
+		- C = 264110 - 10 T - 0.025 T², with $$\sigma_{eq}$$ and C in MPa
 - **Finite element order:** 1 (linear interpolation).
 - **Finite element space:** H1.
 - **Simulation duration:** 200 s.
