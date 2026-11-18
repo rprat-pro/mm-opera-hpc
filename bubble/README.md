@@ -28,7 +28,7 @@ The simulation considers an empty (i.e., not meshed) cavity, on whose surface we
  - E = 150 × 10<sup>-3</sup> N µm<sup>-2</sup>
  - $$\nu = 0.3$$
 
-The elastic modulus is rescaled to consistently describe the geometry in micrometers, rather than in SI units. This choice is made to facilitate the creation of more complex geometries when using `Mérope`, given the characteristic length scale of the considered inclusions.
+The elastic modulus is rescaled to consistently describe the geometry in micrometers, rather than in SI units. This choice is made to facilitate the creation of more complex geometries when using `Mérope`, given the characteristic length scale of the considered inclusions. Consequently, the internal pressure and the stresses are also expressed in N µm<sup>-2</sup> (1 N µm<sup>-2</sup> = 10<sup>12</sup> Pa).
 
 The geometry is meshed using quadratic elements, to better describe the spherical inclusions contained in the RVE. Although `MFEM` allows sub-, super-, and isoparametric analyses, we recommend sticking at least to the isoparametric choice (i.e., not subparametric) for the polynomial shape functions.
 
@@ -57,7 +57,7 @@ Usage: ./test-bubble [options] ...
 | `-sf <double>, --scale-factor-vp <double>`| double | `0.9`                    | Scaling factor for the principal stress.    |
 | `-n <string>, --name-case <string>`       | string | `TestCaseBubble`         | Name of the test case.                      |
 | `-dm <double>, --dmin <double>`           | double | `0.950`                  | Distance to evaluate bubble rupture.        |
-| `-pr <double>, --pref <double>`           | double | `1`                      | Internal bubble pressure in Pa.             |
+| `-pr <double>, --pref <double>`           | double | `1`                      | Internal bubble pressure in N/µm².          |
 
 The command to execute the test case is
 
