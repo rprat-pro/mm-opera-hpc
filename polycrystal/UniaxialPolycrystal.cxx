@@ -418,7 +418,8 @@ static void addOptionalPostProcessings(
                                                            mfem_mgis::real dt) {
       static int count = 0;
       exporter->SetCycle(count++);
-      exporter->SetTime(t);
+      // the stresses are computed at the end of the time step
+      exporter->SetTime(t + dt);
       const int nMat =
           getMaterialsAttributes(p.getFiniteElementDiscretization())
               .Max();
