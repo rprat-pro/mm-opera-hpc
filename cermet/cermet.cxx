@@ -3,10 +3,15 @@
 #include <optional>
 #include <functional>
 
+#include "mfem/fem/datacollection.hpp"
 #include "MFEMMGIS/Material.hxx"
+#include "MFEMMGIS/NonLinearEvolutionProblemImplementation.hxx"
 #include "MFEMMGIS/ParaviewExportIntegrationPointResultsAtNodes.hxx"
 #include "MFEMMGIS/PeriodicNonLinearEvolutionProblem.hxx"
 #include "MFEMMGIS/Profiler.hxx"
+#include "MFEMMGIS/MechanicalPostProcessings.hxx"
+#include "MFEMMGIS/LinearSolverFactory.hxx"
+#include "MFEMMGIS/L2Projection.hxx"
 #include "MM_OPERA_HPC/Utilities.hxx"
 #include "MM_OPERA_HPC/GrainOrientations.hxx"
 #include "MM_OPERA_HPC/UniaxialMacroscopicStressPeriodicSimulation.hxx"
@@ -55,6 +60,12 @@ struct TestParameters {
   int order = 1;
   int refinement = 0;
   int post_processing = 1;  // default value : activated
+  //! \brief boolean stating if the von Mises stress of the Cauchy stress is
+  //! exported to VTK
+  bool export_von_Mises_stress = false;
+  //! \brief boolean stating if first eigen stress of the Cauchy stress is
+  //! exported to VTK
+  bool export_first_eigen_stress = false;
   int verbosity_level = 0;  // default value : lower level
   int nsteps = 500;
   double duration = 200.;
@@ -73,6 +84,14 @@ static void parseCommandLineOptions(mfem::OptionsParser &args,
                  "refinement level of the mesh");
   args.AddOption(&p.post_processing, "-p", "--postprocessing",
                  "run post processing step");
+  args.AddOption(&p.export_von_Mises_stress, "",
+                 "--enable-export-von-Mises-stress", "",
+                 "--disable-export-von-Mises-stress",
+                 "export the von Mises stress", false);
+  args.AddOption(&p.export_first_eigen_stress, "",
+                 "--enable-export-first_eigen_stress", "",
+                 "--disable-export-first_eigen_stress",
+                 "export first eigen stress", false);
   args.AddOption(&p.verbosity_level, "-v", "--verbosity-level",
                  "choose the verbosity level");
   args.AddOption(&p.duration, "-d", "--duration",
@@ -185,6 +204,93 @@ static void setup_material_properties(
   }
 }
 
+static void addOptionalPostProcessings(
+    mfem_mgis::attributes::MayAbort,
+    mfem_mgis::Context &ctx,
+    mfem_mgis::PeriodicNonLinearEvolutionProblem &p,
+    const TestParameters &params,
+    mfem::ParaViewDataCollection *&exporter) {
+  auto or_die = ctx.getFatalFailureHandler();
+  // setup paraview
+  exporter = new mfem::ParaViewDataCollection("CermetParaviewOutput");
+  exporter->SetDataFormat(mfem::VTKFormat::BINARY);
+  exporter->SetMesh(&(p.getFiniteElementDiscretization().getMesh<true>()));
+
+  if (params.export_von_Mises_stress || params.export_first_eigen_stress) {
+    p.getImplementation<true>().addPostProcessing(ctx, [&ctx, &p, &params,
+                                                        &exporter, or_die](
+                                                           mfem_mgis::real t,
+                                                           mfem_mgis::real dt) {
+      static int count = 0;
+      exporter->SetCycle(count++);
+      // the stresses are computed at the end of the time step
+      exporter->SetTime(t + dt);
+      const int nMat =
+          getMaterialsAttributes(p.getFiniteElementDiscretization())
+              .Max();
+      // fes = FirstEigenStress
+      // vmes = VonMisesEquivalentStress
+      std::vector<mfem_mgis::ImmutablePartialQuadratureFunctionView> fesView{};
+      std::vector<mfem_mgis::ImmutablePartialQuadratureFunctionView> vmesView{};
+      // the functions must outlive the views used by the projections
+      std::vector<mfem_mgis::PartialQuadratureFunction> fes_pqfs;
+      std::vector<mfem_mgis::PartialQuadratureFunction> vmes_pqfs;
+      fes_pqfs.reserve(nMat);
+      vmes_pqfs.reserve(nMat);
+      auto ets = mfem_mgis::Material::END_OF_TIME_STEP;
+      // For each material: the metallic interface and the grains
+      for (int i = 1; i <= nMat; i++) {
+        auto &m = p.getMaterial(ctx, i, 0) | or_die;
+        if (params.export_first_eigen_stress) {
+          auto &fes_pqf =
+              fes_pqfs.emplace_back(m.getPartialQuadratureSpace(), 1);
+          mfem_mgis::computeFirstEigenStress(ctx, fes_pqf, m, ets);
+          fesView.push_back(fes_pqf);
+        }
+        if (params.export_von_Mises_stress) {
+          auto &vmes_pqf =
+              vmes_pqfs.emplace_back(m.getPartialQuadratureSpace(), 1);
+          bool success =
+              mfem_mgis::computeVonMisesEquivalentStress(ctx, vmes_pqf, m, ets);
+          if (!success) {
+            std::cout << "ERROR: computeVonMisesEquivalentStress returns"
+                      << " false in addOptionalPostProcessings" << std::endl;
+          }
+          vmesView.push_back(vmes_pqf);
+        }
+      }
+
+      // Used by computeL2Projection
+      auto &lsf = mfem_mgis::LinearSolverFactory<true>::getFactory();
+      auto &fespace =
+          p.getFiniteElementDiscretization().getFiniteElementSpace<true>();
+      auto linear_solver = lsf.generate(
+          ctx, "HyprePCG", fespace,
+          mfem_mgis::Parameters{
+              {"Preconditioner", mfem_mgis::Parameters{{"Name", "HypreILU"}}}});
+
+      // project solutions
+      std::optional<mfem_mgis::L2ProjectionResult<true>> fes_projection;
+      std::optional<mfem_mgis::L2ProjectionResult<true>> vmes_projection;
+      if (params.export_first_eigen_stress) {
+        fes_projection =
+            mfem_mgis::computeL2Projection<true>(ctx, linear_solver, fesView);
+        exporter->RegisterField("FirstEigenStress",
+                                fes_projection->result.get());
+      }
+      if (params.export_von_Mises_stress) {
+        vmes_projection =
+            mfem_mgis::computeL2Projection<true>(ctx, linear_solver, vmesView);
+        exporter->RegisterField("vonMisesStress",
+                                vmes_projection->result.get());
+      }
+
+      // save paraview files
+      exporter->Save();
+    }) | or_die;
+  }
+}
+
 int main(int argc, char **argv) {
   using namespace mfem_mgis::Profiler::Utils;  // Use Message
                                                // options treatment
@@ -254,6 +360,7 @@ int main(int argc, char **argv) {
   mm_opera_hpc::MacroscopicElasticMaterialProperties mp;
   setup_material_properties(mfem_mgis::may_abort, ctx, problem, p, mp);
 
+  mfem::ParaViewDataCollection *paraview_exporter = nullptr;
   if (post_processing) {
     mfem_mgis::Profiler::Utils::Message("Define post processings");
     problem.addPostProcessing(ctx, "ParaviewExportResults",
@@ -267,6 +374,8 @@ int main(int argc, char **argv) {
        "ParaviewExportIntegrationPointResultsAtNodes",
        {{"OutputFileName", "IntegrationPointOutput"}});
      */
+    addOptionalPostProcessings(mfem_mgis::may_abort, ctx, problem, p,
+                               paraview_exporter);
   }
   //
   const auto te = p.duration;
@@ -292,6 +401,10 @@ int main(int argc, char **argv) {
   mm_opera_hpc::UniaxialMacroscopicStressPeriodicSimulation s(problem, Fzz, np,
                                                               post_processing);
   const auto success = s.run(ctx, out, temporal_sequences);
+
+  if (paraview_exporter != nullptr) {
+    delete paraview_exporter;
+  }
   //
   mm_opera_hpc::printMemoryFootprint("[End]");
   mfem_mgis::Profiler::OutputManager::printTimeTable(ctx);

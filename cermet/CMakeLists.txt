@@ -27,6 +27,7 @@ add_dependencies(cermet generate-lib-cermet)
 ## Test
 add_dependencies(check cermet generate-lib-cermet)
 add_test(NAME CermetTest COMMAND cermet --duration 0.4 --nstep 1 --postprocessing 0)
+add_test(NAME CermetTestWithPostProPar COMMAND mpirun -n 2 ./cermet --enable-export-von-Mises-stress --enable-export-first_eigen_stress --nstep 1 --duration 0.01)
 
 ## Install
 install(TARGETS cermet DESTINATION bin)
