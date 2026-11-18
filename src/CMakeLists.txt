@@ -1,7 +1,7 @@
 add_library(MMOPERAHPC
         Utilities.cxx
         GrainOrientations.cxx
-        MacroscropicElasticMaterialProperties.cxx
+        MacroscopicElasticMaterialProperties.cxx
         UniaxialMacroscopicStressPeriodicSimulation.cxx)
 
 target_include_directories(MMOPERAHPC

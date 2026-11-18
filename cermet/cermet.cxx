@@ -100,7 +100,7 @@ static void setup_material_properties(
     mfem_mgis::Context &ctx,
     mfem_mgis::PeriodicNonLinearEvolutionProblem &problem,
     TestParameters &p,
-    mm_opera_hpc::MacroscropicElasticMaterialProperties &mp) {
+    mm_opera_hpc::MacroscopicElasticMaterialProperties &mp) {
   auto or_die = ctx.getFatalFailureHandler();
   // cubic symmetry elasticity
   const double young1 = 222.e9;
@@ -251,7 +251,7 @@ int main(int argc, char **argv) {
     return 1 + def * ets;
   };
   //
-  mm_opera_hpc::MacroscropicElasticMaterialProperties mp;
+  mm_opera_hpc::MacroscopicElasticMaterialProperties mp;
   setup_material_properties(mfem_mgis::may_abort, ctx, problem, p, mp);
 
   if (post_processing) {

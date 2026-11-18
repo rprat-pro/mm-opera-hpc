@@ -34,7 +34,7 @@
 #include "MFEMMGIS/NonLinearEvolutionProblem.hxx"
 #include "MM_OPERA_HPC/Utilities.hxx"
 #include "MM_OPERA_HPC/GrainOrientations.hxx"
-#include "MM_OPERA_HPC/MacroscropicElasticMaterialProperties.hxx"
+#include "MM_OPERA_HPC/MacroscopicElasticMaterialProperties.hxx"
 #include "MM_OPERA_HPC/UniaxialMacroscopicStressPeriodicSimulation.hxx"
 
 /*!
@@ -139,7 +139,7 @@ static void setupMaterials(
     mfem_mgis::attributes::MayAbort,
     mfem_mgis::Context &,
     mfem_mgis::PeriodicNonLinearEvolutionProblem &,
-    mm_opera_hpc::MacroscropicElasticMaterialProperties &,
+    mm_opera_hpc::MacroscopicElasticMaterialProperties &,
     const TestParameters &);
 static void setLinearSolver(mfem_mgis::attributes::MayAbort,
                             mfem_mgis::Context &,
@@ -171,7 +171,7 @@ int main(int argc, char *argv[]) {
   mm_opera_hpc::printMeshInformation(ctx, problem);
 
   // set problem
-  mm_opera_hpc::MacroscropicElasticMaterialProperties mp;
+  mm_opera_hpc::MacroscopicElasticMaterialProperties mp;
   setupMaterials(mfem_mgis::may_abort, ctx, problem, mp, p);
   setLinearSolver(mfem_mgis::may_abort, ctx, problem, p);
   // add post processings
@@ -278,7 +278,7 @@ static void setupMaterials(
     mfem_mgis::attributes::MayAbort,
     mfem_mgis::Context &ctx,
     mfem_mgis::PeriodicNonLinearEvolutionProblem &problem,
-    mm_opera_hpc::MacroscropicElasticMaterialProperties &mp,
+    mm_opera_hpc::MacroscopicElasticMaterialProperties &mp,
     const TestParameters &p) {
   using namespace mgis::behaviour;
   auto or_die = ctx.getFatalFailureHandler();

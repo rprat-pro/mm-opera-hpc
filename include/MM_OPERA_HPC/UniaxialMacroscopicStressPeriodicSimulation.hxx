@@ -15,7 +15,7 @@
 #include <string_view>
 #include "MGIS/Context.hxx"
 #include "MM_OPERA_HPC/Config.hxx"
-#include "MM_OPERA_HPC/MacroscropicElasticMaterialProperties.hxx"
+#include "MM_OPERA_HPC/MacroscopicElasticMaterialProperties.hxx"
 
 namespace mfem_mgis {
 
@@ -60,7 +60,7 @@ namespace mm_opera_hpc {
       const bool switch_microscopic_equilibrium_convergence_criterion = true;
       //
       //! \brief macroscopic material parameters
-      const MacroscropicElasticMaterialProperties
+      const MacroscopicElasticMaterialProperties
           macroscopic_elastic_material_properties;
       const mfem_mgis::real macroscopic_stress_absolute_tolerance =
           mfem_mgis::real{1e4};
@@ -74,7 +74,7 @@ namespace mm_opera_hpc {
       // increment of the diagonal part of the deformation gradient during the
       // previous time step
       std::array<mfem_mgis::real, 3u> dF = std::array<mfem_mgis::real, 3u>{};
-      // diagonal components of the macroscropic Cauchy stress
+      // diagonal components of the macroscopic Cauchy stress
       std::array<mfem_mgis::real, 3u> S = std::array<mfem_mgis::real, 3u>{};
       // previous succesful time step
       std::optional<mfem_mgis::real> previous_time_increment;
