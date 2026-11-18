@@ -4,17 +4,17 @@
 
 This test case illustrates the simulation of a Representative Volume Element (RVE) of a polycrystal made of uranium dioxide (UO₂). The objective is to study the mechanical response of the material under a uniaxial loading (see the description of the boundary conditions below). In addition to the mechanical analysis, this example implements a fixed-point algorithm enabling the simulation of a uniaxial compression/tensile test with periodic boundary conditions.	
 
-- **Boundary conditions:** periodic boundary conditions are applied on the RVE faces. The loading is imposed in one direction, ensuring compatibility and equilibrium across periodic faces. More precisely, the axial component Fzz of the macroscopic deformation gradient is imposed. The off-diagonal components of the macroscopic deformation gradient are set to zero. The components Fxx and Fzz are the unknowns; they are determined via the fixed-point algorithm imposing zero values for the components Sxx and Syy of the macroscopic Cauchy stress tensor. The main result used for verification is a stress-strain curve with the evolution of the axial component Szz of the Cauchy stress as a function of Fxx.
+- **Boundary conditions:** periodic boundary conditions are applied on the RVE faces. The loading is imposed in one direction, ensuring compatibility and equilibrium across periodic faces. More precisely, the axial component Fzz of the macroscopic deformation gradient is imposed. The off-diagonal components of the macroscopic deformation gradient are set to zero. The components Fxx and Fyy are the unknowns; they are determined via the fixed-point algorithm imposing zero values for the components Sxx and Syy of the macroscopic Cauchy stress tensor. The main result used for verification is the evolution of the axial component Szz of the Cauchy stress as a function of time, which is a stress-strain curve as Fzz increases linearly with time.
 - **Finite element order:** 1 (linear interpolation).
 - **Finite element space:** H1.
 - **Simulation duration:** 200 s.
-- **Number of time steps:** 600.
+- **Number of time steps:** 200.
 - **[Crystal] Constitutive law:** The UO₂ crystal plasticity law used in the example is detailed in reference [^2]; the corresponding MFront file is `law/Mono_UO2_CosH_Jaco3.mfront`. In the case of uranium dioxide, the crystal symmetry is cubic and the corresponding orthotropic elastic properties used in the crystal plasticity law are:
 	- Young's modulus = 222.e9 Pa
 	- Poisson's ratio = 0.27
 	- Shear modulus = 54.e9 Pa
 
-The orthotropic basis of each grain is given as an input of the crystal plasticity law. This orthotropic basis is precomputed with the Euler angles of the grain. The fixed-point algorithm uses the homogenized elastic properties of the polycrystal in order to predict the displacement gradient needed to converge toward a uniaxial tensile test. These macroscopic properties are derived from the single-crystal elastic constants given above with the mean values of the Voigt and Reuss bounds for an isotropic polycrystal (see `src/MacroscropicElasticMaterialProperties.cxx` in the repository).
+The orthotropic basis of each grain is given as an input of the crystal plasticity law. This orthotropic basis is precomputed with the Euler angles of the grain. The fixed-point algorithm uses the homogenized elastic properties of the polycrystal in order to predict the displacement gradient needed to converge toward a uniaxial tensile test. These macroscopic properties are derived from the single-crystal elastic constants given above with the Kröner self-consistent estimate for an isotropic polycrystal (see `src/MacroscropicElasticMaterialProperties.cxx` in the repository).
 
 ## Mesh generation
 
@@ -68,6 +68,7 @@ Usage: ./uniaxial-polycrystal --help
 | ------------------------------------------- | ------ | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | `-h, --help`                                | —      | —                            | Print the help message and exit.                                                                                                              |
 | `-m <string>, --mesh <string>`              | string | `mesh/5crystals.msh`         | Mesh file to use.                                                                                                                             |
+| `-mm <string>, --mesh_mode <string>`        | string | `FromScratch`                | Mesh read mode (`FromScratch`, or `Restart` for a split mesh).                                                                                |
 | `-f <string>, --vect <string>`              | string | `mesh/vectors_5crystals.txt` | Vector file to use.                                                                                                                           |
 | `-l <string>, --library <string>`           | string | `src/libBehaviour.so`        | Material library.                                                                                                                             |
 | `-b <string>, --behaviour <string>`         | string | `Mono_UO2_Cosh_Jaco3`        | Mechanical behaviour.                                                                                                                         |
@@ -75,12 +76,12 @@ Usage: ./uniaxial-polycrystal --help
 | `-r <int>, --refinement <int>`              | int    | `0`                          | Refinement level of the mesh (default = 0).                                                                                                   |
 | `-v <int>, --verbosity-level <int>`         | int    | `0`                          | Verbosity level of the output.                                                                                                                |
 | `-d <double>, --duration <double>`          | double | `200`                        | Duration of the simulation.                                                                                                                   |
-| `-n <int>, --nstep <int>`                   | int    | `600`                        | Number of simulation steps.                                                                                                                   |
+| `-n <int>, --nstep <int>`                   | int    | `200`                        | Number of simulation steps.                                                                                                                   |
 | `--linear-solver <string>`                  | string | `HyprePCG`                   | Linear solver to be used.                                                                                                                     |
 | `--linear-solver-preconditioner <string>`   | string | `HypreBoomerAMG`             | Preconditioner for the linear solver. Use `none` to disable.                                                                                  |
 | `--macroscopic-stress-output-file <string>` | string | `uniaxial-polycrystal.res`   | Output file containing the evolution of the diagonal components of the deformation gradient and the diagonal components of the Cauchy stress. |
-| `--enable-post-processings`                 | bool   | `false`                      | Execute post-processing steps (default).                                                                                                      |
-| `--disable-post-processings`                | bool   | —                            | Do not execute post-processing steps.                                                                                                         |
+| `--enable-post-processing`                  | bool   | `true`                       | Execute post-processing steps (default).                                                                                                      |
+| `--disable-post-processing`                 | bool   | —                            | Do not execute post-processing steps.                                                                                                         |
 | `--enable-export-von-Mises-stress`          | bool   | `false`                      | Export the von Mises stress.                                                                                                                  |
 | `--disable-export-von-Mises-stress`         | bool   | —                            | Do not export the von Mises stress (default).                                                                                                 |
 | `--enable-export-first_eigen_stress`        | bool   | `false`                      | Export the first principal stress.                                                                                                            |
@@ -132,19 +133,19 @@ An example of the detailed output:
 
 ```
       Time     MFEM/MGIS       CAST3M  RelDiff_% Status
-0      1.0  6.041066e+07   63100000.0   4.451762     OK
-1      2.0  7.737121e+07   79000000.0   2.105167     OK
-2      3.0  8.327457e+07   84300000.0   1.231384     OK
-3      4.0  8.583679e+07   86600000.0   0.889139     OK
-4      5.0  8.730071e+07   87900000.0   0.686468     OK
+0      1.0  6.041066e+07   63121000.0   4.486524     OK
+1      2.0  7.737121e+07   78996000.0   2.099997     OK
+2      3.0  8.327457e+07   84282000.0   1.209769     OK
+3      4.0  8.583679e+07   86623000.0   0.915934     OK
+4      5.0  8.730071e+07   87898000.0   0.684177     OK
 ..     ...           ...          ...        ...    ...
-595  199.0  1.062465e+08  106000000.0  -0.231979     OK
-596  199.0  1.062465e+08  106000000.0  -0.231979     OK
-597  200.0  1.062661e+08  106000000.0  -0.250424     OK
-598  200.0  1.062661e+08  106000000.0  -0.250424     OK
-599  200.0  1.062661e+08  106000000.0  -0.250424     OK
+195  196.0  1.061861e+08  105790000.0  -0.373003     OK
+196  197.0  1.062065e+08  105800000.0  -0.382700     OK
+197  198.0  1.062266e+08  105800000.0  -0.401578     OK
+198  199.0  1.062465e+08  105810000.0  -0.410809     OK
+199  200.0  1.062661e+08  105820000.0  -0.419810     OK
 
-[600 rows x 5 columns]
+[200 rows x 5 columns]
 Check PASS.
 ```
 

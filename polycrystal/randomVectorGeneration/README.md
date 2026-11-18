@@ -1,6 +1,6 @@
 # Random Orthogonal Vector Pair Generator
 
-This project provides a simple Python script to generate a specified number of pairs of orthogonal vectors. In the polycrystal and cermet test cases, these vectors are used to describe the principal directions of crystals. The script is used to randomly generate the principal directions of crystals within a polycrystal.
+This project provides a simple Python script to generate pairs of orthogonal vectors. In the polycrystal and cermet test cases, these vectors are used to describe the principal directions of crystals. The script is used to randomly generate the principal directions of crystals within a polycrystal.
 
 ## Prerequisites
 

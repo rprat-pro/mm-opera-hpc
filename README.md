@@ -62,7 +62,7 @@ $$
 
 where $$σ_I^{max}\mid_i (p_{in})$$ is the maximal value of the first principal stress near the bubble $$i$$ subjected to the pressure $$p_{in}$$ and $$σ_R$$ the rupture stress giving the critical pressure leading to crack initiation. For a bubble $$i$$, the maximal value of the first principal stress $$\sigma_I^{max}\mid_i$$ corresponds to the maximal value at a distance $$R+\delta$$ from the centre of the bubble, with R the radius of the bubble and $$δ$$ the distance needed to reach the first Gauss integration point around the bubble in the finite element mesh.
 
-The fractional fission gas release for bubbles all having the same internal pressure $$p_{int}$$ can be calculated as follows
+The fractional fission gas release for bubbles all having the same internal pressure $$p_{in}$$ can be calculated as follows
 
 $$
 FGR=\dfrac{∑_i\left[V_i \mid\left(σ_I^{max} \mid_i \left(p_{in}\right)\right)>σ_R \right]}{∑_{i=1}^n V_i}
