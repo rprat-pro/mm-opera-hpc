@@ -15,13 +15,13 @@
 Problem:
 
 This simulation consists of applying a tensile load on a cermet RVE. The cermet
-is a polycrystal where each grain has a material ID (from 2 to Nmat – 1) and a
+is a polycrystal where each grain has a material ID (from 2 to Nmat) and a
 different orientation. A metallic interface is present between the different
 polycrystals (material ID 1)
 
 Definition:
 
-- [Crystal] Behavior law: MonoCristal_UO2
+- [Crystal] Behavior law: Mono_UO2_Cosh_Jaco3
 -- Parameters:
 --- Young Modulus = 222.e9
 --- Poisson ratio = 0.27

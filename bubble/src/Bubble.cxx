@@ -1,5 +1,5 @@
 /*!
- * \file   main.cxx
+ * \file   Bubble.cxx
  * \brief  Main program for bubble fracture simulation in porous materials
  * \date   29/09/2024
  *

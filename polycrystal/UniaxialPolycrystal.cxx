@@ -1,5 +1,5 @@
 /*!
- * \file   Mono_UO2_CosH_Jaco.cxx
+ * \file   UniaxialPolycrystal.cxx
  * \brief
  * This example is modelling ...
  * \author Raphael Prat, Maxence Wangermez
