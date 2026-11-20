@@ -1,6 +1,10 @@
 # Create mesh for https://github.com/rprat-pro/mm-opera-hpc 
 # Test case polycrystal
 # Build a .geo file to be meshed by gmsh
+#
+# Adapted from the examples of Mérope.
+# Copyright : see the licence of Mérope,
+# https://github.com/MarcJos/Merope/blob/main/Licence.txt
 
 import sac_de_billes
 import merope

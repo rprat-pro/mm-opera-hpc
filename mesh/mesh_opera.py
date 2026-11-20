@@ -1,3 +1,7 @@
+# Adapted from the examples of Mérope.
+# Copyright : see the licence of Mérope,
+# https://github.com/MarcJos/Merope/blob/main/Licence.txt
+
 import sac_de_billes as sdb
 import merope
 
